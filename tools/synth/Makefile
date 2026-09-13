@@ -25,9 +25,10 @@ stresstest_MODS := text cursors stress
 asmtest_MODS    := text cursors stress assemble
 fulltest_MODS   := text cursors stress assemble phrules accents pairs contour diphone frames interp synth
 toktest_MODS    := text cursors tokenise except numbers wordstream dict lts
+saytest_MODS    := text cursors tokenise except numbers wordstream dict lts stress assemble phrules accents pairs contour diphone frames interp synth
 say_MODS        := text dict lts cursors wordstream
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest fulltest toktest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest fulltest toktest saytest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 
