@@ -41,6 +41,7 @@
 #define AND        0x1002E784u
 #define CENTS      0x1002E790u
 #define H_MONEY    0x100046D0u
+#define H_DASH2    0x10007650u
 #define H_ORDINAL  0x10009930u
 #define H_ORDEMIT  0x10001B00u
 #define ORD_ST     0x1002E7CCu
@@ -187,6 +188,7 @@ static int groups_out(bst_tok *t);
 static int sepnum_out(bst_tok *t);
 static int ordinal_seen(bst_tok *t, int c);
 static void ordinal_emit(bst_tok *t);
+static int dash_out(bst_tok *t, int c);
 static void say_char(bst_tok *t, int c);
 
 /* Punctuation that closes a phrase versus punctuation that only groups. */
@@ -264,6 +266,7 @@ static int handler(bst_tok *t, unsigned h, int c) {
     case H_DOTTED:   return dotted_out(t);
     case H_GROUPS:   return groups_out(t);
     case H_SEPNUM:   return sepnum_out(t);
+    case H_DASH2:    return dash_out(t, c);
     case H_ORDINAL:  return ordinal_seen(t, c);
     case H_ORDEMIT:  ordinal_emit(t); unread(t, 1); return 1;
     case H_MONEY:    /* a currency sign: the number after it is an amount */
@@ -290,12 +293,26 @@ static void say_char(bst_tok *t, int c) {
 /* The word the machine has just delimited. The exception table gets first
    refusal: a word it holds goes into the scratch buffer as phoneme codes and
    never reaches the dictionary or the rules. */
-static void word_range(bst_tok *t, int from, int to) {
+/* `dotted` says the piece came from a run like "i.e.", where a lone letter is
+   always said by name rather than looked up. */
+static void word_range(bst_tok *t, int from, int to, int dotted) {
     int n = to - from + 1;
     int first = n > 0 ? t->ring[from] : 0;
     /* A lone letter is said by name. The three that are words in their own
-       right are not. */
-    if (n == 1 && first != 'a' && first != 'A' && first != 'I') {
+       right are not, and neither is one the exception table holds. */
+    if (n == 1 && (dotted || (first != 'a' && first != 'A' && first != 'I'))) {
+        uint8_t codes[64];
+        int m = dotted ? 0 : bst_except(t, t->ring + from, 1, codes, (int)sizeof codes);
+        if (m > 0) {
+            emit(t, ' ');
+            emit(t, 0xFE);
+            for (int i = 0; i < m; i++) emit(t, codes[i]);
+            emit(t, 0xFF);
+            emit(t, ' ');
+            t->prevkind = t->kind;
+            t->kind = 5 - ((chattr(t, first) & 0x20) == 0);
+            return;
+        }
         say_char(t, first);
         t->prevkind = t->kind;
         t->kind = 5 - ((chattr(t, first) & 0x20) == 0);
@@ -334,7 +351,7 @@ static void word_range(bst_tok *t, int from, int to) {
     t->kind = 5 - ((chattr(t, t->ring[from]) & 0x20) == 0);
 }
 
-static void word_out(bst_tok *t) { word_range(t, t->start, t->cur); }
+static void word_out(bst_tok *t) { word_range(t, t->start, t->cur, 0); }
 
 /* A run of single letters separated by full stops. The whole span gets one
    look in the exception table, and failing that each piece is said on its
@@ -362,7 +379,7 @@ static int dotted_out(bst_tok *t) {
     while (i <= last) {
         int j = i;
         while (j <= last && t->ring[j] != '.') j++;
-        if (j > i) word_range(t, i, j - 1);
+        if (j > i) word_range(t, i, j - 1, 1);
         i = j + 1;
     }
     return 1;
@@ -380,6 +397,19 @@ static int number_out(bst_tok *t) {
     bst_say_number(t, t->ring + t->start, n);
     t->prevkind = t->kind;
     t->kind = 6;
+    return 1;
+}
+
+/* A dash. Two or more in a row are a break in the sentence and go into the
+   scratch as themselves; a single one between digits is a group separator,
+   and anywhere else it is a pause with nothing said. */
+static int dash_out(bst_tok *t, int c) {
+    int n = t->cur - t->start;
+    t->prevkind = t->kind;
+    t->kind = ((t->kind == 4 || t->kind == 5) && n == 1) ? 0x0F : 3;
+    unread(t, 1);
+    if (n >= 2) { emit(t, '-'); return 1; }
+    if (is_digit(t, t->prevch) && is_digit(t, c)) { emit_ptr(t, GRPSEP); return 1; }
     return 1;
 }
 
