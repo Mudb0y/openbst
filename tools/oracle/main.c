@@ -196,6 +196,16 @@ int main(int argc, char **argv) {
         if (w) emu_watch_writes(e, w, (uint32_t)lo, (uint32_t)(lo + len));
     }
 
+    if (recatspec) {
+        char rs[128];
+        snprintf(rs, sizeof rs, "%s", recatspec);
+        char *q = NULL;
+        unsigned long pc = strtoul(rs, &q, 0);
+        int argno = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 0;
+        int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
+        emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
+    }
+
     if (btrace) emu_backtrace(e);
 
     /* Generic instruments work with --call as well as the high-level modes,
@@ -272,16 +282,6 @@ int main(int argc, char **argv) {
 
         if (records)
             emu_hook_record(e, pr->seg_entry, 0, 8, stdout);
-
-        if (recatspec) {
-            char rs[128];
-            snprintf(rs, sizeof rs, "%s", recatspec);
-            char *q = NULL;
-            unsigned long pc = strtoul(rs, &q, 0);
-            int argno = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 0;
-            int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
-            emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
-        }
 
         if (intonation) emu_hook_call(e, pr->intonation_push, 4, stdout);
 

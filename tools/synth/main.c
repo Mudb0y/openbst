@@ -7,7 +7,10 @@
    synthesizer, so the result can be compared sample for sample against the
    audio the original produced for the same text. */
 
-static int read_tables(bst_tables *t, const char *dll) {
+/* `tables`, when given, names the file offsets of the pulse, noise and gain
+   tables, and optionally the log pair and the durations. tablescan.py reports
+   them for any build. */
+static int read_tables(bst_tables *t, const char *dll, const char *tables) {
     FILE *f = fopen(dll, "rb");
     if (!f) { fprintf(stderr, "cannot open %s\n", dll); return -1; }
     fseek(f, 0, SEEK_END);
@@ -16,7 +19,20 @@ static int read_tables(bst_tables *t, const char *dll) {
     void *img = malloc(n);
     if (!img || fread(img, 1, n, f) != (size_t)n) { fclose(f); free(img); return -1; }
     fclose(f);
-    int rc = bst_tables_load(t, img, n);
+    int rc;
+    if (tables) {
+        bst_offsets o = { 0, 0, 0, 0, 0, 0 };
+        size_t *fields[6] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog, &o.duration };
+        const char *p = tables;
+        for (int i = 0; i < 6 && p && *p; i++) {
+            char *e = NULL;
+            *fields[i] = (size_t)strtoul(p, &e, 16);
+            p = (e && *e == ',') ? e + 1 : NULL;
+        }
+        rc = bst_tables_load_at(t, img, n, &o);
+    } else {
+        rc = bst_tables_load(t, img, n);
+    }
     free(img);
     return rc;
 }
@@ -35,17 +51,22 @@ static void write_wav(FILE *f, const int16_t *pcm, size_t n, uint32_t rate) {
 }
 
 int main(int argc, char **argv) {
-    const char *dll = NULL, *framefile = NULL, *out = NULL;
+    const char *dll = NULL, *framefile = NULL, *out = NULL, *tables = NULL;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--dll") && i + 1 < argc)         dll = argv[++i];
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc) framefile = argv[++i];
         else if (!strcmp(argv[i], "--out") && i + 1 < argc)    out = argv[++i];
-        else { fprintf(stderr, "usage: synth --dll DLL --frames FILE [--out WAV]\n"); return 2; }
+        else if (!strcmp(argv[i], "--tables") && i + 1 < argc) tables = argv[++i];
+        else {
+            fprintf(stderr, "usage: synth --dll DLL --frames FILE [--out WAV]"
+                            " [--tables pulse,noise,gain]\n");
+            return 2;
+        }
     }
     if (!dll || !framefile) { fprintf(stderr, "need --dll and --frames\n"); return 2; }
 
     bst_tables t;
-    if (read_tables(&t, dll) < 0) { fprintf(stderr, "table load failed\n"); return 1; }
+    if (read_tables(&t, dll, tables) < 0) { fprintf(stderr, "table load failed\n"); return 1; }
 
     FILE *ff = strcmp(framefile, "-") ? fopen(framefile, "r") : stdin;
     if (!ff) { fprintf(stderr, "cannot open %s\n", framefile); return 1; }

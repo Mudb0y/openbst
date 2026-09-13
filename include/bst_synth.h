@@ -113,7 +113,17 @@ int    bst_synth_frame(bst_synth *s, const uint8_t f[16]);
    number of samples written, capped at max. */
 size_t bst_synth_run(bst_synth *s, int16_t *out, size_t max);
 
-/* Reads the three tables out of a loaded BeSTspeech image. */
+/* Where each table sits in a build, as a file offset. */
+typedef struct {
+    size_t pulse, noise, gain, log, alog, duration;
+} bst_offsets;
+
+extern const bst_offsets BST_OFFSETS_1995;
+
+/* Reads the tables out of a loaded BeSTspeech image. The plain form assumes
+   the 1995 build; the other takes the offsets, which tablescan.py reports. */
 int    bst_tables_load(bst_tables *t, const void *image, size_t len);
+int    bst_tables_load_at(bst_tables *t, const void *image, size_t len,
+                          const bst_offsets *o);
 
 #endif

@@ -99,18 +99,31 @@ size_t bst_synth_run(bst_synth *s, int16_t *out, size_t max) {
     return n;
 }
 
-int bst_tables_load(bst_tables *t, const void *image, size_t len) {
-    const uint8_t *p = image;
-    /* File offsets within the 1995 build, derived from the .rdata mapping. */
-    const size_t pulse_off = 0x17e48, noise_off = 0x17e08, gain_off = 0x18488;
-    const size_t log_off = 0x17a08, alog_off = 0x17c08, dur_off = 0x18c20;
+/* Where each table sits in the 1995 build. Other builds carry the same tables
+   at their own offsets, and the ones with no log pair leave those zero. */
+const bst_offsets BST_OFFSETS_1995 = {
+    0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20
+};
 
-    if (len < gain_off + BST_GAIN_ENTRIES * 2) return -1;
-    memcpy(t->pulse, p + pulse_off, sizeof t->pulse);
-    memcpy(t->noise, p + noise_off, sizeof t->noise);
-    memcpy(t->gain,  p + gain_off,  sizeof t->gain);
-    memcpy(t->log,   p + log_off,   sizeof t->log);
-    memcpy(t->alog,  p + alog_off,  sizeof t->alog);
-    memcpy(t->duration, p + dur_off, sizeof t->duration);
+int bst_tables_load_at(bst_tables *t, const void *image, size_t len,
+                       const bst_offsets *o) {
+    const uint8_t *p = image;
+    memset(t, 0, sizeof *t);
+    if (o->pulse + sizeof t->pulse > len) return -1;
+    if (o->noise + sizeof t->noise > len) return -1;
+    if (o->gain  + sizeof t->gain  > len) return -1;
+    memcpy(t->pulse, p + o->pulse, sizeof t->pulse);
+    memcpy(t->noise, p + o->noise, sizeof t->noise);
+    memcpy(t->gain,  p + o->gain,  sizeof t->gain);
+    /* The 2006 builds have no log pair: their interpolation is not in the
+       log domain, and the lattice never reads them. */
+    if (o->log  && o->log  + sizeof t->log  <= len) memcpy(t->log,  p + o->log,  sizeof t->log);
+    if (o->alog && o->alog + sizeof t->alog <= len) memcpy(t->alog, p + o->alog, sizeof t->alog);
+    if (o->duration && o->duration + sizeof t->duration <= len)
+        memcpy(t->duration, p + o->duration, sizeof t->duration);
     return 0;
+}
+
+int bst_tables_load(bst_tables *t, const void *image, size_t len) {
+    return bst_tables_load_at(t, image, len, &BST_OFFSETS_1995);
 }
