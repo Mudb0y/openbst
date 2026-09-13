@@ -95,7 +95,8 @@ int bst_tok_read(bst_tok *t) { return rd(t); }
    the tail the reader adds, which is why an abbreviation at the very end of a
    text keeps its full stop and one in the middle does not. */
 int bst_tok_peek_read(bst_tok *t) {
-    if (t->cur + 1 > t->realend) return 0xFFFF;
+    if (t->push) { if (t->cur + 1 > t->realend) return 0xFFFF; }
+    else if (t->tp >= t->tn) return 0xFFFF;
     return rd(t);
 }
 

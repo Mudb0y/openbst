@@ -221,9 +221,12 @@ static void choose(bst_tok *t, uint8_t *rec, int n, const uint8_t *word,
         int end = i - 1;
         int ok = 1;
         while (i < n && rec[i] >= COND_LO && rec[i] <= COND_HI) {
-            if (!condition(t, rec[i], word, wlen)) ok = 0;
+            /* The engine stops at the first condition that fails, and some
+               of them have side effects, so stopping matters. */
+            if (!condition(t, rec[i], word, wlen)) { ok = 0; i++; break; }
             i++;
         }
+        while (i < n && rec[i] >= COND_LO && rec[i] <= COND_HI) i++;
         if (ok) { *from = start; *to = end; return; }
         start = i;
     }
