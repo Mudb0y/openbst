@@ -55,8 +55,12 @@ static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
 
 /* ---- input ------------------------------------------------------------- */
 
-static int source(bst_tok *t) {
+/* Returns the next character, and says whether it came from the text or from
+   the tail, because the lookahead must not read into the tail. */
+static int source(bst_tok *t, int *real) {
+    *real = 1;
     if (t->tp < t->tn) return t->text[t->tp++];
+    *real = 0;
     if (t->tail < (int)(sizeof TAIL)) return TAIL[t->tail++];
     return 0xFFFF;
 }
@@ -67,18 +71,21 @@ static int rd(bst_tok *t) {
         t->cur++;
         return t->ring[t->cur] == 0xFF ? 0xFFFF : t->ring[t->cur];
     }
-    int c = source(t);
+    int real = 0;
+    int c = source(t, &real);
     if (c == 0xFFFF) {
         if (t->cur + 1 < BST_TOK_RING) t->ring[++t->cur] = 0xFF;
         return 0xFFFF;
     }
     if (c == 0x5C) {
-        int d = source(t);
+        int dreal;
+        int d = source(t, &dreal);
         if (d == 0x7E) c = 0x7E;
         else if (d != 0x5C && d != 0xFFFF) { if (t->tp > 0) t->tp--; else t->tail--; }
     }
     if (t->cur + 1 < BST_TOK_RING) t->ring[++t->cur] = (uint8_t)c;
     if (t->cur + 1 > t->nring) t->nring = t->cur + 1;
+    if (real && t->cur > t->realend) t->realend = t->cur;
     return c;
 }
 
@@ -88,7 +95,7 @@ int bst_tok_read(bst_tok *t) { return rd(t); }
    the tail the reader adds, which is why an abbreviation at the very end of a
    text keeps its full stop and one in the middle does not. */
 int bst_tok_peek_read(bst_tok *t) {
-    if (!t->push && t->tp >= t->tn) return 0xFFFF;
+    if (t->cur + 1 > t->realend) return 0xFFFF;
     return rd(t);
 }
 
@@ -183,6 +190,7 @@ static void punct_out(bst_tok *t, int c) {
 }
 
 static void dot_out(bst_tok *t, int c) {
+    (void)c;
     t->sentence = 0;
     t->prevkind = t->kind;
     t->kind = 3;
@@ -514,6 +522,7 @@ void bst_tok_init(bst_tok *t, const bst_image *img, const char *text) {
     t->tn = (int)strlen(text);
     t->cur = -1;
     t->start = 0;
+    t->realend = -1;
     t->lastout = ' ';
     t->textmode = 1;
     t->breath = 0x3C;

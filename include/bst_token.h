@@ -32,6 +32,7 @@ typedef struct {
 
     uint8_t  ring[BST_TOK_RING];
     int      nring, cur, start, push;
+    int      realend;    /* the last ring position that came from the text */
 
     uint8_t  out[BST_TOK_OUT];
     int      nout, lastout, overflow;
