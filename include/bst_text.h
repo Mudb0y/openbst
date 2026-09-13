@@ -32,6 +32,24 @@ typedef struct {
 
 int  bst_image_init(bst_image *img, const void *data, size_t len);
 
+/* A phoneme record: a type letter and two operands, which is the form the
+   rest of the engine consumes. */
+typedef struct {
+    uint8_t type;      /* 'T' 'X' 'A' 'S' 'V' 'C' 'P' */
+    uint8_t a, b;
+} bst_rec;
+
+#define BST_RECS_MAX 64
+
+typedef struct {
+    bst_rec rec[BST_RECS_MAX];
+    int     n;
+} bst_recs;
+
+/* Looks a normalised word up in the dictionary. Returns 1 and fills out on a
+   hit, 0 on a miss, in which case the caller should fall back to the rules. */
+int  bst_dict_lookup(const bst_image *img, const bst_word *w, bst_recs *out);
+
 /* Copies a word into the engine's working form and strips one inflectional
    suffix. Mirrors the original exactly, including that the stem check can
    collapse a doubled consonant, restore a silent e, or refuse the strip. */

@@ -26,7 +26,15 @@ int main(int argc, char **argv) {
         if (!line[0]) continue;
         bst_word w;
         bst_normalise(&img, line, &w);
-        printf("%s %s %02x\n", line, w.buf, w.flags);
+        bst_recs r;
+        int hit = bst_dict_lookup(&img, &w, &r);
+        printf("%s %s %02x", line, w.buf, w.flags);
+        if (hit) {
+            printf(" dict");
+            for (int i = 0; i < r.n; i++)
+                printf(" %c%d,%d", r.rec[i].type, r.rec[i].a, r.rec[i].b);
+        } else printf(" miss");
+        printf("\n");
     }
     free(d);
     return 0;

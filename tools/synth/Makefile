@@ -54,8 +54,12 @@ $(BUILD)/normtest.o: normtest.c ../../include/bst_text.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BIN5): $(BUILD)/text_core.o $(BUILD)/normtest.o
-	$(CC) $(BUILD)/text_core.o $(BUILD)/normtest.o -o $@
+$(BUILD)/dict_core.o: ../../src/dict.c ../../include/bst_text.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN5): $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/normtest.o
+	$(CC) $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/normtest.o -o $@
 
 clean:
 	rm -f $(OBJ) $(CORE) $(BIN) $(BIN2) $(BUILD)/interptest.o
