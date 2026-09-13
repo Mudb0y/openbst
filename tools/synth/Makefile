@@ -20,9 +20,10 @@ pairtest_MODS   := text cursors pairs diphone
 acctest_MODS    := text cursors accents
 contest_MODS    := text cursors contour
 frametest_MODS  := text cursors diphone frames interp synth
+pipetest_MODS   := text cursors accents pairs contour diphone frames interp synth
 say_MODS        := text dict lts cursors
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 
