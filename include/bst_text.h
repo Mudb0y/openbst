@@ -163,6 +163,35 @@ typedef struct {
 int bst_accents(const bst_image *img, uint8_t *stream, int len,
                 bst_accent_state *st);
 
+/* ---- the intonation contour ---------------------------------------------
+
+   The voice's pitch table spans its range in fourteen steps; an accent code is
+   an index into it. The contour generator walks the accents emitting one
+   record each: the pitch period to head for, how many segments to take getting
+   there, and the shape of the move. */
+
+typedef struct {
+    int   base;        /* the voice's floor, in hertz */
+    int   top;         /* the stored ceiling the range commands scale */
+    int   voicebase;   /* the floor to fall back to */
+    int   level;       /* the default pitch level index */
+    int   emphasis;
+    int   voice;
+    int   strong;      /* the group cursor's value, carried between calls */
+    int   mid, hi;     /* the current middle and ceiling */
+    short table[14];
+} bst_pitch;
+
+typedef struct {
+    uint8_t kind;      /* 2 a move, 1 the close */
+    uint8_t period;
+    int16_t dur;
+    int16_t slope;
+} bst_contour_rec;
+
+int bst_contour(const bst_image *img, const uint8_t *stream, int len,
+                bst_pitch *p, bst_contour_rec *out, int max);
+
 /* ---- diphone expansion --------------------------------------------------
 
    A segment's index names an entry in the diphone inventory, and the entry

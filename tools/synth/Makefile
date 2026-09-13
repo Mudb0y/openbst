@@ -18,9 +18,10 @@ curtest_MODS    := text cursors
 phtest_MODS     := text cursors phrules
 pairtest_MODS   := text cursors pairs diphone
 acctest_MODS    := text cursors accents
+contest_MODS    := text cursors contour
 say_MODS        := text dict lts cursors
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 
