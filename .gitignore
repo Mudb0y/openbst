@@ -5,3 +5,4 @@ build/
 *.wav
 result
 result-*
+__pycache__/
