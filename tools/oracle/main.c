@@ -294,9 +294,11 @@ int main(int argc, char **argv) {
         }
 
         if (phrules) {
-            const uint32_t a[1] = { pr->stream };
-            const int      l[1] = { 96 };
-            emu_hook_dump(e, pr->rules_before, a, l, 1, 'B', stdout);
+            /* The length matters: the pass stops at the last phrase marker
+               within it, and the buffer past that is the previous phrase. */
+            const uint32_t a[2] = { pr->stream, 0x1001b69c };
+            const int      l[2] = { 256, 2 };
+            emu_hook_dump(e, pr->rules_before, a, l, 2, 'B', stdout);
             emu_hook_dump(e, pr->rules_after,  a, l, 1, 'A', stdout);
         }
 

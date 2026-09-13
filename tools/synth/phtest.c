@@ -7,10 +7,14 @@
    is the bar that matters: the pass rewrites few positions, so doing nothing
    already scores about 95%. */
 
-static int hexline(const char *l, uint8_t *out, int max) {
-    const char *p = strchr(l, '|');
-    if (!p) return -1;
-    p++;
+/* Reads the nth "|"-delimited field of a capture line as hex bytes. */
+static int hexfield(const char *l, int field, uint8_t *out, int max) {
+    const char *p = l;
+    for (int k = 0; k <= field; k++) {
+        p = strchr(p, '|');
+        if (!p) return -1;
+        p++;
+    }
     int n = 0;
     while (n < max) {
         unsigned v;
@@ -20,6 +24,10 @@ static int hexline(const char *l, uint8_t *out, int max) {
         p += 2;
     }
     return n;
+}
+
+static int hexline(const char *l, uint8_t *out, int max) {
+    return hexfield(l, 0, out, max);
 }
 
 extern int bst_rule_mask;
@@ -42,17 +50,25 @@ int main(int argc, char **argv) {
     if (!g) return 1;
 
     char line[1024];
-    uint8_t before[256], after[256], ours[256];
+    uint8_t before[512], after[512], ours[512];
     int have = 0, blen = 0;
     int shown = 0;
     long ok = 0, tot = 0, exact = 0, streams = 0, base_ok = 0, base_exact = 0;
 
     while (fgets(line, sizeof line, g)) {
-        if (line[0] == 'B') { blen = hexline(line, before, sizeof before); have = blen > 0; }
+        if (line[0] == 'B') {
+            blen = hexline(line, before, sizeof before);
+            uint8_t lb[2];
+            if (hexfield(line, 1, lb, 2) == 2) {
+                int real = lb[0] | (lb[1] << 8);
+                if (real > 0 && real < blen) blen = real;
+            }
+            have = blen > 0;
+        }
         else if (line[0] == 'A' && have) {
             int alen = hexline(line, after, sizeof after);
             have = 0;
-            if (alen != blen) continue;
+            if (alen < blen) continue;
             memcpy(ours, before, (size_t)blen);
             bst_phrules(&img, ours, blen, (int)sizeof ours, 0);
             streams++;
@@ -80,5 +96,5 @@ int main(int argc, char **argv) {
     printf("        identity %ld/%ld positions, %ld/%ld streams\n", base_ok, tot, base_exact, streams);
     printf("        %s\n", (ok >= base_ok && exact >= base_exact)
                            ? "at or ahead of the baseline" : "BELOW the baseline");
-    return 0;
+    return ok == tot ? 0 : 1;
 }
