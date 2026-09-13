@@ -7,10 +7,11 @@ BIN4   := $(BUILD)/durtest
 BIN5   := $(BUILD)/normtest
 BIN6   := $(BUILD)/curtest
 BIN7   := $(BUILD)/phtest
+BIN8   := $(BUILD)/say
 OBJ    := $(BUILD)/synth_core.o $(BUILD)/synth_main.o
 CORE   := $(BUILD)/synth_core.o $(BUILD)/interp_core.o
 
-all: $(BIN) $(BIN2) $(BIN3) $(BIN4) $(BIN5) $(BIN6) $(BIN7)
+all: $(BIN) $(BIN2) $(BIN3) $(BIN4) $(BIN5) $(BIN6) $(BIN7) $(BIN8)
 
 $(BUILD)/synth_core.o: ../../src/synth.c ../../include/bst_synth.h
 	@mkdir -p $(BUILD)
@@ -84,6 +85,13 @@ $(BUILD)/phtest.o: phtest.c ../../include/bst_text.h
 
 $(BIN7): $(BUILD)/text_core.o $(BUILD)/ph_core.o $(BUILD)/phtest.o
 	$(CC) $(BUILD)/text_core.o $(BUILD)/ph_core.o $(BUILD)/phtest.o -o $@
+
+$(BUILD)/say.o: say.c ../../include/bst_text.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN8): $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/say.o
+	$(CC) $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/say.o -o $@
 
 clean:
 	rm -f $(OBJ) $(CORE) $(BIN) $(BIN2) $(BUILD)/interptest.o

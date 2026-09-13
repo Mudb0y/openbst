@@ -328,3 +328,16 @@ void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
     for (int i = 1; i <= n; i++) out->buf[i - 1] = b.buf[i];
     out->len = n;
 }
+
+int bst_word_pronounce(const bst_image *img, const char *word,
+                       bst_recs *recs, bst_stream *stream) {
+    bst_word w;
+    bst_normalise(img, word, &w);
+
+    memset(recs, 0, sizeof *recs);
+    memset(stream, 0, sizeof *stream);
+
+    if (bst_dict_lookup(img, &w, recs)) return 1;
+    bst_lts(img, &w, stream);
+    return 0;
+}

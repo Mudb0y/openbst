@@ -71,6 +71,17 @@ int  bst_phrules(const bst_image *img, uint8_t *stream, int len, int cap, int em
    rules. Always succeeds: the rule set has a default for every letter. */
 void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out);
 
+/* The whole word path in one call: normalise, look the word up, fall back to
+   the rules, and restore the stripped suffix. Returns 1 if the pronunciation
+   came from the dictionary, 0 if from the rules.
+
+   Dictionary hits come back as typed records and rule results as a code
+   stream, because that is how the engine keeps them; the caller gets whichever
+   applies and recs->n is zero when the stream was used. Converting one into
+   the other is a later stage that is not reproduced yet. */
+int  bst_word_pronounce(const bst_image *img, const char *word,
+                        bst_recs *recs, bst_stream *stream);
+
 /* Copies a word into the engine's working form and strips one inflectional
    suffix. Mirrors the original exactly, including that the stem check can
    collapse a doubled consonant, restore a silent e, or refuse the strip. */
