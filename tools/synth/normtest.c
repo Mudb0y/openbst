@@ -33,7 +33,12 @@ int main(int argc, char **argv) {
             printf(" dict");
             for (int i = 0; i < r.n; i++)
                 printf(" %c%d,%d", r.rec[i].type, r.rec[i].a, r.rec[i].b);
-        } else printf(" miss");
+        } else {
+            bst_stream s;
+            bst_lts(&img, &w, &s);
+            printf(" lts");
+            for (int i = 0; i < s.len; i++) printf(" %02X", s.buf[i]);
+        }
         printf("\n");
     }
     free(d);

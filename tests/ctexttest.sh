@@ -11,7 +11,7 @@ trap 'rm -rf "$work"' EXIT
 
 "$root/build/normtest" "$dll" < "$words" > "$work/ours.txt"
 
-nok=0 nbad=0 nskip=0 dok=0 dbad=0
+nok=0 nbad=0 nskip=0 dok=0 dbad=0 lok=0 lbad=0
 while read -r w mine _flags kind recs; do
     eng=$("$root/build/oracle" --dll "$dll" --lts "$w" 2>/dev/null | grep '^B' | head -1 |
           sed 's/.*| //' | tr ' ' '\n' |
@@ -21,6 +21,16 @@ while read -r w mine _flags kind recs; do
         else nbad=$((nbad + 1)); [ "$nbad" -le 6 ] && echo "  NORM $w: engine [$eng] C [$mine]"; fi
     else nskip=$((nskip + 1)); fi
 
+    if [ "$kind" = "lts" ]; then
+        engstream=$("$root/build/oracle" --dll "$dll" --speak "$w" --snap 0x1000efee:0x10019330:48 2>/dev/null |
+                    head -1 | sed 's/^S | //' | cut -d' ' -f2-)
+        [ -z "$engstream" ] && continue
+        n=$(echo "$recs" | wc -w)
+        engtrim=$(echo "$engstream" | cut -d' ' -f1-"$n")
+        if [ "$engtrim" = "$(echo $recs)" ]; then lok=$((lok + 1))
+        else lbad=$((lbad + 1)); [ "$lbad" -le 6 ] && echo "  LTS $w: engine [$engtrim] C [$(echo $recs)]"; fi
+        continue
+    fi
     [ "$kind" != "dict" ] && continue
     engrec=$("$root/build/oracle" --dll "$dll" --speak "$w" --recat 0x1000faa0:0:48 2>/dev/null |
              head -1 | sed 's/^R //' | tr ' ' '\n' |
@@ -34,4 +44,5 @@ done < "$work/ours.txt"
 
 echo "ctexttest: normaliser $nok identical / $nbad differing / $nskip skipped"
 echo "           dictionary $dok identical / $dbad differing"
-[ "$nbad" -eq 0 ] && [ "$dbad" -eq 0 ]
+echo "           rules      $lok identical / $lbad differing"
+[ "$nbad" -eq 0 ] && [ "$dbad" -eq 0 ] && [ "$lbad" -eq 0 ]

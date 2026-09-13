@@ -50,6 +50,21 @@ typedef struct {
    hit, 0 on a miss, in which case the caller should fall back to the rules. */
 int  bst_dict_lookup(const bst_image *img, const bst_word *w, bst_recs *out);
 
+/* The rule path produces a phoneme code stream rather than typed records: a
+   code that opens a group occupies the middle of three slots, and modifiers
+   are written into the slots either side of it. The dictionary's typed records
+   are converted into this same form by a later stage. */
+#define BST_STREAM_MAX 128
+
+typedef struct {
+    uint8_t buf[BST_STREAM_MAX];
+    int     len;                 /* bytes written, excluding the leading slot */
+} bst_stream;
+
+/* Pronounces a word the dictionary does not hold, by the letter-to-sound
+   rules. Always succeeds: the rule set has a default for every letter. */
+void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out);
+
 /* Copies a word into the engine's working form and strips one inflectional
    suffix. Mirrors the original exactly, including that the stem check can
    collapse a doubled consonant, restore a silent e, or refuse the strip. */
