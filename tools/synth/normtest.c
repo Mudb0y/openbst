@@ -27,18 +27,10 @@ int main(int argc, char **argv) {
         bst_word w;
         bst_normalise(&img, line, &w);
         bst_recs r;
-        int hit = bst_dict_lookup(&img, &w, &r);
-        printf("%s %s %02x", line, w.buf, w.flags);
-        if (hit) {
-            printf(" dict");
-            for (int i = 0; i < r.n; i++)
-                printf(" %c%d,%d", r.rec[i].type, r.rec[i].a, r.rec[i].b);
-        } else {
-            bst_stream s;
-            bst_lts(&img, &w, &s);
-            printf(" lts");
-            for (int i = 0; i < s.len; i++) printf(" %02X", s.buf[i]);
-        }
+        bst_stream st;
+        int hit = bst_word_pronounce(&img, line, &r, &st);
+        printf("%s %s %02x %s", line, w.buf, w.flags, hit ? "dict" : "lts");
+        for (int i = 0; i < st.len; i++) printf(" %02X", st.buf[i]);
         printf("\n");
     }
     free(d);

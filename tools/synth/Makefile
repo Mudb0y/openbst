@@ -6,14 +6,14 @@ INC    := ../../include
 # Every test driver is one .c here linked against the library modules it
 # needs; the lists below are the only per-binary detail.
 SYNTH   := synth interp
-TEXT    := text dict lts cursors
+TEXT    := text dict lts cursors wordstream
 CORE    := synth interp text dict lts cursors phrules pairs
 
 synth_MODS      := synth interp
 interptest_MODS := synth interp
 prosodytest_MODS:= synth interp
 durtest_MODS    := synth interp
-normtest_MODS   := text dict lts cursors
+normtest_MODS   := text dict lts cursors wordstream
 curtest_MODS    := text cursors
 phtest_MODS     := text cursors phrules
 pairtest_MODS   := text cursors pairs diphone
@@ -21,7 +21,7 @@ acctest_MODS    := text cursors accents
 contest_MODS    := text cursors contour
 frametest_MODS  := text cursors diphone frames interp synth
 pipetest_MODS   := text cursors accents pairs contour diphone frames interp synth
-say_MODS        := text dict lts cursors
+say_MODS        := text dict lts cursors wordstream
 
 BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest say
 

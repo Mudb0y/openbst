@@ -184,128 +184,13 @@ static int try_at(const bst_image *img, const unsigned char *t, int len, int pos
     return best;
 }
 
-/* Turns phoneme codes into records. A code whose attribute opens a group takes
-   three slots, one before it, itself and one after; codes that do not open a
-   group are written into whichever of those slots their attributes select. */
-typedef struct {
-    unsigned char buf[128];
-    int pos, before, at, after, stopped;
-} builder;
-
-static void build_init(builder *b) {
-    memset(b, 0, sizeof *b);
-    b->before = b->at = b->after = -1;
-}
-
-static void build_emit(const bst_image *img, builder *b, int code) {
-    if (b->stopped) return;
-    int p = b->pos;
-    if (p >= 0x60) { b->stopped = 1; return; }
-
-    int a1 = ru8(img, PH_ATTR1 + (uint32_t)code);
-    int a2 = ru8(img, PH_ATTR2 + (uint32_t)code);
-    int opens = (a1 & 0x80) || code == 0x4C || code == 0x49;
-
-    if (!opens) {
-        int special = code > 0x75 && code < 0x7C;
-        if (!(a2 & 2) && !special) {
-            if (!(a2 & 4)) {
-                p = b->pos;
-                b->pos = p + 1;
-                b->before = b->at = b->after = -1;
-            } else if (b->at == -1) {
-                if (b->after == -1) return;
-                p = b->after;
-                b->after = -1;
-            } else {
-                p = b->at;
-                b->before = b->at = -1;
-            }
-        } else {
-            p = b->before;
-            if (p == -1) return;
-            b->before = -1;
-        }
-    } else {
-        b->before = p + 1;
-        b->at = p + 2;
-        b->after = p + 3;
-        b->pos = p + 4;
-        for (int k = 3; k <= 5; k++)
-            if (p + k < (int)sizeof b->buf) b->buf[p + k] = 0;
-    }
-    if (p + 2 >= 0 && p + 2 < (int)sizeof b->buf) b->buf[p + 2] = (unsigned char)code;
-}
-
-/* Puts back the sound of a suffix the normaliser removed. The flag byte is
-   walked from the top bit down, and each suffix appends codes chosen by what
-   the stem ended on: "churches" gets a different plural from "dogs". */
-static void restore_suffix(const bst_image *img, builder *b, int flags, int y_from_i) {
-    for (int slot = 0; flags; slot++, flags = (flags << 1) & 0xFF) {
-        if (!(flags & 0x80)) continue;
-        int last = (b->pos + 1 < (int)sizeof b->buf) ? b->buf[b->pos + 1] : 0;
-        int code;
-
-        switch (slot) {
-        case 0:                                   /* -ed */
-            build_emit(img, b, 0x49);
-            if (last == 0x18 || last == 0x14) {
-                build_emit(img, b, 0x24);
-                build_emit(img, b, 0x76);
-                code = 0x14;
-            } else if (last != 0 && (last < 4 || last == 0x0D || last == 0x1C ||
-                                     last == 0x16 || last == 0x0B)) {
-                code = 0x18;
-            } else {
-                code = 0x14;
-            }
-            break;
-        case 1:                                   /* -ing */
-            build_emit(img, b, 0x49);
-            build_emit(img, b, 0x29);
-            build_emit(img, b, 0x76);
-            code = 0x10;
-            break;
-        case 2:                                   /* -ly */
-            if (last == 0x11) {
-                code = 0x49;
-            } else {
-                /* When the stem's i became a y, a preceding vowel marker is
-                   promoted before the suffix goes on. */
-                if (y_from_i && b->pos >= 2 && b->buf[b->pos - 2] == 0x23)
-                    b->buf[b->pos - 2] = 0x24;
-                build_emit(img, b, 0x49);
-                code = 0x11;
-            }
-            build_emit(img, b, code);
-            build_emit(img, b, 0x23);
-            code = 0x76;
-            break;
-        case 3:                                   /* -s */
-        case 4:                                   /* -'s */
-            build_emit(img, b, 0x49);
-            if (last < 0x0E && ((1u << (last & 0x1F)) & 0x38C8u)) {
-                build_emit(img, b, 0x29);
-                build_emit(img, b, 0x76);
-                code = 6;
-            } else if (last < 0x1D && (last > 0x15 || last == 1 || last == 2)) {
-                code = 0x0D;
-            } else {
-                code = 6;
-            }
-            break;
-        default:
-            return;
-        }
-        build_emit(img, b, code);
-    }
-}
-
-void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
+/* The rule pass on its own, into a builder the caller owns. A dictionary
+   entry is a set of corrections to this rather than a replacement for it, so
+   both paths start here unless the entry says to throw it away. */
+void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp) {
     const unsigned char *t = (const unsigned char *)w->buf;
     int len = w->len;
-    builder b;
-    build_init(&b);
+    bst_builder b = *bp;
 
     int pos = 1;
     while (pos < len && t[pos] != '_' && t[pos]) {
@@ -316,17 +201,39 @@ void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
         int prio, next, patoff, outoff;
         rule_fields(img, ridx, &prio, &next, &patoff, &outoff);
         const char *o = pat_at(img, OUTPUTS + (uint32_t)outoff);
-        for (; *o; o++) build_emit(img, &b, (unsigned char)*o);
+        for (; *o; o++) bst_build_emit(img, &b, (unsigned char)*o);
         pos += used > 0 ? used : 1;
     }
+    *bp = b;
+}
 
-    if (w->flags) restore_suffix(img, &b, w->flags, w->y_from_i);
-
+/* Copies a builder out as the stream form the caller sees: the flag byte
+   first, then the codes. */
+static void build_out(const bst_builder *b, bst_stream *out) {
     memset(out, 0, sizeof *out);
-    int n = b.pos + 2;
+    int n = b->pos + 2;
     if (n > BST_STREAM_MAX - 1) n = BST_STREAM_MAX - 1;
-    for (int i = 1; i <= n; i++) out->buf[i - 1] = b.buf[i];
+    for (int i = 1; i <= n; i++) out->buf[i - 1] = b->buf[i];
     out->len = n;
+}
+
+void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
+    bst_builder b;
+    bst_build_init(&b);
+    bst_lts_build(img, w, &b);
+    if (w->flags) bst_build_suffix(img, &b, w->flags, w->y_from_i);
+    build_out(&b, out);
+}
+
+/* A dictionary entry keeps its suffix pronunciations after the main records,
+   each introduced by an 'A' record naming which suffix it is. */
+static int suffix_block(const bst_recs *r, int flags) {
+    int want = (flags & 0xF8) >> 3;
+    for (int i = 0; i < r->n; i++) {
+        if (!r->rec[i].type) break;
+        if (r->rec[i].type == 'A' && r->rec[i].a == want) return i + 1;
+    }
+    return -1;
 }
 
 int bst_word_pronounce(const bst_image *img, const char *word,
@@ -337,7 +244,25 @@ int bst_word_pronounce(const bst_image *img, const char *word,
     memset(recs, 0, sizeof *recs);
     memset(stream, 0, sizeof *stream);
 
-    if (bst_dict_lookup(img, &w, recs)) return 1;
+    if (bst_dict_lookup(img, &w, recs)) {
+        bst_builder b;
+        bst_build_init(&b);
+        /* Unless the entry opens by throwing it away, the records correct
+           what the rules produce rather than replacing it. */
+        if (recs->n == 0 || recs->rec[0].type != 'T')
+            bst_lts_build(img, &w, &b);
+        int stress = 0, accent = 0;
+        bst_recs_to_stream(img, recs->rec, recs->n, &b, 0, &stress, &accent);
+        if (w.flags) {
+            bst_build_suffix(img, &b, w.flags, w.y_from_i);
+            int k = suffix_block(recs, w.flags);
+            if (k >= 0)
+                bst_recs_to_stream(img, recs->rec + k, recs->n - k, &b, 1,
+                                   &stress, &accent);
+        }
+        build_out(&b, stream);
+        return 1;
+    }
     bst_lts(img, &w, stream);
     return 0;
 }

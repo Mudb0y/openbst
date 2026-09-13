@@ -8,10 +8,21 @@
    Everything here reads its tables out of a loaded BeSTspeech image rather
    than embedding them, so the library carries no lifted data of its own. */
 
+#define BST_SECTIONS 16
+
 typedef struct {
     const uint8_t *image;
     size_t         len;
+    /* The section map, so an address in the image can be followed wherever it
+       points. Most tables live in .rdata, but the pronunciation modifiers are
+       a table of pointers into .data. */
+    uint32_t base;
+    int      nsec;
+    struct { uint32_t va, vsize, raw, rawsize; } sec[BST_SECTIONS];
 } bst_image;
+
+/* Returns a pointer to `need` bytes at a virtual address, or NULL. */
+const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need);
 
 /* Suffixes the normaliser strips, recorded so a later stage can restore the
    sound. */
@@ -62,6 +73,30 @@ typedef struct {
     uint8_t buf[BST_STREAM_MAX];
     int     len;                 /* bytes written, excluding the leading slot */
 } bst_stream;
+
+/* The stream builder both word paths write through. A sound that opens a
+   syllable takes four slots, itself and three after it, and a sound that does
+   not opens none: it goes into whichever of the open slots its attributes
+   select, or is appended. */
+typedef struct {
+    unsigned char buf[128];
+    int pos, before, at, after, stopped;
+} bst_builder;
+
+void bst_build_init(bst_builder *b);
+void bst_build_emit(const bst_image *img, bst_builder *b, int code);
+void bst_build_suffix(const bst_image *img, bst_builder *b, int flags, int y_from_i);
+void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *b);
+
+/* Applies the dictionary's typed records to a code stream, which is the form
+   the rest of the engine wants. The two flags carry the "a main stress has
+   been placed" and "a secondary has" state across the stem and the suffix, so
+   a suffix that wants the stress can take it off the stem.
+
+   Returns the new stream length, or -1 on overflow. */
+int  bst_recs_to_stream(const bst_image *img, const bst_rec *rec, int nrec,
+                        bst_builder *b, int suffix,
+                        int *stress_seen, int *accent_seen);
 
 /* Applies the phonological rule pass to a sentence phoneme stream in place.
    Returns the number of rewrites; the stream may grow, up to cap. */

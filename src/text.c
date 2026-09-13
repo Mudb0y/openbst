@@ -14,9 +14,46 @@
 
 int bst_image_init(bst_image *img, const void *data, size_t len) {
     if (!data || len < 0x20000) return -1;
-    img->image = data;
+    const uint8_t *d = data;
+    img->image = d;
     img->len = len;
+    img->nsec = 0;
+    img->base = 0;
+
+    uint32_t pe = (uint32_t)(d[0x3C] | (d[0x3D] << 8) | (d[0x3E] << 16) | (d[0x3F] << 24));
+    if (pe + 0x100 >= len || d[pe] != 'P' || d[pe + 1] != 'E') return 0;
+    int nsec = d[pe + 6] | (d[pe + 7] << 8);
+    int optsz = d[pe + 20] | (d[pe + 21] << 8);
+    const uint8_t *o = d + pe + 24 + 28;
+    img->base = (uint32_t)(o[0] | (o[1] << 8) | (o[2] << 16) | (o[3] << 24));
+    if (nsec > BST_SECTIONS) nsec = BST_SECTIONS;
+    for (int i = 0; i < nsec; i++) {
+        const uint8_t *h = d + pe + 24 + optsz + i * 40 + 8;
+        uint32_t v[4];
+        for (int k = 0; k < 4; k++)
+            v[k] = (uint32_t)(h[k * 4] | (h[k * 4 + 1] << 8) |
+                              (h[k * 4 + 2] << 16) | (h[k * 4 + 3] << 24));
+        img->sec[img->nsec].vsize   = v[0];
+        img->sec[img->nsec].va      = v[1];
+        img->sec[img->nsec].rawsize = v[2];
+        img->sec[img->nsec].raw     = v[3];
+        img->nsec++;
+    }
     return 0;
+}
+
+const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need) {
+    if (!img->nsec) return NULL;
+    uint32_t rva = va - img->base;
+    for (int i = 0; i < img->nsec; i++) {
+        uint32_t sz = img->sec[i].vsize > img->sec[i].rawsize
+                    ? img->sec[i].vsize : img->sec[i].rawsize;
+        if (rva < img->sec[i].va || rva >= img->sec[i].va + sz) continue;
+        size_t off = img->sec[i].raw + (rva - img->sec[i].va);
+        if (off + need > img->len) return NULL;
+        return img->image + off;
+    }
+    return NULL;
 }
 
 static int attr(const bst_image *img, int c) {
