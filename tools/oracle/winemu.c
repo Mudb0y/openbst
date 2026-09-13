@@ -225,6 +225,30 @@ static void hook_drain(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     uc_mem_write(e->uc, e->drain_idx, &zero, 2);
 }
 
+/* Logs the stack arguments each time control reaches a chosen entry point.
+   Reading the arguments beats inferring them from a data trace, because the
+   index arithmetic that produced them is often several instructions of
+   lea-chains that are easy to misread. */
+static void hook_call(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)addr; (void)size;
+    emu *e = ud;
+    if (!e->calllog) return;
+    uint32_t esp = 0;
+    uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
+    fprintf(e->calllog, "call");
+    for (int i = 0; i < e->hook_nargs; i++)
+        fprintf(e->calllog, " %d", (int32_t)emu_rd32(e, esp + 4 + 4 * i));
+    fprintf(e->calllog, "\n");
+}
+
+void emu_hook_call(emu *e, uint32_t pc, int nargs, FILE *out) {
+    e->calllog = out;
+    e->hook_pc = pc;
+    e->hook_nargs = nargs;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_call, e, pc, pc);
+}
+
 void emu_drain_setup(emu *e, uint32_t idx_addr, uint32_t buf_addr, int threshold,
                      uint32_t after_pc) {
     e->drain_idx = idx_addr;

@@ -98,6 +98,11 @@ struct emu {
        Draining copies the contents out and rewinds the index whenever it
        approaches the limit, which the append routine tolerates because it
        re-reads the index for every character. */
+    /* Argument logging at a chosen function entry. */
+    FILE    *calllog;
+    uint32_t hook_pc;
+    int      hook_nargs;
+
     uint32_t drain_idx, drain_buf;
     int      drain_at;
     char    *acc;
@@ -124,6 +129,7 @@ int      emu_write(emu *e, uint32_t addr, const void *src, uint32_t n);
 void     emu_trace_reads(emu *e, FILE *out);
 void     emu_watch_writes(emu *e, FILE *out, uint32_t lo, uint32_t hi);
 void     emu_drain_setup(emu *e, uint32_t idx_addr, uint32_t buf_addr, int threshold, uint32_t after_pc);
+void     emu_hook_call(emu *e, uint32_t pc, int nargs, FILE *out);
 void     emu_drain_flush(emu *e);
 const char *emu_drained(emu *e, size_t *len);
 void     emu_report_shims(emu *e);

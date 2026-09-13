@@ -25,6 +25,13 @@ typedef struct {
        index; where the buffer can safely be drained and rewound. */
     uint32_t phbuf_after_inc;
 
+    /* Acoustic target table: ten signed bytes per entry, addressed as
+       base + (voice * 410 + phoneme * 10 + variant) * 10. The engine doubles
+       each byte into a Q8 reflection coefficient. Voice is validated to 1..6.
+       Steady frames are copied from here; transitions are interpolated. */
+    uint32_t targets;
+    uint32_t voice_sel;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -40,6 +47,8 @@ static const profile profiles[] = {
         .phbuf_cap     = 0x10096284,
         .frame_flags   = 0x1001c020,
         .phbuf_after_inc = 0x1000bbdb,
+        .targets       = 0x10022284,
+        .voice_sel     = 0x10019a5a,
         .default_level = 6,
     },
 };

@@ -21,6 +21,7 @@ static void usage(void) {
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --level N                   verbosity for --phonemes (default 6)\n"
         "  --watch ADDR:LEN[:FILE]     log writes into an address range\n"
+        "  --hook ADDR[:NARGS]         log stack arguments at a function entry\n"
         "  -v                          verbose\n"
         "\n"
         "argument forms: 12345 | 0xabc | str:TEXT | wstr:TEXT | buf:N | ptr:N\n"
@@ -72,6 +73,7 @@ int main(int argc, char **argv) {
     const char *dll = NULL, *out = NULL, *tracepath = NULL;
     const char *calls[32], *pokes[16], *dumps[8];
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
+    const char *hookspec = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -89,6 +91,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc)   frames = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
+        else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
         else if (!strcmp(argv[i], "-v"))     verbose++;
@@ -161,6 +164,14 @@ int main(int argc, char **argv) {
         if (tracepath) {
             FILE *tf = fopen(tracepath, "wb");
             if (tf) emu_trace_reads(e, tf);
+        }
+        if (hookspec) {
+            char hs[256];
+            snprintf(hs, sizeof hs, "%s", hookspec);
+            char *q = NULL;
+            unsigned long pc = strtoul(hs, &q, 0);
+            int na = (q && *q == ':') ? atoi(q + 1) : 2;
+            emu_hook_call(e, (uint32_t)pc, na, stdout);
         }
         if (watchspec) {
             char ws[256];
