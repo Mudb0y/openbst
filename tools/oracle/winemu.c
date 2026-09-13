@@ -328,7 +328,7 @@ static void hook_dump(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
         if (e->dump[s].pc != (uint32_t)addr) continue;
         fprintf(e->dumplog, "%c", e->dump[s].tag);
         for (int r = 0; r < e->dump[s].n; r++) {
-            uint8_t buf[1024];
+            uint8_t buf[8192];
             int n = e->dump[s].len[r] > (int)sizeof buf ? (int)sizeof buf : e->dump[s].len[r];
             if (uc_mem_read(e->uc, e->dump[s].addr[r], buf, n) != UC_ERR_OK) continue;
             fprintf(e->dumplog, " |");
@@ -350,6 +350,10 @@ void emu_hook_dump(emu *e, uint32_t pc, const uint32_t *addrs, const int *lens,
         e->dump[s].addr[i] = addrs[i];
         e->dump[s].len[i] = lens[i];
     }
+    /* The hook walks every slot, so a second slot at the same address needs no
+       second hook -- registering one would print each slot twice. */
+    for (int i = 0; i < s; i++)
+        if (e->dump[i].pc == pc) return;
     uc_hook h;
     uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_dump, e, pc, pc);
 }

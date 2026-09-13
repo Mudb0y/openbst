@@ -19,17 +19,18 @@ phtest_MODS     := text cursors phrules
 pairtest_MODS   := text cursors pairs diphone
 acctest_MODS    := text cursors accents
 contest_MODS    := text cursors contour
+frametest_MODS  := text cursors diphone frames interp synth
 say_MODS        := text dict lts cursors
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 
-$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h
+$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h
+$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
