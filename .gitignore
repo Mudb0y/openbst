@@ -1,0 +1,7 @@
+dll/
+build/
+*.o
+*.pcm
+*.wav
+result
+result-*
