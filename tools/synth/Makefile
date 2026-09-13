@@ -6,7 +6,7 @@ INC    := ../../include
 # Every test driver is one .c here linked against the library modules it
 # needs; the lists below are the only per-binary detail.
 SYNTH   := synth interp
-TEXT    := text dict lts cursors wordstream stress assemble
+TEXT    := text dict lts cursors wordstream stress assemble tokenise
 CORE    := synth interp text dict lts cursors phrules pairs
 
 synth_MODS      := synth interp
@@ -24,17 +24,18 @@ pipetest_MODS   := text cursors accents pairs contour diphone frames interp synt
 stresstest_MODS := text cursors stress
 asmtest_MODS    := text cursors stress assemble
 fulltest_MODS   := text cursors stress assemble phrules accents pairs contour diphone frames interp synth
+toktest_MODS    := text cursors tokenise wordstream dict lts
 say_MODS        := text dict lts cursors wordstream
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest fulltest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest fulltest toktest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 
-$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h
+$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h
+$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
