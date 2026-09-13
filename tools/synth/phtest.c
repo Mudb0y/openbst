@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
     char line[1024];
     uint8_t before[256], after[256], ours[256];
     int have = 0, blen = 0;
+    int shown = 0;
     long ok = 0, tot = 0, exact = 0, streams = 0, base_ok = 0, base_exact = 0;
 
     while (fgets(line, sizeof line, g)) {
@@ -62,6 +63,15 @@ int main(int argc, char **argv) {
                 if (before[i] == after[i]) base_ok++; else bbad++;
             }
             if (!bad) exact++;
+            else if (shown < 4) {
+                shown++;
+                fprintf(stderr, "  stream %ld differs at:", streams);
+                for (int i = 0; i < blen; i++)
+                    if (ours[i] != after[i])
+                        fprintf(stderr, " [%d] ours %02X theirs %02X (was %02X)",
+                                i, ours[i], after[i], before[i]);
+                fprintf(stderr, "\n");
+            }
             if (!bbad) base_exact++;
         }
     }

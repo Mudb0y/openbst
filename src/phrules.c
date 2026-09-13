@@ -171,9 +171,22 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
                broken -- prev picks up the rewritten value. */
             if ((bst_rule_mask & 256) && (a1(img, c) & 0x80) &&
                 latch_o && emphasis >= 0) {
-                if (c == 0x2C) { c = 0x2A; s[i] = 0x2A; changed++; }
-                else if (!(a1(img, next.val) & 0x80)) {
-                    c = 0x24; s[i] = 0x24; changed++;
+                /* A following segment of one particular kind pre-empts the
+                   rewrite: the current sound becomes a different one and the
+                   follower is deleted outright. */
+                int preempt = 0;
+                if (next.val == 0x12 && next.pos < eight.pos) {
+                    c = 0x2E; s[i] = 0x2E;
+                    if (next.pos >= 0 && next.pos < lim) s[next.pos] = 0;
+                    first = 1;
+                    changed++;
+                    preempt = 1;
+                }
+                if (!preempt) {
+                    if (c == 0x2C) { c = 0x2A; s[i] = 0x2A; changed++; }
+                    else if (!(a1(img, next.val) & 0x80)) {
+                        c = 0x24; s[i] = 0x24; changed++;
+                    }
                 }
             }
 
