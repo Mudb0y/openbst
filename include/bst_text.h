@@ -180,7 +180,7 @@ typedef struct {
     int   strong;      /* the group cursor's value, carried between calls */
     int   mid, hi;     /* the current middle and ceiling */
     short table[14];
-} bst_pitch;
+} bst_voice;
 
 typedef struct {
     uint8_t kind;      /* 2 a move, 1 the close */
@@ -190,7 +190,7 @@ typedef struct {
 } bst_contour_rec;
 
 int bst_contour(const bst_image *img, const uint8_t *stream, int len,
-                bst_pitch *p, bst_contour_rec *out, int max);
+                bst_voice *v, bst_contour_rec *out, int max);
 
 /* ---- diphone expansion --------------------------------------------------
 

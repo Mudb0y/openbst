@@ -27,7 +27,7 @@ static int clampi(int v, int lo, int hi) {
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
-static void build(bst_pitch *p, int base, int mid, int top) {
+static void build(bst_voice *p, int base, int mid, int top) {
     p->mid = mid;
     p->hi = top;
     p->table[0] = (short)base;
@@ -41,7 +41,7 @@ static void build(bst_pitch *p, int base, int mid, int top) {
 
 /* The proportional form: a percentage above the base for the middle and above
    the stored top for the top. */
-static void set_range(bst_pitch *p, int a, int b) {
+static void set_range(bst_voice *p, int a, int b) {
     short s1 = (short)(p->base + (p->base >> 2));
     int mid = s1 + (s1 * a) / 100;
     if (mid < p->base) mid = p->base;
@@ -54,7 +54,7 @@ static void set_range(bst_pitch *p, int a, int b) {
 }
 
 /* The absolute form, as the stream's own commands give it. */
-static void set_abs(bst_pitch *p, int base, int mid, int level, int top) {
+static void set_abs(bst_voice *p, int base, int mid, int level, int top) {
     if (base != KEEP && (base < 0x2B || (p->base = base, base > 600)))
         p->base = p->voicebase;
     if (mid != KEEP) {
@@ -81,13 +81,13 @@ static void set_abs(bst_pitch *p, int base, int mid, int level, int top) {
     build(p, p->base, p->mid, p->hi);
 }
 
-static int freq(const bst_pitch *p, int code) {
+static int freq(const bst_voice *p, int code) {
     return p->table[3 + clampi(code, -3, 10)];
 }
 
 /* Narrows the range when an emphasis command is in force and the span is wide
    enough to be worth narrowing. */
-static void compress(bst_pitch *p) {
+static void compress(bst_voice *p) {
     int sc = (p->emphasis != 1) ? p->emphasis : 0x57;
     if (p->mid == 0 || (p->hi * 100) / p->mid <= 0x6D) return;
     p->hi = p->mid + ((p->hi - p->mid) * sc) / 100;
@@ -100,7 +100,7 @@ static void compress(bst_pitch *p) {
     p->table[idx] = (save <= p->table[8]) ? save : p->table[8];
 }
 
-static void command(bst_pitch *p, const uint8_t *b) {
+static void command(bst_voice *p, const uint8_t *b) {
     int v1 = (b[1] << 8) | b[2];
     int v2 = (b[3] << 8) | b[4];
     switch (b[0]) {
@@ -167,7 +167,7 @@ static int run_before(const bst_image *img, const uint8_t *s, int p) {
 }
 
 int bst_contour(const bst_image *img, const uint8_t *s, int len,
-                bst_pitch *p, bst_contour_rec *out, int max) {
+                bst_voice *p, bst_contour_rec *out, int max) {
     acc e[ACC_MAX];
     int n = -1, carry = 0, seen = 0, nrec = 0;
     bst_cur eight, strong, prev8, prevstrong;

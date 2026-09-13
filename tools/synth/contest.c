@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
             while (*p == ' ') p++;
         }
         if (len > k) len = k;
-        bst_pitch pit;
+        bst_voice pit;
         memset(&pit, 0, sizeof pit);
         pit.base = pit.voicebase = base;
         pit.top = top;
