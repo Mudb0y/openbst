@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include "winemu.h"
 
 #define A(i) emu_arg(e, esp, i)
@@ -266,6 +267,103 @@ static uint32_t s_WideCharToMultiByte(emu *e, uint32_t esp) {
     return out;
 }
 
+/* ---- kernel32: the heap and locale calls the 2006 builds add ------------ */
+
+/* The later CRT allocates through a heap handle rather than GlobalAlloc, but
+   nothing here ever frees, so a bump allocator serves for both. */
+static uint32_t s_HeapCreate(emu *e, uint32_t esp)  { (void)esp; (void)e; return 0xbeef0001u; }
+static uint32_t s_HeapDestroy(emu *e, uint32_t esp) { (void)e; (void)esp; return 1; }
+static uint32_t s_HeapAlloc(emu *e, uint32_t esp)   { return emu_alloc(e, A(2)); }
+static uint32_t s_HeapFree(emu *e, uint32_t esp)    { (void)e; (void)esp; return 1; }
+
+static uint32_t s_HeapReAlloc(emu *e, uint32_t esp) {
+    uint32_t old = A(2), size = A(3);
+    uint32_t p = emu_alloc(e, size);
+    if (p && old) {
+        /* The old block's size is unknown, so copy the smaller of the new size
+           and a bound that cannot run off the heap. */
+        uint32_t n = size;
+        uint8_t *tmp = malloc(n);
+        if (tmp) {
+            if (emu_read(e, old, tmp, n) == 0) emu_write(e, p, tmp, n);
+            free(tmp);
+        }
+    }
+    return p;
+}
+
+static uint32_t s_GetEnvironmentStringsW(emu *e, uint32_t esp) {
+    (void)esp;
+    static const uint16_t empty[2] = { 0, 0 };
+    return emu_push_bytes(e, empty, sizeof empty);
+}
+
+/* Character type classification. Bit 0 upper, 1 lower, 2 digit, 3 space,
+   7 alpha, which is all the CRT checks. */
+static uint32_t s_GetStringType(emu *e, uint32_t esp, int wide) {
+    uint32_t src = A(2);
+    int32_t n = (int32_t)A(3);
+    uint32_t dst = A(4);
+    if (!src || !dst) return 0;
+    if (n < 0) n = 1;
+    for (int32_t i = 0; i < n; i++) {
+        uint32_t c = 0;
+        if (wide) emu_read(e, src + 2 * (uint32_t)i, &c, 2);
+        else      emu_read(e, src + (uint32_t)i, &c, 1);
+        uint16_t t = 0;
+        if (c >= 'A' && c <= 'Z') t |= 0x0001 | 0x0100;
+        if (c >= 'a' && c <= 'z') t |= 0x0002 | 0x0100;
+        if (c >= '0' && c <= '9') t |= 0x0004;
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') t |= 0x0008;
+        emu_write(e, dst + 2 * (uint32_t)i, &t, 2);
+    }
+    return 1;
+}
+static uint32_t s_GetStringTypeA(emu *e, uint32_t esp) { return s_GetStringType(e, esp, 0); }
+static uint32_t s_GetStringTypeW(emu *e, uint32_t esp) { return s_GetStringType(e, esp, 1); }
+
+/* Case mapping. Only the upper and lower flags are ever asked for. */
+static uint32_t s_LCMapString(emu *e, uint32_t esp, int wide) {
+    uint32_t flags = A(1), src = A(2), dst = A(4);
+    int32_t n = (int32_t)A(3), out = (int32_t)A(5);
+    if (!src) return 0;
+    if (n < 0) {
+        n = 0;
+        for (;;) {
+            uint32_t c = 0;
+            if (wide) emu_read(e, src + 2 * (uint32_t)n, &c, 2);
+            else      emu_read(e, src + (uint32_t)n, &c, 1);
+            n++;
+            if (!c) break;
+        }
+    }
+    if (out == 0 || !dst) return (uint32_t)n;
+    if (n > out) n = out;
+    for (int32_t i = 0; i < n; i++) {
+        uint32_t c = 0;
+        if (wide) emu_read(e, src + 2 * (uint32_t)i, &c, 2);
+        else      emu_read(e, src + (uint32_t)i, &c, 1);
+        if ((flags & 0x00000100u) && c >= 'a' && c <= 'z') c -= 32;   /* LOWERCASE */
+        if ((flags & 0x00000200u) && c >= 'A' && c <= 'Z') c += 32;   /* UPPERCASE */
+        if (wide) emu_write(e, dst + 2 * (uint32_t)i, &c, 2);
+        else      emu_write(e, dst + (uint32_t)i, &c, 1);
+    }
+    return (uint32_t)n;
+}
+static uint32_t s_LCMapStringA(emu *e, uint32_t esp) { return s_LCMapString(e, esp, 0); }
+static uint32_t s_LCMapStringW(emu *e, uint32_t esp) { return s_LCMapString(e, esp, 1); }
+
+static uint32_t s_GetCurrentProcess(emu *e, uint32_t esp) { (void)e; (void)esp; return 0xffffffffu; }
+static uint32_t s_LoadLibraryA(emu *e, uint32_t esp)      { (void)e; (void)esp; return 0; }
+static uint32_t s_SetLastError(emu *e, uint32_t esp)      { e->last_error = A(0); return 0; }
+
+static uint32_t s_TerminateProcess(emu *e, uint32_t esp) {
+    (void)esp;
+    e->exited = 1;
+    uc_emu_stop(e->uc);
+    return 1;
+}
+
 /* ---- user32 ------------------------------------------------------------ */
 
 static uint32_t s_RegisterClassA(emu *e, uint32_t esp) {
@@ -368,6 +466,25 @@ const shim_def shim_table[] = {
     { "KERNEL32.dll", "GetFileType",             1, s_GetFileType },
     { "KERNEL32.dll", "GetStartupInfoA",         1, s_GetStartupInfoA },
     { "KERNEL32.dll", "WriteFile",               5, s_WriteFile },
+    { "KERNEL32.dll", "HeapCreate",              3, s_HeapCreate },
+    { "KERNEL32.dll", "HeapDestroy",             1, s_HeapDestroy },
+    { "KERNEL32.dll", "HeapAlloc",               3, s_HeapAlloc },
+    { "KERNEL32.dll", "HeapFree",                3, s_HeapFree },
+    { "KERNEL32.dll", "HeapReAlloc",             4, s_HeapReAlloc },
+    { "KERNEL32.dll", "GetEnvironmentStringsW",  0, s_GetEnvironmentStringsW },
+    { "KERNEL32.dll", "FreeEnvironmentStringsA", 1, s_nop1 },
+    { "KERNEL32.dll", "FreeEnvironmentStringsW", 1, s_nop1 },
+    { "KERNEL32.dll", "GetStringTypeA",          5, s_GetStringTypeA },
+    { "KERNEL32.dll", "GetStringTypeW",          4, s_GetStringTypeW },
+    { "KERNEL32.dll", "LCMapStringA",            6, s_LCMapStringA },
+    { "KERNEL32.dll", "LCMapStringW",            6, s_LCMapStringW },
+    { "KERNEL32.dll", "GetCurrentProcess",       0, s_GetCurrentProcess },
+    { "KERNEL32.dll", "TerminateProcess",        2, s_TerminateProcess },
+    { "KERNEL32.dll", "LoadLibraryA",            1, s_LoadLibraryA },
+    { "KERNEL32.dll", "SetHandleCount",          1, s_nop1 },
+    { "KERNEL32.dll", "SetLastError",            1, s_SetLastError },
+    { "KERNEL32.dll", "Sleep",                   1, s_nop0 },
+    { "KERNEL32.dll", "RtlUnwind",               4, s_nop0 },
 
     { "USER32.dll",   "DefWindowProcA",          4, s_nop0 },
     { "USER32.dll",   "RegisterClassA",          1, s_RegisterClassA },

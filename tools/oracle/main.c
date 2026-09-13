@@ -14,6 +14,7 @@ static void usage(void) {
         "  --dump ADDR:LEN[:FILE]      dump guest memory after the calls\n"
         "  --trace FILE                log every read from the image\n"
         "  --list                      list exports and exit\n"
+        "  --nodllmain                 skip DllMain (some builds do not need it)\n"
         "\n"
         "high-level modes (1995 build):\n"
         "  --speak TEXT                synthesize and capture audio\n"
@@ -88,7 +89,7 @@ int main(int argc, char **argv) {
     const char *snapspec = NULL, *regmemspec = NULL, *phrules = NULL, *intonation = NULL;
     const char *cursors = NULL;
     int level = -1;
-    int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
+    int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0, nodllmain = 0;
     unsigned long long limit = 2000000000ULL;
 
     for (int i = 1; i < argc; i++) {
@@ -117,6 +118,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
         else if (!strcmp(argv[i], "--regs") && i + 1 < argc)     regspec = argv[++i];
+        else if (!strcmp(argv[i], "--nodllmain")) nodllmain = 1;
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
         else if (!strcmp(argv[i], "-v"))     verbose++;
@@ -157,12 +159,14 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (emu_call_dllmain(e, 1) < 0) {
-        fprintf(stderr, "DllMain failed\n");
-        emu_free(e);
-        return 1;
+    if (!nodllmain) {
+        if (emu_call_dllmain(e, 1) < 0) {
+            fprintf(stderr, "DllMain failed\n");
+            emu_free(e);
+            return 1;
+        }
+        fprintf(stderr, "DllMain ok\n");
     }
-    fprintf(stderr, "DllMain ok\n");
 
     if (speak || phonemes || frames || records || interp || gainmode || pitchmode
         || ltsmode || snapspec || regmemspec || phrules || intonation || cursors) {

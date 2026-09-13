@@ -176,6 +176,14 @@ static bool hook_unmapped(uc_engine *uc, uc_mem_type t, uint64_t addr,
             t == UC_MEM_READ_UNMAPPED ? "read" :
             t == UC_MEM_WRITE_UNMAPPED ? "write" : "fetch",
             (unsigned long long)addr, pc);
+    /* On a bad fetch the stack top is the return address of whoever jumped
+       here, which names the caller far faster than a single-step trace. */
+    if (t == UC_MEM_FETCH_UNMAPPED) {
+        uint32_t esp = 0;
+        uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
+        fprintf(stderr, "  called from 0x%08x (stack also holds 0x%08x 0x%08x)\n",
+                emu_rd32(e, esp), emu_rd32(e, esp + 4), emu_rd32(e, esp + 8));
+    }
     return false;
 }
 
