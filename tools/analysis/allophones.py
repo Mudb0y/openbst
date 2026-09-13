@@ -32,9 +32,14 @@ LENGTHS = {0: 1, 1: 3, 2: 1, 3: 3, 4: 3, 5: 5}
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: allophones.py DLL [index...]", file=sys.stderr)
+        print("usage: allophones.py DLL [-n POSITIONS] [index...]", file=sys.stderr)
         return 2
-    d = open(sys.argv[1], "rb").read()
+    args = sys.argv[1:]
+    positions = 1
+    if len(args) > 2 and args[1] == "-n":
+        positions = int(args[2])
+        args = [args[0]] + args[3:]
+    d = open(args[0], "rb").read()
 
     def off(va):
         return RDATA_OFF + (va - RDATA_VA)
@@ -43,7 +48,7 @@ def main():
     table = struct.unpack_from("<%dH" % count, d, off(OFFSETS))
     used = [i for i, v in enumerate(table) if v]
 
-    wanted = [int(a) for a in sys.argv[2:]] or used[:12]
+    wanted = [int(a) for a in args[1:]] or used[:12]
     print("allophone table: %d slots, %d populated, records at 0x%08x"
           % (count, len(used), RECORDS))
 
@@ -52,23 +57,28 @@ def main():
             print("  %4d  empty" % idx)
             continue
         p = off(RECORDS) + table[idx]
-        parts = []
-        for _ in range(24):
-            b = d[p]
-            t = (b & 0x70) >> 4
-            n = LENGTHS.get(t, 1)
-            rec = d[p:p + n]
-            note = ""
-            if t in (1, 3, 4, 5) and n >= 3:
-                note = " target %d" % (((rec[2] << 8) | rec[1]) & 0x1FF)
-            if t == 5 and n >= 5:
-                # A five-byte record names both ends of a transition.
-                note += " target %d" % (((rec[4] << 8) | rec[3]) & 0x1FF)
-            parts.append("%s(t%d%s)" % (rec.hex(" "), t, note))
-            p += n
-            if b & 0x80:
-                break
-        print("  %4d  %s" % (idx, "  ".join(parts)))
+        groups = []
+        # An entry holds one sub-sequence per position the allophone covers,
+        # each ending on a record with bit 7 set. Stopping at the first one
+        # sees only the opening position and misses most of the targets.
+        for _ in range(positions):
+            parts = []
+            for _ in range(24):
+                b = d[p]
+                t = (b & 0x70) >> 4
+                n = LENGTHS.get(t, 1)
+                rec = d[p:p + n]
+                note = ""
+                if t in (1, 3, 4, 5) and n >= 3:
+                    note = " target %d" % (((rec[2] << 8) | rec[1]) & 0x1FF)
+                if t == 5 and n >= 5:
+                    note += " target %d" % (((rec[4] << 8) | rec[3]) & 0x1FF)
+                parts.append("%s(t%d%s)" % (rec.hex(" "), t, note))
+                p += n
+                if b & 0x80:
+                    break
+            groups.append(" ".join(parts))
+        print("  %4d  %s" % (idx, "  |  ".join(groups)))
     return 0
 
 
