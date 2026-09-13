@@ -11,19 +11,33 @@ gain and duration tables but not the log and antilog pair, so they share the
 filter and the gain curve while interpolating differently. The 1998 family
 splits the engine in two, with the per-language KGM modules holding the log
 tables and the shared KNGMM module holding the excitation and gain tables.
+Both families keep the letter and character tables the front end reads, at
+their own offsets, which is where porting the reimplementation to another
+language starts.
 """
 
 import glob
 import os
 import sys
 
+# Offsets into the 1995 build, which is the reference.
 TABLES = {
-    "pulse":    (0x17E48, 160),
-    "noise":    (0x17E08, 32),
-    "gain":     (0x18488, 256),
-    "log":      (0x17A08, 512),
-    "alog":     (0x17C08, 512),
-    "duration": (0x18C20, 16),
+    "pulse":       (0x17E48, 160),
+    "noise":       (0x17E08, 32),
+    "gain":        (0x18488, 256),
+    "log":         (0x17A08, 512),
+    "alog":        (0x17C08, 512),
+    "duration":    (0x18C20, 16),
+    "letterattr":  (0x18920, 256),
+    "phattr1":     (0x18E48, 128),
+    "phattr2":     (0x18EC8, 128),
+    "symbolmap":   (0x18B20, 128),
+    "casemap":     (0x18A20, 128),
+    "voicetgt":    (0x19A84, 256),
+    "transpitch":  (0x1A358, 256),
+    "voweldur":    (0x1A5A8, 128),
+    "excclass":    (0x18C40, 8),
+    "basedur":     (0x18C20, 32),
 }
 
 
@@ -44,8 +58,12 @@ def main():
         except OSError as err:
             print("%-24s %s" % (os.path.basename(p), err))
             continue
-        hits = [k for k, v in pat.items() if v in d]
-        print("%-24s %s" % (os.path.basename(p), ", ".join(hits) if hits else "none"))
+        hits = []
+        for k, v in pat.items():
+            at = d.find(v)
+            if at >= 0:
+                hits.append("%s@%06x" % (k, at))
+        print("%-24s %s" % (os.path.basename(p), " ".join(hits) if hits else "none"))
     return 0
 
 
