@@ -283,6 +283,16 @@ static void word_range(bst_tok *t, int from, int to) {
             return;
         }
     }
+    /* A word with no vowel in it cannot be pronounced, so it is spelled. */
+    int vowel = 0;
+    for (int i = from; i <= to; i++) if (chattr(t, t->ring[i]) & 0x10) { vowel = 1; break; }
+    if (!vowel) {
+        for (int i = from; i <= to; i++) say_char(t, t->ring[i]);
+        t->prevkind = t->kind;
+        t->kind = 5 - ((chattr(t, t->ring[from]) & 0x20) == 0);
+        return;
+    }
+
     for (int i = from; i <= to; i++) {
         int c = t->ring[i];
         emit(t, is_upper(t, c) ? lower(t, c) : c);
