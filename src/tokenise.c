@@ -32,6 +32,7 @@
 #define H_EAT3     0x10007040u
 #define H_WORD     0x10007AC0u
 #define H_NUMBER   0x10005E40u
+#define H_DOTTED   0x10007BA0u
 #define H_PUNCTOUT 0x100070A0u
 #define H_DOTOUT   0x100074F0u
 
@@ -162,6 +163,7 @@ static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next
 /* ---- the handlers ------------------------------------------------------ */
 
 static void word_out(bst_tok *t);
+static int dotted_out(bst_tok *t);
 static int number_out(bst_tok *t);
 static void say_char(bst_tok *t, int c);
 
@@ -237,6 +239,7 @@ static int handler(bst_tok *t, unsigned h, int c) {
     case H_DOTOUT:   dot_out(t, c); return 1;
     case H_WORD:     unread(t, 1); word_out(t); return 1;
     case H_NUMBER:   return number_out(t);
+    case H_DOTTED:   return dotted_out(t);
     default:         return 0;
     }
 }
@@ -255,8 +258,50 @@ static void say_char(bst_tok *t, int c) {
 /* The word the machine has just delimited. The exception table gets first
    refusal: a word it holds goes into the scratch buffer as phoneme codes and
    never reaches the dictionary or the rules. */
-static void word_out(bst_tok *t) {
-    int n = t->cur - t->start + 1;
+static void word_range(bst_tok *t, int from, int to) {
+    int n = to - from + 1;
+    int first = n > 0 ? t->ring[from] : 0;
+    /* A lone letter is said by name. The three that are words in their own
+       right are not. */
+    if (n == 1 && first != 'a' && first != 'A' && first != 'I') {
+        say_char(t, first);
+        t->prevkind = t->kind;
+        t->kind = 5 - ((chattr(t, first) & 0x20) == 0);
+        return;
+    }
+    if (n > 0 && n < 64) {
+        uint8_t codes[256];
+        int m = bst_except(t, t->ring + from, n, codes, (int)sizeof codes);
+        if (m > 0) {
+            emit(t, ' ');
+            emit(t, 0xFE);
+            for (int i = 0; i < m; i++) emit(t, codes[i]);
+            emit(t, 0xFF);
+            emit(t, ' ');
+            t->prevkind = t->kind;
+            t->kind = 5 - ((chattr(t, t->ring[from]) & 0x20) == 0);
+            return;
+        }
+    }
+    for (int i = from; i <= to; i++) {
+        int c = t->ring[i];
+        emit(t, is_upper(t, c) ? lower(t, c) : c);
+    }
+    emit(t, ' ');
+    t->prevkind = t->kind;
+    t->kind = 5 - ((chattr(t, t->ring[from]) & 0x20) == 0);
+}
+
+static void word_out(bst_tok *t) { word_range(t, t->start, t->cur); }
+
+/* A run of single letters separated by full stops. The whole span gets one
+   look in the exception table, and failing that each piece is said on its
+   own, which for a lone letter means by name. */
+static int dotted_out(bst_tok *t) {
+    /* The stop that ended the run belongs to the abbreviation, so it is not
+       given back and no phrase break comes of it. */
+    int last = t->cur - 1;
+    int n = last - t->start + 1;
     if (n > 0 && n < 64) {
         uint8_t codes[256];
         int m = bst_except(t, t->ring + t->start, n, codes, (int)sizeof codes);
@@ -268,23 +313,17 @@ static void word_out(bst_tok *t) {
             emit(t, ' ');
             t->prevkind = t->kind;
             t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
-            return;
+            return 1;
         }
     }
-    if (n == 1) {
-        /* A lone letter is said rather than read. */
-        say_char(t, t->ring[t->start]);
-        t->prevkind = t->kind;
-        t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
-        return;
+    int i = t->start;
+    while (i <= last) {
+        int j = i;
+        while (j <= last && t->ring[j] != '.') j++;
+        if (j > i) word_range(t, i, j - 1);
+        i = j + 1;
     }
-    for (int i = t->start; i <= t->cur; i++) {
-        int c = t->ring[i];
-        emit(t, is_upper(t, c) ? lower(t, c) : c);
-    }
-    emit(t, ' ');
-    t->prevkind = t->kind;
-    t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
+    return 1;
 }
 
 /* A run of digits. The machine has read one character past it, and the run
