@@ -3,6 +3,8 @@
 
 /* Both lookups clamp the same way the engine's do: an index outside 0..255
    yields 255 when positive and 0 when negative. */
+static int lut(const int16_t *t, int x);
+
 static int lut(const int16_t *t, int x) {
     if (x >= 0 && x <= 255) return t[x];
     return x >= 0 ? 255 : 0;
@@ -40,4 +42,25 @@ int bst_transition_len(const int16_t from[BST_ORDER], const int16_t to[BST_ORDER
         sum += d < 0 ? -d : d;
     }
     return (sum >> 2) + (sum >> 3);
+}
+
+void bst_gain_init(bst_gain *g, const bst_tables *t) {
+    g->t = t;
+    g->acc = 0;
+}
+
+int bst_gain_value(const bst_gain *g, int base, int adj, int exc_class) {
+    int v = base + (g->acc >> 8);
+    if (exc_class == BST_NOISE)       v += adj;
+    else if (exc_class == BST_VOICED) v += adj + 8;
+    return v & 0xff;
+}
+
+void bst_gain_step(bst_gain *g, int target, int dur, int clock) {
+    int diff = target - (g->acc >> 8);
+    if (diff == 0) return;
+    int idx = ((clock + dur) >> 4) + 1;
+    int mag = diff < 0 ? -diff : diff;
+    int step = lut(g->t->alog, lut(g->t->log, mag) - lut(g->t->log, idx) + lut(g->t->log, dur));
+    g->acc = (int16_t)(g->acc + (diff > 0 ? step * 16 : -step * 16));
 }

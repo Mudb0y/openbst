@@ -50,6 +50,18 @@ typedef struct {
     uint32_t fresh_flag;     /* set when a new segment was just fetched */
     uint32_t build_done;     /* join point after the interpolation step */
 
+    /* Gain: computed by a routine called from the frame builder, smoothed the
+       same way the coefficients are and written to frame byte 2. */
+    uint32_t gain_before;    /* the call site */
+    uint32_t gain_after;     /* after the result is stored into the frame */
+    uint32_t gain_state;     /* fixed-point accumulator */
+    uint32_t gain_target;
+    uint32_t gain_base;
+    uint32_t gain_mode_adj;
+    uint32_t gain_clock;     /* time base the smoothing rate divides by */
+    uint32_t exc_class;      /* excitation class, selects the mode adjustment */
+    uint32_t frame_gain;     /* frame byte 2 */
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -76,6 +88,15 @@ static const profile profiles[] = {
         .prev_targets  = 0x1001b780,
         .fresh_flag    = 0x1001e3bc,
         .build_done    = 0x10008cae,
+        .gain_before   = 0x10008d54,
+        .gain_after    = 0x10008d5e,
+        .gain_state    = 0x10019a5c,
+        .gain_target   = 0x10019a84,
+        .gain_base     = 0x10019398,
+        .gain_mode_adj = 0x1001939c,
+        .gain_clock    = 0x1001c446,
+        .exc_class     = 0x1001e644,
+        .frame_gain    = 0x10019a32,
         .default_level = 6,
     },
 };

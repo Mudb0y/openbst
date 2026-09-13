@@ -44,6 +44,18 @@ void bst_interp_step(bst_interp *ip, const int16_t target[BST_ORDER],
    it: three eighths of the summed absolute difference. */
 int  bst_transition_len(const int16_t from[BST_ORDER], const int16_t to[BST_ORDER]);
 
+/* Gain, smoothed the same way but on its own clock. The accumulator carries
+   eight fractional bits and the emitted frame byte is its integer part plus a
+   base and an adjustment that depends on the excitation class. */
+typedef struct {
+    const bst_tables *t;
+    int16_t acc;
+} bst_gain;
+
+void bst_gain_init(bst_gain *g, const bst_tables *t);
+int  bst_gain_value(const bst_gain *g, int base, int adj, int exc_class);
+void bst_gain_step(bst_gain *g, int target, int dur, int clock);
+
 typedef struct {
     const bst_tables *t;
 

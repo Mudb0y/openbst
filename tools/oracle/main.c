@@ -21,6 +21,7 @@ static void usage(void) {
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --records TEXT              print the segment records driving frame generation\n"
         "  --interp TEXT               print the interpolator state at each frame\n"
+        "  --gain TEXT                 print the gain smoother state at each frame\n"
         "  --level N                   verbosity for --phonemes (default 6)\n"
         "  --watch ADDR:LEN[:FILE]     log writes into an address range\n"
         "  --hook ADDR[:NARGS]         log stack arguments at a function entry\n"
@@ -76,6 +77,7 @@ int main(int argc, char **argv) {
     const char *calls[32], *pokes[16], *dumps[8];
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
+    const char *gainmode = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -93,6 +95,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc)   frames = argv[++i];
         else if (!strcmp(argv[i], "--records") && i + 1 < argc)  records = argv[++i];
         else if (!strcmp(argv[i], "--interp") && i + 1 < argc)   interp = argv[++i];
+        else if (!strcmp(argv[i], "--gain") && i + 1 < argc)     gainmode = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
@@ -144,7 +147,7 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "DllMain ok\n");
 
-    if (speak || phonemes || frames || records || interp) {
+    if (speak || phonemes || frames || records || interp || gainmode) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
@@ -159,7 +162,8 @@ int main(int argc, char **argv) {
         }
 
         const char *text = speak ? speak : (phonemes ? phonemes :
-                           (frames ? frames : (records ? records : interp)));
+                           (frames ? frames : (records ? records :
+                           (interp ? interp : gainmode))));
         uint32_t gtext = emu_push_str(e, text);
         /* The engine holds this capacity in a signed 16-bit field and refuses
            to write when it is not greater than the index, so anything above
@@ -193,6 +197,17 @@ int main(int argc, char **argv) {
 
         if (records)
             emu_hook_record(e, pr->seg_entry, 0, 8, stdout);
+
+        if (gainmode) {
+            const uint32_t a[8] = { pr->gain_state, pr->gain_target, pr->gain_clock,
+                                    pr->frame_dur, pr->exc_class, pr->fresh_flag,
+                                    pr->gain_base, pr->gain_mode_adj };
+            const int      l[8] = { 2, 2, 2, 2, 2, 1, 2, 2 };
+            emu_hook_dump(e, pr->gain_before, a, l, 8, 'B', stdout);
+            const uint32_t b[2] = { pr->gain_state, pr->frame_gain };
+            const int      m[2] = { 2, 1 };
+            emu_hook_dump(e, pr->gain_after, b, m, 2, 'A', stdout);
+        }
 
         if (interp) {
             /* Snapshot taken at the frame builder's entry, before it steps the
