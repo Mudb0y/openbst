@@ -127,8 +127,10 @@ static uint32_t s_GetOEMCP(emu *e, uint32_t esp)   { (void)e; (void)esp; return 
 static uint32_t s_GetCPInfo(emu *e, uint32_t esp) {
     uint32_t p = A(1);
     if (p) {
-        emu_wr32(e, p, 1);                      /* MaxCharSize */
-        uint8_t rest[18] = { '?', 0 };          /* DefaultChar + LeadByte */
+        /* CPINFO is eighteen bytes: the size, two default characters and
+           twelve lead-byte range bounds. */
+        emu_wr32(e, p, 1);
+        uint8_t rest[14] = { '?', 0 };
         emu_write(e, p + 4, rest, sizeof rest);
     }
     return 1;
@@ -213,6 +215,18 @@ static uint32_t s_GetCurrentThreadId(emu *e, uint32_t esp) { (void)e; (void)esp;
 static uint32_t s_GetLastError(emu *e, uint32_t esp)       { (void)esp; return e->last_error; }
 static uint32_t s_GetProcAddress(emu *e, uint32_t esp)     { (void)e; (void)esp; return 0; }
 static uint32_t s_SetFilePointer(emu *e, uint32_t esp)     { (void)e; (void)esp; return 0; }
+
+/* The Portuguese build's CRT pulls in the file half of stdio. Nothing the
+   engine does depends on it, so a file opens, reads end-of-file and truncates
+   without ever touching a disk. */
+static uint32_t s_CreateFileA(emu *e, uint32_t esp)  { (void)e; (void)esp; return 0x40; }
+static uint32_t s_SetEndOfFile(emu *e, uint32_t esp) { (void)e; (void)esp; return 1; }
+
+static uint32_t s_ReadFile(emu *e, uint32_t esp) {
+    uint32_t read = A(3);
+    if (read) emu_wr32(e, read, 0);
+    return 1;
+}
 
 static uint32_t s_ExitProcess(emu *e, uint32_t esp) {
     (void)esp;
@@ -300,10 +314,13 @@ static uint32_t s_GetEnvironmentStringsW(emu *e, uint32_t esp) {
 
 /* Character type classification. Bit 0 upper, 1 lower, 2 digit, 3 space,
    7 alpha, which is all the CRT checks. */
+/* The wide form drops the locale argument the byte form leads with, so the
+   two read their strings from different stack slots. */
 static uint32_t s_GetStringType(emu *e, uint32_t esp, int wide) {
-    uint32_t src = A(2);
-    int32_t n = (int32_t)A(3);
-    uint32_t dst = A(4);
+    int b = wide ? 1 : 2;
+    uint32_t src = A(b);
+    int32_t n = (int32_t)A(b + 1);
+    uint32_t dst = A(b + 2);
     if (!src || !dst) return 0;
     if (n < 0) n = 1;
     for (int32_t i = 0; i < n; i++) {
@@ -448,6 +465,9 @@ const shim_def shim_table[] = {
     { "KERNEL32.dll", "DeleteCriticalSection",   1, s_nop0 },
     { "KERNEL32.dll", "InitializeCriticalSection", 1, s_nop0 },
     { "KERNEL32.dll", "SetFilePointer",          4, s_SetFilePointer },
+    { "KERNEL32.dll", "CreateFileA",             7, s_CreateFileA },
+    { "KERNEL32.dll", "SetEndOfFile",            1, s_SetEndOfFile },
+    { "KERNEL32.dll", "ReadFile",                5, s_ReadFile },
     { "KERNEL32.dll", "GetEnvironmentStrings",   0, s_GetEnvironmentStrings },
     { "KERNEL32.dll", "GetCommandLineA",         0, s_GetCommandLineA },
     { "KERNEL32.dll", "GetVersion",              0, s_GetVersion },

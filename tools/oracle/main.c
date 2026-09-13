@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     const char *snapspec = NULL, *regmemspec = NULL, *phrules = NULL, *intonation = NULL;
     const char *cursors = NULL;
     int level = -1;
-    int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0, nodllmain = 0;
+    int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0, nodllmain = 0, btrace = 0;
     unsigned long long limit = 2000000000ULL;
 
     for (int i = 1; i < argc; i++) {
@@ -119,6 +119,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
         else if (!strcmp(argv[i], "--regs") && i + 1 < argc)     regspec = argv[++i];
         else if (!strcmp(argv[i], "--nodllmain")) nodllmain = 1;
+        else if (!strcmp(argv[i], "--btrace")) btrace = 1;
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
         else if (!strcmp(argv[i], "-v"))     verbose++;
@@ -157,6 +158,64 @@ int main(int argc, char **argv) {
         }
         emu_free(e);
         return 0;
+    }
+
+    if (regmemspec) {
+        char rm[160];
+        snprintf(rm, sizeof rm, "%s", regmemspec);
+        char *q = NULL;
+        unsigned long pc = strtoul(rm, &q, 0);
+        static const char *names = "";
+        (void)names;
+        int reg = 0;
+        int32_t offv = 0;
+        int len = 8;
+        if (q && *q == ':') {
+            q++;
+            const char *rn[8] = { "eax","ebx","ecx","edx","esi","edi","ebp","esp" };
+            for (int k = 0; k < 8; k++)
+                if (!strncmp(q, rn[k], 3)) { reg = k; break; }
+            q += 3;
+        }
+        if (q && *q == ':') offv = (int32_t)strtol(q + 1, &q, 0);
+        if (q && *q == ':') len = (int)strtol(q + 1, NULL, 0);
+        emu_hook_regmem(e, (uint32_t)pc, reg, offv, len, stdout);
+    }
+
+    if (watchspec) {
+        char ws[256];
+        snprintf(ws, sizeof ws, "%s", watchspec);
+        char *q = NULL;
+        unsigned long lo = strtoul(ws, &q, 0);
+        unsigned long len = (q && *q == ':') ? strtoul(q + 1, &q, 0) : 64;
+        const char *wf = (q && *q == ':') ? q + 1 : NULL;
+        FILE *w = wf ? fopen(wf, "w") : stderr;
+        if (w) emu_watch_writes(e, w, (uint32_t)lo, (uint32_t)(lo + len));
+    }
+
+    if (btrace) emu_backtrace(e);
+
+    /* Generic instruments work with --call as well as the high-level modes,
+       which matters for builds that have no profile yet. */
+    if (regspec) emu_hook_regs(e, (uint32_t)strtoul(regspec, NULL, 0), stdout);
+    if (hookspec) {
+        char hs[256];
+        snprintf(hs, sizeof hs, "%s", hookspec);
+        char *q = NULL;
+        unsigned long pc = strtoul(hs, &q, 0);
+        int na = (q && *q == ':') ? atoi(q + 1) : 2;
+        emu_hook_call(e, (uint32_t)pc, na, stdout);
+    }
+    if (snapspec) {
+        char ss[160];
+        snprintf(ss, sizeof ss, "%s", snapspec);
+        char *q = NULL;
+        unsigned long pc = strtoul(ss, &q, 0);
+        uint32_t a[1];
+        int l[1];
+        a[0] = (q && *q == ':') ? (uint32_t)strtoul(q + 1, &q, 0) : 0;
+        l[0] = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 32;
+        emu_hook_dump(e, (uint32_t)pc, a, l, 1, 'S', stdout);
     }
 
     if (!nodllmain) {
@@ -202,25 +261,6 @@ int main(int argc, char **argv) {
             FILE *tf = fopen(tracepath, "wb");
             if (tf) emu_trace_reads(e, tf);
         }
-        if (regspec) emu_hook_regs(e, (uint32_t)strtoul(regspec, NULL, 0), stdout);
-        if (hookspec) {
-            char hs[256];
-            snprintf(hs, sizeof hs, "%s", hookspec);
-            char *q = NULL;
-            unsigned long pc = strtoul(hs, &q, 0);
-            int na = (q && *q == ':') ? atoi(q + 1) : 2;
-            emu_hook_call(e, (uint32_t)pc, na, stdout);
-        }
-        if (watchspec) {
-            char ws[256];
-            snprintf(ws, sizeof ws, "%s", watchspec);
-            char *q = NULL;
-            unsigned long lo = strtoul(ws, &q, 0);
-            unsigned long len = (q && *q == ':') ? strtoul(q + 1, &q, 0) : 64;
-            const char *wf = (q && *q == ':') ? q + 1 : NULL;
-            FILE *w = wf ? fopen(wf, "w") : stderr;
-            if (w) emu_watch_writes(e, w, (uint32_t)lo, (uint32_t)(lo + len));
-        }
 
         if (records)
             emu_hook_record(e, pr->seg_entry, 0, 8, stdout);
@@ -250,40 +290,6 @@ int main(int argc, char **argv) {
             const int      l[1] = { 96 };
             emu_hook_dump(e, pr->rules_before, a, l, 1, 'B', stdout);
             emu_hook_dump(e, pr->rules_after,  a, l, 1, 'A', stdout);
-        }
-
-        if (regmemspec) {
-            char rm[160];
-            snprintf(rm, sizeof rm, "%s", regmemspec);
-            char *q = NULL;
-            unsigned long pc = strtoul(rm, &q, 0);
-            static const char *names = "";
-            (void)names;
-            int reg = 0;
-            int32_t offv = 0;
-            int len = 8;
-            if (q && *q == ':') {
-                q++;
-                const char *rn[8] = { "eax","ebx","ecx","edx","esi","edi","ebp","esp" };
-                for (int k = 0; k < 8; k++)
-                    if (!strncmp(q, rn[k], 3)) { reg = k; break; }
-                q += 3;
-            }
-            if (q && *q == ':') offv = (int32_t)strtol(q + 1, &q, 0);
-            if (q && *q == ':') len = (int)strtol(q + 1, NULL, 0);
-            emu_hook_regmem(e, (uint32_t)pc, reg, offv, len, stdout);
-        }
-
-        if (snapspec) {
-            char ss[160];
-            snprintf(ss, sizeof ss, "%s", snapspec);
-            char *q = NULL;
-            unsigned long pc = strtoul(ss, &q, 0);
-            uint32_t a[1];
-            int l[1];
-            a[0] = (q && *q == ':') ? (uint32_t)strtoul(q + 1, &q, 0) : 0;
-            l[0] = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 32;
-            emu_hook_dump(e, (uint32_t)pc, a, l, 1, 'S', stdout);
         }
 
         if (ltsmode) {

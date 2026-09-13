@@ -14,6 +14,14 @@ int emu_read(emu *e, uint32_t addr, void *dst, uint32_t n) {
 }
 
 int emu_write(emu *e, uint32_t addr, const void *src, uint32_t n) {
+    /* Shim writes do not go through Unicorn's write hook, so the watch has to
+       be applied here as well or a shim overrunning a guest buffer is the one
+       kind of corruption the watch cannot see. */
+    if (e->watch && addr < e->watch_hi && addr + n > e->watch_lo) {
+        uint32_t pc = 0;
+        uc_reg_read(e->uc, UC_X86_REG_EIP, &pc);
+        fprintf(e->watch, "%08x %u shim %08x\n", addr, n, pc);
+    }
     return uc_mem_write(e->uc, addr, src, n) == UC_ERR_OK ? 0 : -1;
 }
 
@@ -114,8 +122,12 @@ static void hook_shim(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     e->ncalled[idx]++;
     uint32_t esp = 0;
     uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
-    if (e->verbose > 1)
-        fprintf(stderr, "  [shim] %s\n", e->handler[idx]->name);
+    if (e->verbose > 1) {
+        uint8_t sl[3] = {0,0,0};
+        uc_mem_read(e->uc, (uint32_t)addr, sl, 3);
+        fprintf(stderr, "  [shim] %-24s esp %08x ret %08x slot %02x %02x %02x\n",
+                e->handler[idx]->name, esp, emu_rd32(e, esp), sl[0], sl[1], sl[2]);
+    }
     uint32_t ret = e->handler[idx]->fn(e, esp);
     if (e->redirect) {
         /* Hand control to guest code instead of letting the planted ret run.
@@ -166,6 +178,22 @@ static void hook_read(uc_engine *uc, uc_mem_type t, uint64_t addr,
     fwrite(&rec, sizeof rec, 1, e->trace);
 }
 
+static void hook_ring(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)size;
+    emu *e = ud;
+    int n = (int)(sizeof e->ring / sizeof e->ring[0]);
+    e->ring[e->ring_at].eip = (uint32_t)addr;
+    uc_reg_read(e->uc, UC_X86_REG_ESP, &e->ring[e->ring_at].esp);
+    uc_reg_read(e->uc, UC_X86_REG_EBP, &e->ring[e->ring_at].ebp);
+    e->ring_at = (e->ring_at + 1) % n;
+}
+
+void emu_backtrace(emu *e) {
+    e->ring_on = 1;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_ring, e, 1, 0);
+}
+
 static bool hook_unmapped(uc_engine *uc, uc_mem_type t, uint64_t addr,
                           int size, int64_t val, void *ud) {
     (void)uc; (void)size; (void)val;
@@ -183,6 +211,16 @@ static bool hook_unmapped(uc_engine *uc, uc_mem_type t, uint64_t addr,
         uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
         fprintf(stderr, "  called from 0x%08x (stack also holds 0x%08x 0x%08x)\n",
                 emu_rd32(e, esp), emu_rd32(e, esp + 4), emu_rd32(e, esp + 8));
+    }
+    if (e->ring_on) {
+        int n = (int)(sizeof e->ring / sizeof e->ring[0]);
+        fprintf(stderr, "  last instructions, oldest first:\n");
+        for (int i = 0; i < n; i++) {
+            int k = (e->ring_at + i) % n;
+            if (!e->ring[k].eip) continue;
+            fprintf(stderr, "    %08x esp %08x ebp %08x\n",
+                    e->ring[k].eip, e->ring[k].esp, e->ring[k].ebp);
+        }
     }
     return false;
 }
@@ -549,6 +587,10 @@ static int bind_imports(emu *e, const uint8_t *f, size_t flen,
                     p[0] = 0xc2; p[1] = pop & 0xff; p[2] = pop >> 8;
                 }
             }
+            if (e->verbose > 1)
+                fprintf(stderr, "bind %08x %s!%s\n",
+                        e->image_base + fthunk + 4 * j, dllname,
+                        fname ? fname : "(ordinal)");
             e->handler[nsh] = sd;
             nsh++;
             emu_wr32(e, e->image_base + fthunk + 4 * j, slot);

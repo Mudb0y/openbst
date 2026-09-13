@@ -130,6 +130,12 @@ struct emu {
     char    *acc;
     size_t   acc_len, acc_cap;
 
+    /* A ring of the most recently executed instructions, dumped when a fault
+       stops the run. A fault names only where control ended up; the ring names
+       how it got there, which is the only way to find a stack clobber. */
+    struct { uint32_t eip, esp, ebp; } ring[4096];
+    int ring_at, ring_on;
+
     int   verbose;
 };
 
@@ -156,6 +162,7 @@ void     emu_hook_record(emu *e, uint32_t pc, int argno, int nbytes, FILE *out);
 void     emu_hook_dump(emu *e, uint32_t pc, const uint32_t *addrs, const int *lens,
                        int n, char tag, FILE *out);
 void     emu_hook_regs(emu *e, uint32_t pc, FILE *out);
+void     emu_backtrace(emu *e);
 
 /* Dumps memory at an address held in a register, which is how the engine
    reaches most of its per-segment state. reg is an index into the same order
