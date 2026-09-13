@@ -110,7 +110,7 @@ SUITE = [
     ("ord_th",   "4th."),
     ("ord_fifth", "5th."),
     ("ord_tieth", "20th."),
-    ("ord_first", "21st."),
+    ("ord_twelfth", "12th."),
     ("charname", "@."),
     ("dotted",   "A.B.C."),
     ("dash",     "co-op."),

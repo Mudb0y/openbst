@@ -8,7 +8,7 @@
    Everything here reads its tables out of a loaded BeSTspeech image rather
    than embedding them, so the library carries no lifted data of its own. */
 
-#define BST_SECTIONS 16
+#define BST_SECTIONS 20
 
 /* ---- the table directory ------------------------------------------------
 
@@ -50,8 +50,15 @@ typedef struct {
     uint32_t phattr1, phattr2, classtab, exctab, basedur, coefgain;
     /* the tokeniser. code_lo and code_hi bound the executable section, which
        is how a transition row is told from the bytes after the last one: a row
-       names its handler by address. */
+       names its handler by address. The row itself is three columns whose
+       widths and places differ between the 32-bit builds and the 16-bit one,
+       which packs the two state columns into bytes and the handler into a near
+       pointer, with a link to the next row between them. */
     uint32_t tokstates, names, code_lo, code_hi;
+    uint8_t  tok_stride;
+    uint8_t  tok_state_off, tok_state_w;
+    uint8_t  tok_handler_off, tok_handler_w;
+    uint8_t  tok_next_off, tok_next_w;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
@@ -72,6 +79,11 @@ typedef struct {
 } bst_tabmap;
 
 extern const bst_tabmap BST_MAP_1995;
+extern const bst_tabmap BST_MAP_1998_ENG;
+
+/* Fills names with the entries the map has not been given and returns how
+   many there were, so an incomplete build can say so rather than misbehave. */
+int bst_map_gaps(const bst_tabmap *m, const char **names, int max);
 
 
 typedef struct {
@@ -84,6 +96,10 @@ typedef struct {
     int      nsec;
     struct { uint32_t va, vsize, raw, rawsize; } sec[BST_SECTIONS];
     bst_tabmap t;
+    /* Set when the image is one the library built rather than one the caller
+       handed over: a 16-bit module has to be laid out and relocated before
+       any of its pointers mean anything. */
+    void *own;
 } bst_image;
 
 /* Returns a pointer to `need` bytes at a virtual address, or NULL. */
@@ -132,6 +148,18 @@ int  bst_image_init(bst_image *img, const void *data, size_t len);
 /* The same, with the table directory given rather than assumed. */
 int  bst_image_init_map(bst_image *img, const void *data, size_t len,
                         const bst_tabmap *map);
+
+/* A 16-bit NE module. Its segments are laid out one to a 64K window and its
+   relocations applied, because a pointer in the file holds a link in a fixup
+   chain rather than an address. Addresses are then (segment << 16) | offset,
+   which is what an applied internal relocation writes, so a pointer read out
+   of the loaded image is already in the form bst_at wants.
+
+   Call bst_image_free when done; the other two initialisers need no freeing
+   but tolerate it. */
+int  bst_image_init_ne(bst_image *img, const void *data, size_t len,
+                       const bst_tabmap *map);
+void bst_image_free(bst_image *img);
 
 /* A phoneme record: a type letter and two operands, which is the form the
    rest of the engine consumes. */

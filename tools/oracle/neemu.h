@@ -113,6 +113,14 @@ struct nemu {
     struct { uint32_t lin; int nstack; } probe[8];
     int nprobe;
 
+    /* One entry per instruction that reads the module's data, rather than one
+       per read: a sentence makes hundreds of millions of reads and only a few
+       hundred instructions make them. */
+    FILE *trace;
+    struct { uint32_t pc, lo, hi; uint64_t n; int order; } *tab;
+    int    ntab, captab;
+    int    tabseq;
+
     /* Captured PUTFR frames, which is what the synthesiser hands its caller
        in place of audio. */
     uint8_t *frames;
@@ -170,6 +178,13 @@ void     ne_backtrace(nemu *e);
 /* Prints the registers and a few stack words each time control reaches an
    address, which is how an argument list gets read without guessing. */
 void     ne_hook_regs(nemu *e, uint16_t sel, uint16_t off, int nstack);
+
+/* Records every read of a loaded module's data, as twelve-byte records of
+   address, program counter and size. Both addresses are in the same form the
+   table directory uses, (segment << 16) | offset, so the analysis tools do not
+   have to know where the emulator put anything. */
+void     ne_trace_reads(nemu *e, FILE *out);
+void     ne_trace_report(nemu *e);
 void     ne_frames_reset(nemu *e);
 
 /* neshims.c */

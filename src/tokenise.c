@@ -118,14 +118,22 @@ void bst_tok_say(bst_tok *t, unsigned ptrva) { emit_ptr(t, ptrva); }
 
 /* ---- the transition table ---------------------------------------------- */
 
+static uint32_t col(const uint8_t *p, int off, int w) {
+    uint32_t v = 0;
+    for (int i = 0; i < w; i++) v |= (uint32_t)p[off + i] << (8 * i);
+    return v;
+}
+
 static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next) {
-    const uint8_t *p = bst_at(t->img, t->img->t.tokstates + (unsigned)i * 12, 12);
+    const bst_tabmap *m = &t->img->t;
+    int stride = m->tok_stride;
+    const uint8_t *p = bst_at(t->img, m->tokstates + (unsigned)i * stride, stride);
     if (!p) return 0;
-    uint32_t h = (uint32_t)(p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24));
-    if (h < t->img->t.code_lo || h >= t->img->t.code_hi) return 0;
-    *state = p[0];
+    uint32_t h = col(p, m->tok_handler_off, m->tok_handler_w);
+    if (h < m->code_lo || h >= m->code_hi) return 0;
+    *state = (int)col(p, m->tok_state_off, m->tok_state_w);
     *handler = h;
-    *next = p[8];
+    *next = (int)col(p, m->tok_next_off, m->tok_next_w);
     return 1;
 }
 

@@ -157,6 +157,71 @@ static void hook_trap(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     uc_emu_stop(e->uc);
 }
 
+/* Turns a linear address back into the segment and offset the module knows it
+   by, which is the only form worth recording: the emulator's arena layout is
+   an accident of load order. */
+static uint32_t seg_addr(nemu *e, uint32_t lin, int stored_only) {
+    for (int m = 0; m < e->nmods; m++)
+        for (int s = 0; s < e->mod[m].nseg; s++) {
+            uint32_t b = e->mod[m].seg[s].base;
+            uint32_t n = stored_only ? e->mod[m].seg[s].len
+                                     : e->mod[m].seg[s].alloc;
+            if (lin >= b && lin < b + n)
+                return ((uint32_t)(s + 1) << 16) | (lin - b);
+        }
+    return 0;
+}
+
+static void hook_trace(uc_engine *uc, uc_mem_type t, uint64_t addr,
+                       int size, int64_t val, void *ud) {
+    (void)uc; (void)t; (void)val; (void)size;
+    nemu *e = ud;
+    if (!e->trace) return;
+    /* Only what the module shipped: the stack lives above the data in the
+       automatic data segment, and tracing it would bury the tables under
+       millions of stack reads. */
+    uint32_t a = seg_addr(e, (uint32_t)addr, 1);
+    if (!a) return;
+    uint32_t cs = 0, ip = 0;
+    uc_reg_read(e->uc, UC_X86_REG_CS, &cs);
+    uc_reg_read(e->uc, UC_X86_REG_IP, &ip);
+    uint32_t p = seg_addr(e, ne_lin(e, (uint16_t)cs, 0) + ip, 0);
+
+    for (int i = 0; i < e->ntab; i++) {
+        if (e->tab[i].pc != p) continue;
+        e->tab[i].n++;
+        if (a < e->tab[i].lo) e->tab[i].lo = a;
+        if (a > e->tab[i].hi) e->tab[i].hi = a;
+        return;
+    }
+    if (e->ntab >= e->captab) {
+        int cap = e->captab ? e->captab * 2 : 256;
+        void *q = realloc(e->tab, (size_t)cap * sizeof *e->tab);
+        if (!q) return;
+        e->tab = q;
+        e->captab = cap;
+    }
+    e->tab[e->ntab].pc = p;
+    e->tab[e->ntab].lo = e->tab[e->ntab].hi = a;
+    e->tab[e->ntab].n = 1;
+    e->tab[e->ntab].order = e->tabseq++;
+    e->ntab++;
+}
+
+void ne_trace_reads(nemu *e, FILE *out) {
+    e->trace = out;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_MEM_READ, hook_trace, e, 1, 0);
+}
+
+void ne_trace_report(nemu *e) {
+    if (!e->trace) return;
+    for (int i = 0; i < e->ntab; i++)
+        fprintf(e->trace, "%08x %08x %08x %llu %d\n", e->tab[i].pc,
+                e->tab[i].lo, e->tab[i].hi,
+                (unsigned long long)e->tab[i].n, e->tab[i].order);
+}
+
 static void hook_probe(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     (void)uc; (void)size;
     nemu *e = ud;
@@ -291,6 +356,7 @@ nemu *ne_new(void) {
 void ne_free(nemu *e) {
     if (!e) return;
     for (int i = 0; i < e->nmods; i++) free(e->mod[i].file);
+    free(e->tab);
     if (e->uc) uc_close(e->uc);
     free(e->frames);
     free(e);

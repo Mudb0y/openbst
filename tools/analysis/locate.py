@@ -44,6 +44,19 @@ TABLES = [
     ("diph_offsets", 0x1002D508, 4880),
     ("patterns",     0x1002EFB8, 1024),
     ("outputs",      0x10021C80, 1024),
+    ("ph_single",    0x10092D68, 0xAC),
+    ("ph_pair",      0x10092E18, 0x138),
+    ("sound_add",    0x10092F58, 0x68),
+    ("stress_add",   0x10092FC0, 0x18),
+    ("stress_num",   0x10092FD8, 0x28),
+    ("modmap",       0x10037638, 0x30),
+    ("modtab",       0x10037668, 0xC0),
+    ("lts_index",    0x1002E818, 0x300),
+    ("names",        0x1002EBD0, 0x228),
+    ("dispatch",     0x10022ED0, 1024),
+    ("rules",        0x10093000, 2048),
+    ("suffix_ptrs",  0x10020E90, 16),
+    ("trie_desc",    0x10030898, 20),
 ]
 
 

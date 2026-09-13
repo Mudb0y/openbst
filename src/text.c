@@ -1,3 +1,5 @@
+#include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include "bst_text.h"
 
@@ -16,6 +18,10 @@ const bst_tabmap BST_MAP_1995 = {
 
     .tokstates     = 0x10021748, .names      = 0x1002EBD0,
     .code_lo       = 0x10001000, .code_hi    = 0x10019000,
+    .tok_stride = 12,
+    .tok_state_off = 0, .tok_state_w = 4,
+    .tok_handler_off = 4, .tok_handler_w = 4,
+    .tok_next_off = 8, .tok_next_w = 4,
 
     .code_medial   = 0x10020EA0, .code_initial  = 0x10020F10,
     .ph_single     = 0x10092D68, .ph_single_max = 0x10092E14,
@@ -76,6 +82,148 @@ const bst_tabmap BST_MAP_1995 = {
         [BST_S_HUNDRED]   = 0x1002E794, [BST_S_ZERO]     = 0x1002EEB8,
     },
 };
+
+/* The 1998 English module's table directory, as far as it has been settled.
+   Addresses are (segment << 16) | offset, which is what bst_image_init_ne
+   lays the module out to use.
+
+   The tables that are the engine rather than the language were placed by
+   matching the 1995 build's bytes; the transition table and its handlers by
+   aligning the two state machines, which agree row for row; the dictionary
+   buckets by reading the switch that selects them; and the pointer slots that
+   name a spoken word by which text makes the engine read them.
+
+   A zero means not yet settled, not absent. bst_map_gaps reports them. */
+const bst_tabmap BST_MAP_1998_ENG = {
+    .chattr        = 0x00101476, .letterattr = 0x00101576,
+    .casemap       = 0x00101676, .symmap     = 0x00101776,
+
+    .phattr1       = 0x00100ef8, .phattr2    = 0x00100f76,
+    .classtab      = 0x00100b80, .exctab     = 0x00100b86,
+    .basedur       = 0x00100b60, .coefgain   = 0x0010055e,
+
+    .tokstates     = 0x001011dc, .names      = 0x00101d1e,
+    .code_lo       = 0x00000000, .code_hi    = 0x0001e458,
+    .tok_stride = 6,
+    .tok_state_off = 0, .tok_state_w = 1,
+    .tok_handler_off = 1, .tok_handler_w = 2,
+    .tok_next_off = 5, .tok_next_w = 1,
+
+    .code_medial   = 0x00100068, .code_initial  = 0x001000d2,
+    .ph_single     = 0x00100ff4, .ph_single_max = 0x001010a0,
+    .ph_pair       = 0x001010a2, .ph_pair_max   = 0x001011da,
+    .bucket_index  = {
+        0x0008a6ca, 0x0008eac4, 0x00094bf2, 0x00098064, 0x0009d9b0,
+        0x000a650a, 0x000a9eec, 0x000ae59e, 0x000b3972, 0x000b7aca,
+        0x000bdba2, 0x000c7dd6, 0x000d860e, 0x000db550, 0x000e9ab0,
+    },
+    .bucket_data   = {
+        0x00080000, 0x0008a922, 0x00090000, 0x00094d0c, 0x0009812a,
+        0x000a0000, 0x000a668a, 0x000a9fc8, 0x000b0000, 0x000b3a44,
+        0x000b7bb2, 0x000c0000, 0x000d0000, 0x000d8808, 0x000e0000,
+    },
+
+    .suffix_ptrs   = 0x0010005c, .lts_index = 0x00060000,
+    .dispatch      = 0x00050000, .rules     = 0,
+    .patterns      = 0x00020000, .outputs = 0x00040000,
+
+    .trie_desc     = 0,
+    .modmap        = 0x00102452, .modtab = 0x00102654,
+
+    .trans_pitch   = 0x001001ec, .vowel_dur  = 0x00100438,
+    .stress_num    = 0x001001c8, .stress_add = 0x001001b6,
+    .sound_add     = 0x00100154,
+
+    .diph_records  = 0x000f6018, .diph_offsets = 0x000fa280,
+    .diph_offsets_end = 0x000fb590, .voices    = 0x00040604,
+
+    .h = {
+        [BST_H_LETTER]   = 0x00008376, [BST_H_DIGIT]    = 0x0000837c,
+        [BST_H_EAT1]     = 0x00008388, [BST_H_SPACE]    = 0x00008394,
+        [BST_H_DOT]      = 0x0000839c, [BST_H_CURRENCY] = 0x000083aa,
+        [BST_H_PUNCT]    = 0x000083c0, [BST_H_DASH]     = 0x000083d2,
+        [BST_H_EXPONENT] = 0x000084ea, [BST_H_MODE1]    = 0x0000850c,
+        [BST_H_MODE2]    = 0x0000851a, [BST_H_DEL]      = 0x00008528,
+        [BST_H_OPENER]   = 0x0000853c, [BST_H_TILDE]    = 0x00008588,
+        [BST_H_APOSDOT]  = 0x000085ca, [BST_H_APOS]     = 0x000085e0,
+        [BST_H_POSSESS]  = 0x000085ee, [BST_H_EAT2]     = 0x0000b648,
+        [BST_H_EAT3]     = 0x0000b654, [BST_H_WORD]     = 0x0000a9c6,
+        [BST_H_NUMBER]   = 0x0000951a, [BST_H_DOTTED]   = 0x0000aa88,
+        [BST_H_SEP]      = 0x00008736, [BST_H_GROUPS]   = 0x00008bf2,
+        [BST_H_SEPNUM]   = 0x00009650, [BST_H_MONEY]    = 0x0000992a,
+        [BST_H_DASH2]    = 0x0000a6ca, [BST_H_ORDINAL]  = 0x000083fa,
+        [BST_H_ORDEMIT]  = 0x0000c054, [BST_H_PUNCTOUT] = 0x0000a2e4,
+        [BST_H_DOTOUT]   = 0x0000a5ba,
+    },
+    .s = {
+        [BST_S_DOLLARS]  = 0x001023a4, [BST_S_AND]      = 0x001023a8,
+        [BST_S_CENTS]    = 0x001023b4, [BST_S_HUNDRED]  = 0x001023b8,
+        [BST_S_OH]       = 0x001023c0, [BST_S_POINT]    = 0x001023c4,
+        [BST_S_ORD_ST]   = 0x001023f0, [BST_S_ORD_ND]   = 0x001023f4,
+        [BST_S_ORD_RD]   = 0x001023f8, [BST_S_ORD_FIFTH]= 0x001023fc,
+        [BST_S_ORD_FIRST]= 0x00102400, [BST_S_ORD_TIETH]= 0x00102404,
+        [BST_S_ORD_TH]   = 0x00102408, [BST_S_GRPSEP]   = 0x00102410,
+        [BST_S_PLURAL]   = 0x00102400,
+        [BST_S_DIGITS]   = 0x00101f76, [BST_S_TENS]     = 0x00101fe0,
+        [BST_S_TEENS]    = 0x00102058, [BST_S_SCALES]   = 0x00102140,
+        [BST_S_ZERO]     = 0x00102036,
+    },
+};
+
+/* Names every entry the directory has not been given, so a build's map can be
+   read for what is missing rather than tried and puzzled over. */
+int bst_map_gaps(const bst_tabmap *m, const char **names, int max) {
+    static const struct { const char *name; size_t off; } F[] = {
+        { "chattr", offsetof(bst_tabmap, chattr) },
+        { "letterattr", offsetof(bst_tabmap, letterattr) },
+        { "casemap", offsetof(bst_tabmap, casemap) },
+        { "symmap", offsetof(bst_tabmap, symmap) },
+        { "phattr1", offsetof(bst_tabmap, phattr1) },
+        { "phattr2", offsetof(bst_tabmap, phattr2) },
+        { "classtab", offsetof(bst_tabmap, classtab) },
+        { "exctab", offsetof(bst_tabmap, exctab) },
+        { "basedur", offsetof(bst_tabmap, basedur) },
+        { "coefgain", offsetof(bst_tabmap, coefgain) },
+        { "tokstates", offsetof(bst_tabmap, tokstates) },
+        { "names", offsetof(bst_tabmap, names) },
+        { "code_medial", offsetof(bst_tabmap, code_medial) },
+        { "code_initial", offsetof(bst_tabmap, code_initial) },
+        { "ph_single", offsetof(bst_tabmap, ph_single) },
+        { "ph_single_max", offsetof(bst_tabmap, ph_single_max) },
+        { "ph_pair", offsetof(bst_tabmap, ph_pair) },
+        { "ph_pair_max", offsetof(bst_tabmap, ph_pair_max) },
+        { "suffix_ptrs", offsetof(bst_tabmap, suffix_ptrs) },
+        { "lts_index", offsetof(bst_tabmap, lts_index) },
+        { "dispatch", offsetof(bst_tabmap, dispatch) },
+        { "rules", offsetof(bst_tabmap, rules) },
+        { "patterns", offsetof(bst_tabmap, patterns) },
+        { "outputs", offsetof(bst_tabmap, outputs) },
+        { "trie_desc", offsetof(bst_tabmap, trie_desc) },
+        { "modmap", offsetof(bst_tabmap, modmap) },
+        { "modtab", offsetof(bst_tabmap, modtab) },
+        { "trans_pitch", offsetof(bst_tabmap, trans_pitch) },
+        { "vowel_dur", offsetof(bst_tabmap, vowel_dur) },
+        { "stress_num", offsetof(bst_tabmap, stress_num) },
+        { "stress_add", offsetof(bst_tabmap, stress_add) },
+        { "sound_add", offsetof(bst_tabmap, sound_add) },
+        { "diph_records", offsetof(bst_tabmap, diph_records) },
+        { "diph_offsets", offsetof(bst_tabmap, diph_offsets) },
+        { "voices", offsetof(bst_tabmap, voices) },
+    };
+    int n = 0;
+    for (size_t i = 0; i < sizeof F / sizeof F[0]; i++) {
+        uint32_t v;
+        memcpy(&v, (const char *)m + F[i].off, sizeof v);
+        if (!v && n < max) names[n++] = F[i].name;
+    }
+    for (int i = 0; i < BST_BUCKETS; i++)
+        if (!m->bucket_index[i] && n < max) names[n++] = "bucket_index";
+    for (int i = 0; i < BST_H_COUNT; i++)
+        if (!m->h[i] && n < max) names[n++] = "handler";
+    for (int i = 0; i < BST_S_COUNT; i++)
+        if (!m->s[i] && n < max) names[n++] = "string";
+    return n;
+}
 
 #define A_VOWEL   1
 #define A_VOICED  2
@@ -347,4 +495,127 @@ void bst_normalise(const bst_image *img, const char *word, bst_word *out) {
     out->len = k + 3;
     out->flags = flags;
     out->vowels = vowels;
+}
+
+/* ---- 16-bit modules ------------------------------------------------------
+
+   An NE file keeps its segments unrelocated, and every place a pointer will go
+   holds instead the offset of the next place to fix up. Nothing in the data
+   means anything until that has been walked, so the library lays the module
+   out the way the loader would -- one segment to a 64K window, addressed as
+   (segment << 16) | offset -- and applies the fixups. An internal relocation
+   then writes exactly that address form, which is why a pointer read out of
+   the result needs no further translation. */
+
+#define NE_WINDOWS 21
+#define NE_WINDOW  0x10000u
+
+static uint16_t ne16(const uint8_t *p) { return (uint16_t)(p[0] | (p[1] << 8)); }
+static uint32_t ne32(const uint8_t *p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+int bst_image_init_ne(bst_image *img, const void *data, size_t len,
+                      const bst_tabmap *map) {
+    const uint8_t *d = data;
+    if (!d || len < 0x100) return -1;
+    uint32_t ne = ne32(d + 0x3C);
+    if (ne + 0x40 > len || d[ne] != 'N' || d[ne + 1] != 'E') return -1;
+
+    int nseg = ne16(d + ne + 0x1C);
+    uint32_t seg_off = ne16(d + ne + 0x22);
+    int shift = ne16(d + ne + 0x32);
+    if (!shift) shift = 9;
+    if (nseg < 1 || nseg > BST_SECTIONS) return -1;
+
+    uint8_t *flat = calloc(NE_WINDOWS, NE_WINDOW);
+    if (!flat) return -1;
+
+    memset(img, 0, sizeof *img);
+    img->own = flat;
+    img->image = flat;
+    img->len = (size_t)NE_WINDOWS * NE_WINDOW;
+    img->base = 0;
+    img->t = *map;
+
+    for (int i = 0; i < nseg; i++) {
+        const uint8_t *s = d + ne + seg_off + i * 8;
+        uint32_t sector = ne16(s), slen = ne16(s + 2), alloc = ne16(s + 6);
+        if (!slen) slen = 0x10000;
+        if (!alloc || alloc < slen) alloc = slen;
+        uint32_t win = (uint32_t)(i + 1) * NE_WINDOW;
+        if (sector) {
+            uint32_t at = (uint32_t)sector << shift;
+            uint32_t n = slen;
+            if (at + n > len) n = (uint32_t)len - at;
+            memcpy(flat + win, d + at, n);
+        }
+        img->sec[i].va = win;
+        img->sec[i].vsize = alloc;
+        img->sec[i].raw = win;
+        img->sec[i].rawsize = alloc;
+        img->nsec++;
+    }
+
+    /* The fixups. Only internal references matter: nothing the tables hold
+       points at the host. */
+    for (int i = 0; i < nseg; i++) {
+        const uint8_t *s = d + ne + seg_off + i * 8;
+        uint32_t sector = ne16(s), slen = ne16(s + 2), sflags = ne16(s + 4);
+        if (!slen) slen = 0x10000;
+        if (!(sflags & 0x100) || !sector) continue;
+        uint32_t p = ((uint32_t)sector << shift) + slen;
+        if (p + 2 > len) continue;
+        int nrel = ne16(d + p);
+        uint32_t win = (uint32_t)(i + 1) * NE_WINDOW;
+        for (int k = 0; k < nrel; k++) {
+            if (p + 2 + (uint32_t)(k + 1) * 8 > len) break;
+            const uint8_t *r = d + p + 2 + k * 8;
+            int at = r[0] & 0x0F, rt = r[1];
+            uint32_t off = ne16(r + 2), a = ne16(r + 4), b = ne16(r + 6);
+            if ((rt & 3) != 0) continue;
+            uint32_t value;
+            if (a == 0xFF) continue;          /* a movable entry, not a table */
+            if (a < 1 || a > (uint32_t)nseg) continue;
+            value = (a << 16) | (b & 0xFFFF);
+            uint32_t cur = off;
+            for (int guard = 0; guard < 4096; guard++) {
+                if (cur == 0xFFFF || cur + 2 > NE_WINDOW) break;
+                uint16_t next = (uint16_t)ne16(flat + win + cur);
+                switch (at) {
+                case 0:
+                    flat[win + cur] = (uint8_t)value;
+                    break;
+                case 2:
+                    flat[win + cur] = (uint8_t)(value >> 16);
+                    flat[win + cur + 1] = (uint8_t)(value >> 24);
+                    break;
+                case 3:
+                    flat[win + cur] = (uint8_t)value;
+                    flat[win + cur + 1] = (uint8_t)(value >> 8);
+                    if (cur + 4 <= NE_WINDOW) {
+                        flat[win + cur + 2] = (uint8_t)(value >> 16);
+                        flat[win + cur + 3] = (uint8_t)(value >> 24);
+                    }
+                    break;
+                default:
+                    flat[win + cur] = (uint8_t)value;
+                    flat[win + cur + 1] = (uint8_t)(value >> 8);
+                    break;
+                }
+                if (rt & 4) break;
+                if (at == 0) break;
+                cur = next;
+            }
+        }
+    }
+    return 0;
+}
+
+void bst_image_free(bst_image *img) {
+    if (!img) return;
+    free(img->own);
+    img->own = NULL;
+    img->image = NULL;
 }

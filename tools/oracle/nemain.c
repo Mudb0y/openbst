@@ -117,12 +117,12 @@ static void usage(void) {
     fprintf(stderr,
             "usage: neoracle [-v] [-vv] --core KGMTTS.DLL --lang KGMENG.DLL\n"
             "                [--info] [--dump DIR] [--call NAME[,word...]]\n"
-            "                [--engine TEXT] [--frames FILE]\n");
+            "                [--engine TEXT] [--frames FILE] [--trace FILE]\n");
 }
 
 int main(int argc, char **argv) {
     const char *core = NULL, *lang = NULL, *call = NULL, *dump = NULL;
-    const char *say = NULL, *engine = NULL, *probe = NULL;
+    const char *say = NULL, *engine = NULL, *probe = NULL, *tracepath = NULL;
     const char *wframes = NULL;
     int verbose = 0, info = 0, btrace = 0;
     unsigned long long limit = 0;
@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--info")) info = 1;
         else if (!strcmp(argv[i], "--btrace")) btrace = 1;
         else if (!strcmp(argv[i], "--probe") && i + 1 < argc) probe = argv[++i];
+        else if (!strcmp(argv[i], "--trace") && i + 1 < argc) tracepath = argv[++i];
         else if (!strcmp(argv[i], "--limit") && i + 1 < argc) limit = strtoull(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--eof") && i + 1 < argc) g_eof = (int)strtol(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--core") && i + 1 < argc) core = argv[++i];
@@ -208,6 +209,12 @@ int main(int argc, char **argv) {
         printf("%s init -> %u\n", mc->name, ax);
     }
 
+    FILE *tracef = NULL;
+    if (tracepath) {
+        tracef = fopen(tracepath, "w");
+        if (tracef) ne_trace_reads(e, tracef);
+    }
+
     if (engine) {
         if (!ml) { fprintf(stderr, "--engine needs --lang\n"); return 1; }
         if (probe) {
@@ -268,6 +275,7 @@ int main(int argc, char **argv) {
         printf("TTSCONTROL(0) -> %08x, %zu frame bytes\n", r, e->frames_len);
     }
 
+    if (tracef) { ne_trace_report(e); fclose(tracef); }
     if (verbose) ne_report(e);
     ne_free(e);
     return 0;
