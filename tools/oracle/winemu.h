@@ -54,6 +54,7 @@ struct emu {
 
     /* Slot i of the shim page dispatches to handler[i]. */
     const shim_def *handler[MAX_IMPORTS];
+    uint64_t        ncalled[MAX_IMPORTS];
     int             nshims;
 
     /* Captured waveOut output. */
@@ -67,8 +68,24 @@ struct emu {
     int      tls_used[MAX_TLS];
 
     uint32_t wndproc;
+    uint32_t hwnd;
+
+    /* Posted window messages, oldest first. The engine drives its own message
+       pump and will not return until it sees its buffers complete. */
+    struct { uint32_t hwnd, msg, wparam, lparam; } msgq[256];
+    int msgq_head, msgq_tail;
+
+    /* Set by a shim that wants guest code to run before the shim "returns".
+       The hook stops emulation and emu_call resumes at the new EIP. */
+    int      redirect;
+    int      redirect_taken;
+    uint32_t redirect_eip, redirect_esp;
     uint32_t last_error;
     int      exited;
+
+    /* Guards against the engine spinning in a wait loop we have not satisfied.
+       0 means no limit. */
+    uint64_t insn_limit;
 
     FILE *trace;
     int   verbose;
@@ -90,6 +107,9 @@ void     emu_wr32(emu *e, uint32_t addr, uint32_t v);
 int      emu_read(emu *e, uint32_t addr, void *dst, uint32_t n);
 int      emu_write(emu *e, uint32_t addr, const void *src, uint32_t n);
 void     emu_trace_reads(emu *e, FILE *out);
+void     emu_report_shims(emu *e);
+void     emu_post(emu *e, uint32_t hwnd, uint32_t msg, uint32_t wp, uint32_t lp);
+int      emu_peek(emu *e, uint32_t *hwnd, uint32_t *msg, uint32_t *wp, uint32_t *lp, int remove);
 
 /* shims.c */
 extern const shim_def shim_table[];

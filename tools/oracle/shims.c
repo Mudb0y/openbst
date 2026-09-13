@@ -7,6 +7,8 @@
 /* ---- winmm: the whole point of the exercise ---------------------------- */
 
 #define FAKE_HWAVEOUT 0xbe570001u
+#define FAKE_HWND     0x00cd0001u
+#define MM_WOM_DONE   0x000003bdu
 #define WHDR_DONE     0x00000001u
 #define WHDR_PREPARED 0x00000002u
 
@@ -26,6 +28,9 @@ static uint32_t s_waveOutOpen(emu *e, uint32_t esp) {
     if (fdwOpen & 0x00000001u) return 0;   /* WAVE_FORMAT_QUERY */
     if (phwo) emu_wr32(e, phwo, FAKE_HWAVEOUT);
     e->wave_open = 1;
+    if (e->verbose)
+        fprintf(stderr, "waveOutOpen %u Hz %u ch %u bit, callback 0x%x flags 0x%x\n",
+                e->sample_rate, e->channels, e->bits, A(3), fdwOpen);
     return 0;
 }
 
@@ -53,9 +58,10 @@ static uint32_t s_waveOutWrite(emu *e, uint32_t esp) {
         if (emu_read(e, data, e->pcm + e->pcm_len, len) == 0)
             e->pcm_len += len;
     }
-    /* Retire the buffer immediately: the engine polls WHDR_DONE rather than
-       waiting on the device, so there is nothing to schedule. */
+    /* Retire the buffer immediately. There is no device to wait for, so the
+       completion is posted straight back to the engine's own window. */
     emu_wr32(e, pwh + 0x10, emu_rd32(e, pwh + 0x10) | WHDR_DONE);
+    emu_post(e, FAKE_HWND, MM_WOM_DONE, FAKE_HWAVEOUT, pwh);
     return 0;
 }
 
@@ -267,8 +273,49 @@ static uint32_t s_RegisterClassA(emu *e, uint32_t esp) {
     if (wc) e->wndproc = emu_rd32(e, wc + 4);
     return 0xc001;
 }
-static uint32_t s_CreateWindowExA(emu *e, uint32_t esp) { (void)e; (void)esp; return 0x00cd0001u; }
-static uint32_t s_PeekMessageA(emu *e, uint32_t esp)    { (void)e; (void)esp; return 0; }
+static uint32_t s_CreateWindowExA(emu *e, uint32_t esp) {
+    (void)esp;
+    e->hwnd = FAKE_HWND;
+    return FAKE_HWND;
+}
+
+static uint32_t s_PeekMessageA(emu *e, uint32_t esp) {
+    uint32_t lpMsg = A(0), remove = A(4) & 1;   /* PM_REMOVE */
+    uint32_t hwnd, msg, wp, lp;
+    if (!emu_peek(e, &hwnd, &msg, &wp, &lp, (int)remove)) return 0;
+    if (lpMsg) {
+        uint32_t m[7] = { hwnd, msg, wp, lp, 0, 0, 0 };
+        emu_write(e, lpMsg, m, sizeof m);
+    }
+    return 1;
+}
+
+/* Runs the engine's own window procedure. Unicorn cannot be re-entered from
+   inside a hook, so instead of calling it we build the frame it expects and
+   hand control over: wndproc's "ret 16" lands back in DispatchMessageA's
+   caller with the stack exactly where the planted "ret 4" would have left it. */
+static uint32_t s_DispatchMessageA(emu *e, uint32_t esp) {
+    uint32_t lpMsg = A(0);
+    if (!lpMsg || !e->wndproc) return 0;
+
+    uint32_t hwnd = emu_rd32(e, lpMsg + 0);
+    uint32_t msg  = emu_rd32(e, lpMsg + 4);
+    uint32_t wp   = emu_rd32(e, lpMsg + 8);
+    uint32_t lp   = emu_rd32(e, lpMsg + 12);
+    uint32_t retaddr = emu_rd32(e, esp);
+
+    uint32_t s = esp - 12;
+    emu_wr32(e, s +  0, retaddr);
+    emu_wr32(e, s +  4, hwnd);
+    emu_wr32(e, s +  8, msg);
+    emu_wr32(e, s + 12, wp);
+    emu_wr32(e, s + 16, lp);
+
+    e->redirect = 1;
+    e->redirect_eip = e->wndproc;
+    e->redirect_esp = s;
+    return 0;
+}
 
 const shim_def shim_table[] = {
     { "WINMM.dll",    "waveOutOpen",             6, s_waveOutOpen },
@@ -328,7 +375,7 @@ const shim_def shim_table[] = {
     { "USER32.dll",   "MessageBeep",             1, s_nop1 },
     { "USER32.dll",   "PeekMessageA",            5, s_PeekMessageA },
     { "USER32.dll",   "TranslateMessage",        1, s_nop0 },
-    { "USER32.dll",   "DispatchMessageA",        1, s_nop0 },
+    { "USER32.dll",   "DispatchMessageA",        1, s_DispatchMessageA },
 };
 
 const int shim_table_len = (int)(sizeof shim_table / sizeof shim_table[0]);

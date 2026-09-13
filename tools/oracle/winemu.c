@@ -106,11 +106,47 @@ static void hook_shim(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     int idx = (int)((addr - SHIM_BASE) / SHIM_STRIDE);
     if (idx < 0 || idx >= e->nshims || !e->handler[idx]) return;
 
+    e->ncalled[idx]++;
     uint32_t esp = 0;
     uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
+    if (e->verbose > 1)
+        fprintf(stderr, "  [shim] %s\n", e->handler[idx]->name);
     uint32_t ret = e->handler[idx]->fn(e, esp);
+    if (e->redirect) {
+        /* Hand control to guest code instead of letting the planted ret run.
+           The shim has already arranged a stack frame that returns to the
+           shim's own caller afterwards. */
+        e->redirect = 0;
+        e->redirect_taken = 1;
+        uc_reg_write(e->uc, UC_X86_REG_EIP, &e->redirect_eip);
+        uc_reg_write(e->uc, UC_X86_REG_ESP, &e->redirect_esp);
+        uc_emu_stop(e->uc);
+        return;
+    }
     uc_reg_write(e->uc, UC_X86_REG_EAX, &ret);
     /* The `ret imm16` planted in this slot performs the stdcall cleanup. */
+}
+
+void emu_post(emu *e, uint32_t hwnd, uint32_t msg, uint32_t wp, uint32_t lp) {
+    int n = (int)(sizeof e->msgq / sizeof e->msgq[0]);
+    int next = (e->msgq_tail + 1) % n;
+    if (next == e->msgq_head) return;   /* queue full: drop, as Windows would */
+    e->msgq[e->msgq_tail].hwnd = hwnd;
+    e->msgq[e->msgq_tail].msg = msg;
+    e->msgq[e->msgq_tail].wparam = wp;
+    e->msgq[e->msgq_tail].lparam = lp;
+    e->msgq_tail = next;
+}
+
+int emu_peek(emu *e, uint32_t *hwnd, uint32_t *msg, uint32_t *wp, uint32_t *lp, int remove) {
+    int n = (int)(sizeof e->msgq / sizeof e->msgq[0]);
+    if (e->msgq_head == e->msgq_tail) return 0;
+    *hwnd = e->msgq[e->msgq_head].hwnd;
+    *msg  = e->msgq[e->msgq_head].msg;
+    *wp   = e->msgq[e->msgq_head].wparam;
+    *lp   = e->msgq[e->msgq_head].lparam;
+    if (remove) e->msgq_head = (e->msgq_head + 1) % n;
+    return 1;
 }
 
 static void hook_read(uc_engine *uc, uc_mem_type t, uint64_t addr,
@@ -140,6 +176,14 @@ static bool hook_unmapped(uc_engine *uc, uc_mem_type t, uint64_t addr,
 
 void emu_trace_reads(emu *e, FILE *out) {
     e->trace = out;
+}
+
+void emu_report_shims(emu *e) {
+    fprintf(stderr, "shim call counts:\n");
+    for (int i = 0; i < e->nshims; i++)
+        if (e->ncalled[i])
+            fprintf(stderr, "  %-26s %llu\n", e->handler[i]->name,
+                    (unsigned long long)e->ncalled[i]);
 }
 
 /* ---- construction ------------------------------------------------------ */
@@ -339,12 +383,27 @@ int emu_call(emu *e, uint32_t func, const uint32_t *args, int argc, uint32_t *re
     emu_wr32(e, esp, MAGIC_RET);
     uc_reg_write(e->uc, UC_X86_REG_ESP, &esp);
 
-    uc_err err = uc_emu_start(e->uc, func, MAGIC_RET, 0, 0);
-    if (err != UC_ERR_OK) {
-        uint32_t pc = 0;
+    /* Emulation is restarted after every shim that redirects into guest code,
+       because Unicorn cannot be re-entered from inside a hook. */
+    uint32_t start = func, pc = 0;
+    for (long seg = 0;; seg++) {
+        uc_err err = uc_emu_start(e->uc, start, MAGIC_RET, 0, e->insn_limit);
         uc_reg_read(e->uc, UC_X86_REG_EIP, &pc);
-        fprintf(stderr, "emu error at 0x%08x: %s\n", pc, uc_strerror(err));
-        return -1;
+        if (err != UC_ERR_OK) {
+            fprintf(stderr, "emu error at 0x%08x: %s\n", pc, uc_strerror(err));
+            return -1;
+        }
+        if (pc == MAGIC_RET || e->exited) break;
+        if (seg > 4000000L) {
+            fprintf(stderr, "too many resumes, still running at 0x%08x\n", pc);
+            return -2;
+        }
+        if (e->insn_limit && !e->redirect_taken) {
+            fprintf(stderr, "instruction budget exhausted, still running at 0x%08x\n", pc);
+            return -2;
+        }
+        e->redirect_taken = 0;
+        start = pc;
     }
     if (ret) uc_reg_read(e->uc, UC_X86_REG_EAX, ret);
     return 0;

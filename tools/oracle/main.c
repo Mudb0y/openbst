@@ -8,6 +8,7 @@ static void usage(void) {
         "  --call NAME[:ARG,ARG,...]   call an export; repeatable, in order\n"
         "  --out FILE                  write captured audio (wav unless --raw)\n"
         "  --raw                       write headerless pcm\n"
+        "  --limit N                   instruction budget per call\n"
         "  --trace FILE                log every read from the image\n"
         "  --list                      list exports and exit\n"
         "  -v                          verbose\n"
@@ -61,15 +62,18 @@ int main(int argc, char **argv) {
     const char *dll = NULL, *out = NULL, *tracepath = NULL;
     const char *calls[32];
     int ncalls = 0, raw = 0, list = 0, verbose = 0;
+    unsigned long long limit = 2000000000ULL;
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--dll") && i + 1 < argc)        dll = argv[++i];
         else if (!strcmp(argv[i], "--out") && i + 1 < argc)   out = argv[++i];
         else if (!strcmp(argv[i], "--trace") && i + 1 < argc) tracepath = argv[++i];
         else if (!strcmp(argv[i], "--call") && i + 1 < argc && ncalls < 32) calls[ncalls++] = argv[++i];
+        else if (!strcmp(argv[i], "--limit") && i + 1 < argc) limit = strtoull(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
-        else if (!strcmp(argv[i], "-v"))     verbose = 1;
+        else if (!strcmp(argv[i], "-v"))     verbose++;
+        else if (!strcmp(argv[i], "-vv"))    verbose += 2;
         else { usage(); return 2; }
     }
     if (!dll) { usage(); return 2; }
@@ -77,6 +81,7 @@ int main(int argc, char **argv) {
     emu *e = emu_new();
     if (!e) { fprintf(stderr, "emulator init failed\n"); return 1; }
     e->verbose = verbose;
+    e->insn_limit = limit;
 
     fprintf(stderr, "loading %s\n", dll);
     if (emu_load_pe(e, dll) < 0) { emu_free(e); return 1; }
@@ -150,7 +155,9 @@ int main(int argc, char **argv) {
         for (int i = 0; i < argn; i++) fprintf(stderr, "%s0x%x", i ? ", " : "", args[i]);
         fprintf(stderr, ")\n");
 
-        if (emu_call(e, fn, args, argn, &ret) < 0) { emu_free(e); return 1; }
+        int rc = emu_call(e, fn, args, argn, &ret);
+        if (rc == -1) { emu_free(e); return 1; }
+        if (rc == -2) break;
         fprintf(stderr, "  -> 0x%08x   (%zu bytes captured so far)\n", ret, e->pcm_len);
 
         for (int i = 0; i < argn; i++) {
@@ -166,6 +173,7 @@ int main(int argc, char **argv) {
     }
 
     if (e->trace) fclose(e->trace);
+    if (verbose) emu_report_shims(e);
 
     fprintf(stderr, "captured %zu bytes, %u Hz, %u ch, %u bit\n",
             e->pcm_len, e->sample_rate, e->channels, e->bits);
