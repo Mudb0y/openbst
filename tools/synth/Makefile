@@ -6,7 +6,7 @@ INC    := ../../include
 # Every test driver is one .c here linked against the library modules it
 # needs; the lists below are the only per-binary detail.
 SYNTH   := synth interp
-TEXT    := text dict lts cursors wordstream
+TEXT    := text dict lts cursors wordstream stress
 CORE    := synth interp text dict lts cursors phrules pairs
 
 synth_MODS      := synth interp
@@ -21,9 +21,10 @@ acctest_MODS    := text cursors accents
 contest_MODS    := text cursors contour
 frametest_MODS  := text cursors diphone frames interp synth
 pipetest_MODS   := text cursors accents pairs contour diphone frames interp synth
+stresstest_MODS := text cursors stress
 say_MODS        := text dict lts cursors wordstream
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 

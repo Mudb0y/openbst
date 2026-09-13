@@ -88,6 +88,12 @@ void bst_build_emit(const bst_image *img, bst_builder *b, int code);
 void bst_build_suffix(const bst_image *img, bst_builder *b, int flags, int y_from_i);
 void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *b);
 
+/* Chooses which syllable of a word carries the accent and fills in every
+   syllable's mark. `emph` is the emphasis state the surrounding text set and
+   `mode` the engine's mode bits. */
+void bst_word_stress(const bst_image *img, uint8_t *stream, int len,
+                     int emph, int mode);
+
 /* Applies the dictionary's typed records to a code stream, which is the form
    the rest of the engine wants. The two flags carry the "a main stress has
    been placed" and "a secondary has" state across the stem and the suffix, so
