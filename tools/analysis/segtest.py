@@ -63,7 +63,7 @@ def main():
         if not text:
             continue
         pairs = [(int(a), int(b)) for a, b in
-                 re.findall(r"^call (\S+) (\S+)", run(text, "0x10002910:4"), re.M)]
+                 re.findall(r"^call \S+ (\S+) (\S+)", run(text, "0x10002910:4"), re.M)]
         if not pairs:
             continue
         # Entries carrying the command flag in the top nibble are not expanded
@@ -72,7 +72,7 @@ def main():
                          if (idx & 0xF000) == 0
                          for t in expand(idx, cnt)])
         theirs = collapse([int(x) for x in
-                           re.findall(r"^call \S+ (\S+)", run(text, "0x10004130:2"), re.M)])
+                           re.findall(r"^call \S+ \S+ (\S+)", run(text, "0x10004130:2"), re.M)])
         if ours == theirs:
             same += 1
         else:

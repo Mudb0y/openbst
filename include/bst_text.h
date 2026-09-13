@@ -87,4 +87,63 @@ int  bst_word_pronounce(const bst_image *img, const char *word,
    collapse a doubled consonant, restore a silent e, or refuse the strip. */
 void bst_normalise(const bst_image *img, const char *word, bst_word *out);
 
+/* ---- the sentence stream ------------------------------------------------
+
+   Everything past the word front end works on one byte stream per sentence,
+   scanned by a handful of cursors that skip empty slots and step over the
+   six-byte command records. The stages share the cursors, so they live here
+   rather than inside any one of them. */
+
+typedef struct { int val, pos; } bst_cur;
+
+/* The two phoneme attribute bytes. The first classifies the sound; the second
+   says which of the scans below stop on it. */
+int bst_ph_attr1(const bst_image *img, int c);
+int bst_ph_attr2(const bst_image *img, int c);
+
+/* Forward to the next segment, stress mark or eighth-class sound; backward to
+   the previous eighth-class sound; and forward to the next segment that opens
+   a group. Each gives up slightly differently at the end of the stream, which
+   is load-bearing: a cursor that reads zero because its scan found nothing is
+   distinguishable from one that found a zero. */
+void bst_scan_seg(const bst_image *img, const uint8_t *s, int lim, int from, bst_cur *c);
+void bst_scan_stress(const bst_image *img, const uint8_t *s, int lim, int from, bst_cur *c);
+void bst_scan_eight(const bst_image *img, const uint8_t *s, int lim, int from, bst_cur *c);
+void bst_scan_eight_back(const bst_image *img, const uint8_t *s, int from, bst_cur *c);
+void bst_scan_strong(const bst_image *img, const uint8_t *s, int lim, int from, bst_cur *c);
+
+/* ---- the pair scan ------------------------------------------------------
+
+   One traversal of the sentence stream emitting, for each sound, a diphone
+   segment naming it and the sound before it, and up to three transition
+   events around it carrying duration and two pitch offsets. How many events
+   fall before the segment and how many after is fixed per sound class, and
+   the count of events since the last segment is what the segment records, so
+   the two kinds interleave and cannot be produced separately. */
+
+#define BST_EMIT_SEG   0
+#define BST_EMIT_TRANS 1
+
+typedef struct {
+    uint8_t  kind;
+    uint16_t index;   /* segment: previous * 48 + current, or a command with
+                         0xF000 set; transition: (sound - 1) * 3 + position */
+    uint16_t count;   /* segment: events since the last one; transition: the
+                         duration, before the engine clamps it to a byte */
+    int16_t  a, b;    /* segment: the command's operands; transition: the two
+                         pitch offsets, 0x7F meaning "no target" */
+} bst_emit;
+
+/* State the scan carries between sentences. */
+typedef struct {
+    int prev;        /* the sound the next sentence's first pair starts from */
+    int strong;      /* the group-opening cursor's value, kept across calls */
+    int emphasis;
+    int flags;
+} bst_pair_state;
+
+/* Returns the number of records written, or -1 if max was too small. */
+int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
+              bst_pair_state *st, bst_emit *out, int max);
+
 #endif

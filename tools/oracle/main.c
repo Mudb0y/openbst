@@ -22,7 +22,7 @@ static void usage(void) {
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --records TEXT              print the segment records driving frame generation\n"
         "  --recat PC:ARG:N            dump N bytes at pointer argument ARG on reaching PC\n"
-        "  --snap PC:ADDR:N            dump N bytes at ADDR on reaching PC\n"
+        "  --snap PC:ADDR:N[,ADDR:N]   dump N bytes at each ADDR on reaching PC\n"
         "  --regmem PC:REG:OFF:N       dump N bytes at REG+OFF on reaching PC\n"
         "  --phrules TEXT              the phoneme stream before and after the rule stage\n"
         "  --intonation TEXT           the intonation records: type, pitch period, timing\n"
@@ -32,7 +32,7 @@ static void usage(void) {
         "  --pitch TEXT                print the pitch smoother state at each frame\n"
         "  --level N                   verbosity for --phonemes (default 6)\n"
         "  --watch ADDR:LEN[:FILE]     log writes into an address range\n"
-        "  --hook ADDR[:NARGS]         log stack arguments at a function entry\n"
+        "  --hook ADDR[:NARGS][,...]   log stack arguments at each function entry\n"
         "  -v                          verbose\n"
         "\n"
         "argument forms: 12345 | 0xabc | str:TEXT | wstr:TEXT | buf:N | ptr:N\n"
@@ -201,21 +201,26 @@ int main(int argc, char **argv) {
     if (hookspec) {
         char hs[256];
         snprintf(hs, sizeof hs, "%s", hookspec);
-        char *q = NULL;
-        unsigned long pc = strtoul(hs, &q, 0);
-        int na = (q && *q == ':') ? atoi(q + 1) : 2;
-        emu_hook_call(e, (uint32_t)pc, na, stdout);
+        for (char *t = strtok(hs, ","); t; t = strtok(NULL, ",")) {
+            char *q = NULL;
+            unsigned long pc = strtoul(t, &q, 0);
+            int na = (q && *q == ':') ? atoi(q + 1) : 2;
+            emu_hook_call(e, (uint32_t)pc, na, stdout);
+        }
     }
     if (snapspec) {
-        char ss[160];
+        char ss[256];
         snprintf(ss, sizeof ss, "%s", snapspec);
         char *q = NULL;
         unsigned long pc = strtoul(ss, &q, 0);
-        uint32_t a[1];
-        int l[1];
-        a[0] = (q && *q == ':') ? (uint32_t)strtoul(q + 1, &q, 0) : 0;
-        l[0] = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 32;
-        emu_hook_dump(e, (uint32_t)pc, a, l, 1, 'S', stdout);
+        uint32_t a[8];
+        int l[8], na = 0;
+        while (q && (*q == ':' || *q == ',') && na < 8) {
+            a[na] = (uint32_t)strtoul(q + 1, &q, 0);
+            l[na] = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 32;
+            na++;
+        }
+        if (na) emu_hook_dump(e, (uint32_t)pc, a, l, na, 'S', stdout);
     }
 
     if (!nodllmain) {

@@ -98,10 +98,12 @@ struct emu {
        Draining copies the contents out and rewinds the index whenever it
        approaches the limit, which the append routine tolerates because it
        re-reads the index for every character. */
-    /* Argument logging at a chosen function entry. */
+    /* Argument logging at chosen function entries. Several can be watched at
+       once, which is how two emitters driven by one traversal keep their
+       interleaving. */
     FILE    *calllog;
-    uint32_t hook_pc;
-    int      hook_nargs;
+    struct { uint32_t pc; int nargs; } calls[8];
+    int      ncalls;
 
     /* Dumps the bytes a pointer argument points at, for following the
        segment records that drive frame generation. */

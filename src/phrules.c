@@ -15,74 +15,22 @@
  * the cursors and misplaces everything downstream, which is why a partial
  * version scores below leaving the stream alone.
  *
+ * The cursor scans themselves are shared with the pair scan and live in
+ * cursors.c.
+ *
  * This implementation is partial and is not in the test suite. See the rule
  * mask below for exactly how partial. */
 
-#define RDATA_VA  0x10020000u
-#define RDATA_OFF 0x17800u
-#define PH_ATTR1  0x10021648u
-#define PH_ATTR2  0x100216C8u
-
 #define CMD 0x7C
 
-static int a1(const bst_image *img, int c) {
-    size_t o = RDATA_OFF + (PH_ATTR1 - RDATA_VA) + (unsigned)(c & 0xFF);
-    return o < img->len ? img->image[o] : 0;
-}
-static int a2(const bst_image *img, int c) {
-    size_t o = RDATA_OFF + (PH_ATTR2 - RDATA_VA) + (unsigned)(c & 0xFF);
-    return o < img->len ? img->image[o] : 0;
-}
+typedef bst_cur cur;
 
-typedef struct { int val, pos; } cur;
+static int a1(const bst_image *img, int c) { return bst_ph_attr1(img, c); }
+static int a2(const bst_image *img, int c) { return bst_ph_attr2(img, c); }
 
-/* The three forward scans. Each looks for the next byte carrying a given
-   second-attribute bit, skipping empty slots and stepping over the six-byte
-   command records, and each gives up slightly differently at the end. */
-static void scan_seg(const bst_image *img, const uint8_t *s, int lim, int from, cur *c) {
-    int p = from;
-    for (;;) {
-        int q;
-        do {
-            q = p; p = q + 1;
-            if (p > lim) { c->val = 0; c->pos = 0; return; }
-        } while (s[p] == 0);
-        int b = s[p];
-        if (a2(img, b) & 1) { c->val = b; c->pos = p; return; }
-        if (b == CMD) { p = q + 7; continue; }
-        if (p >= lim - 1 || b == 0x4D || b == 0x4E) { c->val = 0; c->pos = 0; return; }
-    }
-}
-
-static void scan_stress(const bst_image *img, const uint8_t *s, int lim, int from, cur *c) {
-    int p = from;
-    for (;;) {
-        int q;
-        do {
-            q = p; p = q + 1;
-            if (p > lim) { c->val = 0; c->pos = 0; return; }
-        } while (s[p] == 0);
-        int b = s[p];
-        if (a2(img, b) & 2) { c->val = b - 0x30; c->pos = p; return; }
-        if (b == CMD) { p = q + 7; continue; }
-        if (p >= lim - 1) { c->val = 0; c->pos = 0; return; }
-    }
-}
-
-static void scan_eight(const bst_image *img, const uint8_t *s, int lim, int from, cur *c) {
-    int p = from;
-    for (;;) {
-        int q;
-        do {
-            q = p; p = q + 1;
-            if (p > lim) { c->val = 0; c->pos = 0; return; }
-        } while (s[p] == 0);
-        int b = s[p];
-        if (a2(img, b) & 8) { c->val = b; c->pos = p; return; }
-        if (b == CMD) { p = q + 7; continue; }
-        if (p >= lim) { c->val = 0; c->pos = 0; return; }
-    }
-}
+#define scan_seg(i, s, l, f, c)    bst_scan_seg(i, s, l, f, c)
+#define scan_stress(i, s, l, f, c) bst_scan_stress(i, s, l, f, c)
+#define scan_eight(i, s, l, f, c)  bst_scan_eight(i, s, l, f, c)
 
 /* Which rules and which terms are enabled. Every condition has its own bit so
  * they can be measured separately, which is the only way to tell a correct

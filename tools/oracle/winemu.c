@@ -281,13 +281,17 @@ static void hook_drain(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
    index arithmetic that produced them is often several instructions of
    lea-chains that are easy to misread. */
 static void hook_call(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
-    (void)uc; (void)addr; (void)size;
+    (void)uc; (void)size;
     emu *e = ud;
     if (!e->calllog) return;
+    int k = -1;
+    for (int i = 0; i < e->ncalls; i++)
+        if (e->calls[i].pc == (uint32_t)addr) { k = i; break; }
+    if (k < 0) return;
     uint32_t esp = 0;
     uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
-    fprintf(e->calllog, "call");
-    for (int i = 0; i < e->hook_nargs; i++)
+    fprintf(e->calllog, "call %08x", (uint32_t)addr);
+    for (int i = 0; i < e->calls[k].nargs; i++)
         fprintf(e->calllog, " %d", (int32_t)emu_rd32(e, esp + 4 + 4 * i));
     fprintf(e->calllog, "\n");
 }
@@ -324,7 +328,7 @@ static void hook_dump(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
         if (e->dump[s].pc != (uint32_t)addr) continue;
         fprintf(e->dumplog, "%c", e->dump[s].tag);
         for (int r = 0; r < e->dump[s].n; r++) {
-            uint8_t buf[128];
+            uint8_t buf[1024];
             int n = e->dump[s].len[r] > (int)sizeof buf ? (int)sizeof buf : e->dump[s].len[r];
             if (uc_mem_read(e->uc, e->dump[s].addr[r], buf, n) != UC_ERR_OK) continue;
             fprintf(e->dumplog, " |");
@@ -397,9 +401,12 @@ void emu_hook_regs(emu *e, uint32_t pc, FILE *out) {
 }
 
 void emu_hook_call(emu *e, uint32_t pc, int nargs, FILE *out) {
+    int n = (int)(sizeof e->calls / sizeof e->calls[0]);
+    if (e->ncalls >= n) return;
     e->calllog = out;
-    e->hook_pc = pc;
-    e->hook_nargs = nargs;
+    e->calls[e->ncalls].pc = pc;
+    e->calls[e->ncalls].nargs = nargs;
+    e->ncalls++;
     uc_hook h;
     uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_call, e, pc, pc);
 }

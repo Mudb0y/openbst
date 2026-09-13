@@ -57,7 +57,7 @@ def main():
                               "--hook", "0x10002910:4"],
                              capture_output=True, text=True).stdout
         pairs = [(int(a), int(b)) for a, b in
-                 re.findall(r"^call (\S+) (\S+)", out, re.M)]
+                 re.findall(r"^call \S+ (\S+) (\S+)", out, re.M)]
         if not pairs:
             continue
         lines += 1

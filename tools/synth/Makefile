@@ -1,99 +1,48 @@
 CFLAGS ?= -O2 -g -Wall -Wextra -std=gnu11 -I../../include
 BUILD  := ../../build
-BIN    := $(BUILD)/synth
-BIN2   := $(BUILD)/interptest
-BIN3   := $(BUILD)/prosodytest
-BIN4   := $(BUILD)/durtest
-BIN5   := $(BUILD)/normtest
-BIN6   := $(BUILD)/curtest
-BIN7   := $(BUILD)/phtest
-BIN8   := $(BUILD)/say
-OBJ    := $(BUILD)/synth_core.o $(BUILD)/synth_main.o
-CORE   := $(BUILD)/synth_core.o $(BUILD)/interp_core.o
+SRC    := ../../src
+INC    := ../../include
 
-all: $(BIN) $(BIN2) $(BIN3) $(BIN4) $(BIN5) $(BIN6) $(BIN7) $(BIN8)
+# Every test driver is one .c here linked against the library modules it
+# needs; the lists below are the only per-binary detail.
+SYNTH   := synth interp
+TEXT    := text dict lts cursors
+CORE    := synth interp text dict lts cursors phrules pairs
 
-$(BUILD)/synth_core.o: ../../src/synth.c ../../include/bst_synth.h
+synth_MODS      := synth interp
+interptest_MODS := synth interp
+prosodytest_MODS:= synth interp
+durtest_MODS    := synth interp
+normtest_MODS   := text dict lts cursors
+curtest_MODS    := text cursors
+phtest_MODS     := text cursors phrules
+pairtest_MODS   := text cursors pairs
+say_MODS        := text dict lts cursors
+
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest say
+
+all: $(addprefix $(BUILD)/,$(BINS))
+
+$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/synth_main.o: main.c ../../include/bst_synth.h
+$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/interp_core.o: ../../src/interp.c ../../include/bst_synth.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
+# The synthesizer driver is main.c rather than synth.c, which would collide
+# with the library module of that name.
+$(BUILD)/synth: $(BUILD)/drv_main.o $(addprefix $(BUILD)/lib_,$(addsuffix .o,$(synth_MODS)))
+	$(CC) $^ -o $@
 
-$(BUILD)/interptest.o: interptest.c ../../include/bst_synth.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN): $(OBJ) $(BUILD)/interp_core.o
-	$(CC) $(OBJ) $(BUILD)/interp_core.o -o $@
-
-$(BIN2): $(CORE) $(BUILD)/interptest.o
-	$(CC) $(CORE) $(BUILD)/interptest.o -o $@
-
-$(BUILD)/prosodytest.o: prosodytest.c ../../include/bst_synth.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN3): $(CORE) $(BUILD)/prosodytest.o
-	$(CC) $(CORE) $(BUILD)/prosodytest.o -o $@
-
-$(BUILD)/durtest.o: durtest.c ../../include/bst_synth.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN4): $(CORE) $(BUILD)/durtest.o
-	$(CC) $(CORE) $(BUILD)/durtest.o -o $@
-
-$(BUILD)/text_core.o: ../../src/text.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD)/normtest.o: normtest.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD)/dict_core.o: ../../src/dict.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD)/lts_core.o: ../../src/lts.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN5): $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/normtest.o
-	$(CC) $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/normtest.o -o $@
-
-$(BUILD)/curtest.o: curtest.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN6): $(BUILD)/text_core.o $(BUILD)/curtest.o
-	$(CC) $(BUILD)/text_core.o $(BUILD)/curtest.o -o $@
-
-$(BUILD)/ph_core.o: ../../src/phrules.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD)/phtest.o: phtest.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN7): $(BUILD)/text_core.o $(BUILD)/ph_core.o $(BUILD)/phtest.o
-	$(CC) $(BUILD)/text_core.o $(BUILD)/ph_core.o $(BUILD)/phtest.o -o $@
-
-$(BUILD)/say.o: say.c ../../include/bst_text.h
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BIN8): $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/say.o
-	$(CC) $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/say.o -o $@
+define BINRULE
+$(BUILD)/$(1): $(BUILD)/drv_$(1).o $(addprefix $(BUILD)/lib_,$(addsuffix .o,$($(1)_MODS)))
+	$$(CC) $$^ -o $$@
+endef
+$(foreach b,$(filter-out synth,$(BINS)),$(eval $(call BINRULE,$(b))))
 
 clean:
-	rm -f $(OBJ) $(CORE) $(BIN) $(BIN2) $(BUILD)/interptest.o
+	rm -f $(BUILD)/lib_*.o $(BUILD)/drv_*.o $(addprefix $(BUILD)/,$(BINS))
 
 .PHONY: all clean

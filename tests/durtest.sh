@@ -15,7 +15,7 @@ while IFS= read -r text; do
     paste \
       <("$root/build/oracle" --dll "$dll" --speak "$text" --regmem 0x1000452d:edi:0:2 2>/dev/null | awk '/^M/{print $4}') \
       <("$root/build/oracle" --dll "$dll" --speak "$text" --regmem 0x1000452d:esi:0:1 2>/dev/null | awk '/^M/{print $3}') \
-      <("$root/build/oracle" --dll "$dll" --speak "$text" --hook 0x10006bc0:2   2>/dev/null | awk '/^call/{print $3}') \
+      <("$root/build/oracle" --dll "$dll" --speak "$text" --hook 0x10006bc0:2   2>/dev/null | awk '/^call/{print $4}') \
       >> "$work/t.txt"
 done < "$corpus"
 
