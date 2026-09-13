@@ -84,21 +84,27 @@ static void scan_eight(const bst_image *img, const uint8_t *s, int lim, int from
     }
 }
 
-/* Which rules are enabled. Two of the five are known wrong and are off by
-   default: the glottal-stop insertion (bit 0) and the phrase-edge variant of
-   the reduced vowel (bit 4). Each of those scores below leaving the stream
-   alone, so enabling them makes the pass worse than not running it.
+/* Which rules and which terms are enabled.
+ *
+ * Splitting the conditions and measuring them one at a time gives a sharper
+ * answer than "two rules of five work": everything that reads the previous
+ * segment cursor hurts, and everything that reads the next segment cursor
+ * helps or is neutral. The glottal-stop insertion (bit 0), the phrase-edge
+ * test on the previous segment (bit 6) and the test for an empty next value
+ * (bit 5) are all off for that reason. The fault is one cursor, not four
+ * rules, which matches the cursor check: prev was the only one that diverged.
  *
  * Measured over the corpus, against 5294 of 5568 positions and 28 of 58
  * streams for the identity:
- *     nothing            5294 / 28
- *     aspiration only    5305 / 29
- *     the default here   5306 / 29
- *     everything on      5073 / 12
+ *     nothing                       5294 / 28
+ *     aspiration only               5305 / 29
+ *     the default here              5306 / 29
+ *     plus any prev-dependent term  5285 / 14
+ *     everything on                 5073 / 12
  *
  * So this reproduces on the order of twelve of the 274 rewrites the pass
  * makes. It is a beginning, not the stage. */
-int bst_rule_mask = 0xE;
+int bst_rule_mask = 0x0C;
 
 int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis) {
     cur next = {0, 0}, next2 = {0, 0}, stress = {0, 0}, eight = {0, 0};
@@ -198,11 +204,12 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
                 if ((bst_rule_mask & 8) && next.val == 0x11) {
                     c = 0x25; s[i] = 0x25; changed++;
                 }
-                if ((bst_rule_mask & 16) &&
-                    (prev.val == 0 || next.val == 0 ||
-                     prev.val == 0x2F || next.val == 0x2F)) {
-                    c = 0x2B; s[i] = 0x2B; changed++;
-                }
+                int edge = 0;
+                if ((bst_rule_mask & 16)  && prev.val == 0)    edge = 1;
+                if ((bst_rule_mask & 32)  && next.val == 0)    edge = 1;
+                if ((bst_rule_mask & 64)  && prev.val == 0x2F) edge = 1;
+                if ((bst_rule_mask & 128) && next.val == 0x2F) edge = 1;
+                if (edge) { c = 0x2B; s[i] = 0x2B; changed++; }
             }
 
             /* The pending previous cursor takes the rewritten value, which is
