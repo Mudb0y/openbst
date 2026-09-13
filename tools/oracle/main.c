@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "winemu.h"
+#include "profile.h"
 
 static void usage(void) {
     fprintf(stderr,
@@ -9,8 +10,16 @@ static void usage(void) {
         "  --out FILE                  write captured audio (wav unless --raw)\n"
         "  --raw                       write headerless pcm\n"
         "  --limit N                   instruction budget per call\n"
+        "  --poke ADDR=VAL[:W]         write VAL (width W bytes, default 4) before calls\n"
+        "  --dump ADDR:LEN[:FILE]      dump guest memory after the calls\n"
         "  --trace FILE                log every read from the image\n"
         "  --list                      list exports and exit\n"
+        "\n"
+        "high-level modes (1995 build):\n"
+        "  --speak TEXT                synthesize and capture audio\n"
+        "  --phonemes TEXT             print the engine's phoneme transcription\n"
+        "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
+        "  --level N                   verbosity for --phonemes (default 6)\n"
         "  -v                          verbose\n"
         "\n"
         "argument forms: 12345 | 0xabc | str:TEXT | wstr:TEXT | buf:N | ptr:N\n"
@@ -60,8 +69,10 @@ static void write_wav(FILE *f, emu *e) {
 
 int main(int argc, char **argv) {
     const char *dll = NULL, *out = NULL, *tracepath = NULL;
-    const char *calls[32];
-    int ncalls = 0, raw = 0, list = 0, verbose = 0;
+    const char *calls[32], *pokes[16], *dumps[8];
+    const char *speak = NULL, *phonemes = NULL, *frames = NULL;
+    int level = -1;
+    int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
 
     for (int i = 1; i < argc; i++) {
@@ -70,6 +81,12 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--trace") && i + 1 < argc) tracepath = argv[++i];
         else if (!strcmp(argv[i], "--call") && i + 1 < argc && ncalls < 32) calls[ncalls++] = argv[++i];
         else if (!strcmp(argv[i], "--limit") && i + 1 < argc) limit = strtoull(argv[++i], NULL, 0);
+        else if (!strcmp(argv[i], "--poke") && i + 1 < argc && npokes < 16) pokes[npokes++] = argv[++i];
+        else if (!strcmp(argv[i], "--dump") && i + 1 < argc && ndumps < 8) dumps[ndumps++] = argv[++i];
+        else if (!strcmp(argv[i], "--speak") && i + 1 < argc)    speak = argv[++i];
+        else if (!strcmp(argv[i], "--phonemes") && i + 1 < argc) phonemes = argv[++i];
+        else if (!strcmp(argv[i], "--frames") && i + 1 < argc)   frames = argv[++i];
+        else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
         else if (!strcmp(argv[i], "-v"))     verbose++;
@@ -117,6 +134,86 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "DllMain ok\n");
 
+    if (speak || phonemes || frames) {
+        const profile *pr = NULL;
+        for (int i = 0; i < NPROFILES; i++)
+            if (profiles[i].image_size == e->image_size) pr = &profiles[i];
+        if (!pr) { fprintf(stderr, "no profile for this build\n"); emu_free(e); return 1; }
+
+        uint32_t fn = emu_export(e, "bstCreateTts");
+        uint32_t zero[4] = { 0, 0, 0, 0 }, ret = 0;
+        if (!fn || emu_call(e, fn, zero, 4, &ret) < 0 || !ret) {
+            fprintf(stderr, "bstCreateTts failed\n");
+            emu_free(e);
+            return 1;
+        }
+
+        const char *text = speak ? speak : (phonemes ? phonemes : frames);
+        uint32_t gtext = emu_push_str(e, text);
+        /* The engine holds this capacity in a signed 16-bit field and refuses
+           to write when it is not greater than the index, so anything above
+           32767 disables the output entirely. */
+        uint32_t cap = 32000;
+        uint32_t gbuf = emu_alloc(e, cap + 16);
+
+        if (tracepath) {
+            FILE *tf = fopen(tracepath, "wb");
+            if (tf) emu_trace_reads(e, tf);
+        }
+
+        if (phonemes) {
+            uint32_t a[6] = { 0, 0, gtext,
+                              (uint32_t)(level < 0 ? pr->default_level : level),
+                              gbuf, cap };
+            fn = emu_export(e, "GetPhBuf");
+            if (!fn || emu_call(e, fn, a, 6, &ret) < 0) { emu_free(e); return 1; }
+        } else {
+            if (frames) {
+                /* Point the diagnostic buffer at our allocation and switch the
+                   frame dump on. Both are cleared by engine setup, so this has
+                   to happen after bstCreateTts and before the speak call. */
+                emu_wr32(e, pr->phbuf_ptr, gbuf);
+                emu_wr32(e, pr->phbuf_idx, 0);
+                uint16_t c = (uint16_t)cap;
+                emu_write(e, pr->phbuf_cap, &c, 2);
+                uint16_t f = 1;
+                emu_write(e, pr->frame_flags, &f, 2);
+            }
+            uint32_t a[2] = { 0, gtext };
+            fn = emu_export(e, "SayBstText");
+            if (!fn || emu_call(e, fn, a, 2, &ret) < 0) { emu_free(e); return 1; }
+        }
+
+        if (phonemes || frames) {
+            /* GetPhBuf zeroes the write index on the way out, so the length
+               comes from the terminator the append routine maintains. */
+            char *t = malloc(cap + 1);
+            if (t && emu_read(e, gbuf, t, cap) == 0) {
+                t[cap] = 0;
+                size_t n = strlen(t);
+                fputs(t, stdout);
+                if (n && t[n - 1] != '\n') putchar('\n');
+                fprintf(stderr, "%zu bytes of diagnostic output\n", n);
+            }
+            free(t);
+        }
+
+        if (e->trace) fclose(e->trace);
+        fprintf(stderr, "captured %zu bytes, %u Hz, %u ch, %u bit\n",
+                e->pcm_len, e->sample_rate, e->channels, e->bits);
+        if (out && e->pcm_len) {
+            FILE *f = fopen(out, "wb");
+            if (f) {
+                if (raw) fwrite(e->pcm, 1, e->pcm_len, f);
+                else write_wav(f, e);
+                fclose(f);
+                fprintf(stderr, "wrote %s\n", out);
+            }
+        }
+        emu_free(e);
+        return 0;
+    }
+
     if (tracepath) {
         FILE *tf = fopen(tracepath, "wb");
         if (!tf) { fprintf(stderr, "cannot write %s\n", tracepath); emu_free(e); return 1; }
@@ -124,6 +221,20 @@ int main(int argc, char **argv) {
     }
 
     for (int c = 0; c < ncalls; c++) {
+        /* Applied before every call: engine setup routines clear .bss state,
+           so a poke made once up front does not survive them. */
+        for (int i = 0; i < npokes; i++) {
+            unsigned long addr = 0, val = 0, width = 4;
+            char *p = NULL;
+            addr = strtoul(pokes[i], &p, 0);
+            if (p && *p == '=') val = strtoul(p + 1, &p, 0);
+            if (p && *p == ':') width = strtoul(p + 1, NULL, 0);
+            if (width > 4) width = 4;
+            uint8_t b[4] = { (uint8_t)val, (uint8_t)(val >> 8),
+                             (uint8_t)(val >> 16), (uint8_t)(val >> 24) };
+            emu_write(e, (uint32_t)addr, b, (uint32_t)width);
+        }
+
         char spec[512];
         snprintf(spec, sizeof spec, "%s", calls[c]);
         char *colon = strchr(spec, ':');
@@ -170,6 +281,26 @@ int main(int argc, char **argv) {
             }
             free(tmp);
         }
+    }
+
+    for (int i = 0; i < ndumps; i++) {
+        char spec[256];
+        snprintf(spec, sizeof spec, "%s", dumps[i]);
+        char *p = NULL;
+        unsigned long addr = strtoul(spec, &p, 0);
+        unsigned long len = (p && *p == ':') ? strtoul(p + 1, &p, 0) : 64;
+        const char *file = (p && *p == ':') ? p + 1 : NULL;
+        uint8_t *tmp = malloc(len ? len : 1);
+        if (!tmp) continue;
+        if (emu_read(e, (uint32_t)addr, tmp, (uint32_t)len) == 0) {
+            if (file) {
+                FILE *df = fopen(file, "wb");
+                if (df) { fwrite(tmp, 1, len, df); fclose(df); fprintf(stderr, "dumped 0x%08lx+%lu to %s\n", addr, len, file); }
+            } else {
+                fwrite(tmp, 1, len, stdout);
+            }
+        } else fprintf(stderr, "cannot read 0x%08lx+%lu\n", addr, len);
+        free(tmp);
     }
 
     if (e->trace) fclose(e->trace);
