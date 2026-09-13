@@ -23,9 +23,10 @@ frametest_MODS  := text cursors diphone frames interp synth
 pipetest_MODS   := text cursors accents pairs contour diphone frames interp synth
 stresstest_MODS := text cursors stress
 asmtest_MODS    := text cursors stress assemble
+fulltest_MODS   := text cursors stress assemble phrules accents pairs contour diphone frames interp synth
 say_MODS        := text dict lts cursors wordstream
 
-BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest say
+BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest fulltest say
 
 all: $(addprefix $(BUILD)/,$(BINS))
 

@@ -45,8 +45,7 @@ int main(int argc, char **argv) {
         }
         z.emph = emph;
         z.mode = mode;
-        int done = bst_assemble_token(&z, kind, buf);
-        if (done || kind == 6) {
+        if (bst_assemble_token(&z, kind, buf)) {
             int len = z.len > 0 ? z.len : z.wp + 1;
             for (int i = 0; i < len; i++) printf("%s%02X", i ? " " : "", stream[i]);
             putchar('\n');

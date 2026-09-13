@@ -204,7 +204,8 @@ int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {
         close_phrase(z, buf);
         break;
     case 6:
-        return 1;
+        /* The end of the text. Anything not already closed is dropped. */
+        return 0;
     default:
         break;
     }

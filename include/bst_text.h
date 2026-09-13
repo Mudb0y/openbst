@@ -123,8 +123,10 @@ int  bst_recs_to_stream(const bst_image *img, const bst_rec *rec, int nrec,
                         int *stress_seen, int *accent_seen);
 
 /* Applies the phonological rule pass to a sentence phoneme stream in place.
-   Returns the number of rewrites; the stream may grow, up to cap. */
-int  bst_phrules(const bst_image *img, uint8_t *stream, int len, int cap, int emphasis);
+   The stream may grow, up to cap: *len is updated and the number of insertions
+   returned, because anything the caller holds an offset into shifts by that
+   much. */
+int  bst_phrules(const bst_image *img, uint8_t *stream, int *len, int cap, int level);
 
 /* Pronounces a word the dictionary does not hold, by the letter-to-sound
    rules. Always succeeds: the rule set has a default for every letter. */

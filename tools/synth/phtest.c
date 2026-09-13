@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
             have = 0;
             if (alen < blen) continue;
             memcpy(ours, before, (size_t)blen);
-            bst_phrules(&img, ours, blen, (int)sizeof ours, 0);
+            int olen = blen;
+            bst_phrules(&img, ours, &olen, (int)sizeof ours, 0);
             streams++;
             int bad = 0, bbad = 0;
             for (int i = 0; i < blen; i++) {

@@ -41,7 +41,9 @@ static int marker_ahead(const bst_image *img, const uint8_t *s, int len, int fro
 
 int bst_rule_mask = -1;   /* retained so a term can still be disabled by hand */
 
-int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int level) {
+int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level) {
+    int len = *lenp;
+    int inserted_total = 0;
     cur next = {0, 0}, next2 = {0, 0}, eight = {0, 0}, stress = {0, 0};
     cur prev = {0, 0}, prev8 = {0, 0};
     cur pend = {0, 0}, pend8 = {0, 0}, older8 = {0, 0};
@@ -149,6 +151,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int level) {
                 len++; lim++;
                 if (i <= last) last++;
                 inserted = 1;
+                inserted_total++;
                 changed++;
             }
         }
@@ -200,5 +203,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int level) {
     }
     (void)latch_p;
     (void)bst_rule_mask;
-    return changed;
+    (void)changed;
+    *lenp = len;
+    return inserted_total;
 }
