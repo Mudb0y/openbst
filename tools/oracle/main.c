@@ -19,6 +19,8 @@ static void usage(void) {
         "  --speak TEXT                synthesize and capture audio\n"
         "  --phonemes TEXT             print the engine's phoneme transcription\n"
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
+        "  --records TEXT              print the segment records driving frame generation\n"
+        "  --interp TEXT               print the interpolator state at each frame\n"
         "  --level N                   verbosity for --phonemes (default 6)\n"
         "  --watch ADDR:LEN[:FILE]     log writes into an address range\n"
         "  --hook ADDR[:NARGS]         log stack arguments at a function entry\n"
@@ -73,7 +75,7 @@ int main(int argc, char **argv) {
     const char *dll = NULL, *out = NULL, *tracepath = NULL;
     const char *calls[32], *pokes[16], *dumps[8];
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
-    const char *hookspec = NULL;
+    const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -89,9 +91,12 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--speak") && i + 1 < argc)    speak = argv[++i];
         else if (!strcmp(argv[i], "--phonemes") && i + 1 < argc) phonemes = argv[++i];
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc)   frames = argv[++i];
+        else if (!strcmp(argv[i], "--records") && i + 1 < argc)  records = argv[++i];
+        else if (!strcmp(argv[i], "--interp") && i + 1 < argc)   interp = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
+        else if (!strcmp(argv[i], "--regs") && i + 1 < argc)     regspec = argv[++i];
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
         else if (!strcmp(argv[i], "-v"))     verbose++;
@@ -139,7 +144,7 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "DllMain ok\n");
 
-    if (speak || phonemes || frames) {
+    if (speak || phonemes || frames || records || interp) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
@@ -153,7 +158,8 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        const char *text = speak ? speak : (phonemes ? phonemes : frames);
+        const char *text = speak ? speak : (phonemes ? phonemes :
+                           (frames ? frames : (records ? records : interp)));
         uint32_t gtext = emu_push_str(e, text);
         /* The engine holds this capacity in a signed 16-bit field and refuses
            to write when it is not greater than the index, so anything above
@@ -165,6 +171,7 @@ int main(int argc, char **argv) {
             FILE *tf = fopen(tracepath, "wb");
             if (tf) emu_trace_reads(e, tf);
         }
+        if (regspec) emu_hook_regs(e, (uint32_t)strtoul(regspec, NULL, 0), stdout);
         if (hookspec) {
             char hs[256];
             snprintf(hs, sizeof hs, "%s", hookspec);
@@ -182,6 +189,22 @@ int main(int argc, char **argv) {
             const char *wf = (q && *q == ':') ? q + 1 : NULL;
             FILE *w = wf ? fopen(wf, "w") : stderr;
             if (w) emu_watch_writes(e, w, (uint32_t)lo, (uint32_t)(lo + len));
+        }
+
+        if (records)
+            emu_hook_record(e, pr->seg_entry, 0, 8, stdout);
+
+        if (interp) {
+            /* Snapshot taken at the frame builder's entry, before it steps the
+               parameter state: the target vector, the state, this frame's
+               duration and the time left in the transition. */
+            const uint32_t a[4] = { pr->targets_cur, pr->state_cur,
+                                    pr->frame_dur, pr->trans_left };
+            const int      l[4] = { 20, 20, 2, 2 };
+            emu_hook_dump(e, pr->build_entry, a, l, 4, 'B', stdout);
+            const uint32_t b[1] = { pr->state_cur };
+            const int      m[1] = { 20 };
+            emu_hook_dump(e, pr->build_done, b, m, 1, 'A', stdout);
         }
 
         if (phonemes || frames)

@@ -14,12 +14,35 @@
 #define BST_NOISE_BYTES   64
 #define BST_GAIN_ENTRIES 256
 
-/* Tables lifted from the original binary. */
+/* Tables lifted from the original binary. The log and antilog pair are
+   base two with 32 units to the octave, and the engine uses them to multiply
+   and divide without a multiply: add logs, take the antilog. */
 typedef struct {
     int16_t pulse[BST_PULSE_LEN];
     int16_t noise[BST_NOISE_BYTES / 2];
     int16_t gain[BST_GAIN_ENTRIES];
+    int16_t log[256];
+    int16_t alog[256];
 } bst_tables;
+
+/* Parameter interpolator. The engine never jumps to a target: each frame it
+   moves the running state a fraction of the remaining distance, the fraction
+   being this frame's duration over the time left in the transition. Working
+   in the log domain is what makes the result awkward to reproduce by fitting
+   a curve, and exact to reproduce by following the arithmetic. */
+typedef struct {
+    const bst_tables *t;
+    int16_t state[BST_ORDER];   /* twice the Q8 coefficient */
+} bst_interp;
+
+void bst_interp_init(bst_interp *ip, const bst_tables *t);
+void bst_interp_snap(bst_interp *ip, const int16_t target[BST_ORDER]);
+void bst_interp_step(bst_interp *ip, const int16_t target[BST_ORDER],
+                     int dur, int remaining);
+
+/* Minimum length of a transition, from the total coefficient movement across
+   it: three eighths of the summed absolute difference. */
+int  bst_transition_len(const int16_t from[BST_ORDER], const int16_t to[BST_ORDER]);
 
 typedef struct {
     const bst_tables *t;

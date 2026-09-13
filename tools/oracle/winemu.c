@@ -241,6 +241,86 @@ static void hook_call(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     fprintf(e->calllog, "\n");
 }
 
+static void hook_record(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)addr; (void)size;
+    emu *e = ud;
+    if (!e->reclog) return;
+    uint32_t esp = 0;
+    uc_reg_read(e->uc, UC_X86_REG_ESP, &esp);
+    uint32_t p = emu_rd32(e, esp + 4 + 4 * e->rec_argno);
+    if (!p) return;
+    uint8_t buf[64];
+    int n = e->rec_nbytes > (int)sizeof buf ? (int)sizeof buf : e->rec_nbytes;
+    if (uc_mem_read(e->uc, p, buf, n) != UC_ERR_OK) return;
+    fprintf(e->reclog, "R");
+    for (int i = 0; i < n; i++) fprintf(e->reclog, " %02X", buf[i]);
+    fprintf(e->reclog, "\n");
+}
+
+void emu_hook_record(emu *e, uint32_t pc, int argno, int nbytes, FILE *out) {
+    e->reclog = out;
+    e->rec_argno = argno;
+    e->rec_nbytes = nbytes;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_record, e, pc, pc);
+}
+
+static void hook_dump(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)size;
+    emu *e = ud;
+    if (!e->dumplog) return;
+    for (int s = 0; s < e->dump_slots; s++) {
+        if (e->dump[s].pc != (uint32_t)addr) continue;
+        fprintf(e->dumplog, "%c", e->dump[s].tag);
+        for (int r = 0; r < e->dump[s].n; r++) {
+            uint8_t buf[128];
+            int n = e->dump[s].len[r] > (int)sizeof buf ? (int)sizeof buf : e->dump[s].len[r];
+            if (uc_mem_read(e->uc, e->dump[s].addr[r], buf, n) != UC_ERR_OK) continue;
+            fprintf(e->dumplog, " |");
+            for (int i = 0; i < n; i++) fprintf(e->dumplog, " %02X", buf[i]);
+        }
+        fprintf(e->dumplog, "\n");
+    }
+}
+
+void emu_hook_dump(emu *e, uint32_t pc, const uint32_t *addrs, const int *lens,
+                   int n, char tag, FILE *out) {
+    if (e->dump_slots >= 2) return;
+    int s = e->dump_slots++;
+    e->dumplog = out;
+    e->dump[s].pc = pc;
+    e->dump[s].tag = tag;
+    e->dump[s].n = n > 8 ? 8 : n;
+    for (int i = 0; i < e->dump[s].n; i++) {
+        e->dump[s].addr[i] = addrs[i];
+        e->dump[s].len[i] = lens[i];
+    }
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_dump, e, pc, pc);
+}
+
+static void hook_regs(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)addr; (void)size;
+    emu *e = ud;
+    if (!e->dumplog) return;
+    int ids[8] = { UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX,
+                   UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EBP, UC_X86_REG_ESP };
+    const char *nm[8] = { "eax","ebx","ecx","edx","esi","edi","ebp","esp" };
+    fprintf(e->dumplog, "G");
+    for (int i = 0; i < 8; i++) {
+        uint32_t v = 0;
+        uc_reg_read(e->uc, ids[i], &v);
+        fprintf(e->dumplog, " %s=%d", nm[i], (int32_t)(int16_t)v);
+    }
+    fprintf(e->dumplog, "\n");
+}
+
+void emu_hook_regs(emu *e, uint32_t pc, FILE *out) {
+    e->dumplog = out;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_regs, e, pc, pc);
+}
+
 void emu_hook_call(emu *e, uint32_t pc, int nargs, FILE *out) {
     e->calllog = out;
     e->hook_pc = pc;

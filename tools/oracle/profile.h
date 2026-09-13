@@ -32,6 +32,24 @@ typedef struct {
     uint32_t targets;
     uint32_t voice_sel;
 
+    /* Entry of the routine that receives each segment record and fetches its
+       acoustic targets; hooking it yields the input to frame generation. */
+    uint32_t seg_entry;
+
+    /* Frame builder: entry point, the current target vector and running
+       parameter state (ten int16 each), this frame's duration and the time
+       remaining in the current transition. */
+    /* Sampled at the interpolation step, not the builder's entry: the frame
+       duration is recomputed in between. */
+    uint32_t build_entry;
+    uint32_t targets_cur;
+    uint32_t state_cur;
+    uint32_t frame_dur;
+    uint32_t trans_left;
+    uint32_t prev_targets;   /* target vector of the previous segment */
+    uint32_t fresh_flag;     /* set when a new segment was just fetched */
+    uint32_t build_done;     /* join point after the interpolation step */
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -49,6 +67,15 @@ static const profile profiles[] = {
         .phbuf_after_inc = 0x1000bbdb,
         .targets       = 0x10022284,
         .voice_sel     = 0x10019a5a,
+        .seg_entry     = 0x10003900,
+        .build_entry   = 0x1000893a,
+        .targets_cur   = 0x100192f0,
+        .state_cur     = 0x10019310,
+        .frame_dur     = 0x1001b424,
+        .trans_left    = 0x1001c44a,
+        .prev_targets  = 0x1001b780,
+        .fresh_flag    = 0x1001e3bc,
+        .build_done    = 0x10008cae,
         .default_level = 6,
     },
 };

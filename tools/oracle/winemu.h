@@ -103,6 +103,23 @@ struct emu {
     uint32_t hook_pc;
     int      hook_nargs;
 
+    /* Dumps the bytes a pointer argument points at, for following the
+       segment records that drive frame generation. */
+    FILE    *reclog;
+    int      rec_argno, rec_nbytes;
+
+    /* Snapshots chosen memory regions each time a chosen instruction runs.
+       Two independent slots, so a value can be sampled before and after the
+       code that changes it. */
+    FILE    *dumplog;
+    struct {
+        uint32_t pc;
+        uint32_t addr[8];
+        int      len[8], n;
+        char     tag;
+    } dump[2];
+    int dump_slots;
+
     uint32_t drain_idx, drain_buf;
     int      drain_at;
     char    *acc;
@@ -130,6 +147,10 @@ void     emu_trace_reads(emu *e, FILE *out);
 void     emu_watch_writes(emu *e, FILE *out, uint32_t lo, uint32_t hi);
 void     emu_drain_setup(emu *e, uint32_t idx_addr, uint32_t buf_addr, int threshold, uint32_t after_pc);
 void     emu_hook_call(emu *e, uint32_t pc, int nargs, FILE *out);
+void     emu_hook_record(emu *e, uint32_t pc, int argno, int nbytes, FILE *out);
+void     emu_hook_dump(emu *e, uint32_t pc, const uint32_t *addrs, const int *lens,
+                       int n, char tag, FILE *out);
+void     emu_hook_regs(emu *e, uint32_t pc, FILE *out);
 void     emu_drain_flush(emu *e);
 const char *emu_drained(emu *e, size_t *len);
 void     emu_report_shims(emu *e);

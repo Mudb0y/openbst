@@ -103,10 +103,13 @@ int bst_tables_load(bst_tables *t, const void *image, size_t len) {
     const uint8_t *p = image;
     /* File offsets within the 1995 build, derived from the .rdata mapping. */
     const size_t pulse_off = 0x17e48, noise_off = 0x17e08, gain_off = 0x18488;
+    const size_t log_off = 0x17a08, alog_off = 0x17c08;
 
     if (len < gain_off + BST_GAIN_ENTRIES * 2) return -1;
     memcpy(t->pulse, p + pulse_off, sizeof t->pulse);
     memcpy(t->noise, p + noise_off, sizeof t->noise);
     memcpy(t->gain,  p + gain_off,  sizeof t->gain);
+    memcpy(t->log,   p + log_off,   sizeof t->log);
+    memcpy(t->alog,  p + alog_off,  sizeof t->alog);
     return 0;
 }
