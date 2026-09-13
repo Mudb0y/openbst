@@ -194,6 +194,66 @@ def lookup(img, word):
     return entry, state[0]
 
 
+TYPES = {0x54: "T", 0x58: "X", 0x41: "A", 0x53: "S", 0x56: "V", 0x43: "C", 0x50: "P"}
+
+
+def emit_code(code, out):
+    """FUN_10012650: a 12-bit code becomes one typed three-byte record."""
+    top = code & 0xE00
+    lo = code & 0xFF
+    if top == 0x000:   out.append(("T", 0, 0))
+    elif top == 0x200: out.append(("X", lo, 0))
+    elif top == 0x400: out.append(("A", lo, 0))
+    elif top == 0x600: out.append(("S", code & 0xF, (code >> 4) & 3))
+    elif top == 0x800: out.append(("V", code & 0xF, (code >> 4) & 0xF))
+    elif top == 0xA00: out.append(("C", code & 0xF, (code >> 4) & 0xF))
+    elif top in (0xC00, 0xE00): out.append(("P", code & 0xF, (code >> 4) & 0x3F))
+
+
+def emit_byte(b, out):
+    """FUN_100127b0: the compact form used by the phoneme-pair table."""
+    t = b & 0xE0
+    if t == 0x00:   out.append(("T", 0, 0))
+    elif t == 0x40: out.append(("A", b & 0x1F, 0))
+    elif t == 0x60: out.append(("S", b & 3, (b & 0x1C) >> 2))
+    elif t == 0x80: out.append(("V", b & 3, (b & 0x1C) >> 2))
+    elif t == 0xA0: out.append(("C", b & 3, (b & 0x1C) >> 2))
+    elif t == 0xC0: out.append(("P", b & 3, (b & 0x1C) >> 2))
+
+
+def decode_one(img, b, nxt, out):
+    """FUN_100125b0. Codes are bytes: low ones name a single record, middle
+    ones a common pair, and the top range takes a second byte."""
+    single_max = img.s16(PH_SINGLE_MAX)
+    pair_max = img.s16(PH_PAIR_MAX)
+    if b <= single_max:
+        emit_code(img.u16(PH_SINGLE + b * 2), out)
+        return 1
+    if b - (single_max + 1) <= pair_max:
+        pair = img.u16(PH_PAIR + (b - (single_max + 1)) * 2)
+        emit_byte(pair & 0xFF, out)
+        emit_byte(pair >> 8, out)
+        return 1
+    emit_code((b << 8) | nxt, out)
+    return 2
+
+
+def decode_pron(img, entry, pos):
+    """FUN_10012500: the pronunciation runs over whole bytes, after a leading
+    half byte when the match ended on an odd nibble."""
+    total, _, _ = entry_header(img, entry)
+    out = []
+    p = entry + (pos >> 1)
+    if pos & 1:
+        lo = img.u8(p) & 0xF
+        if lo != 0xF:
+            decode_one(img, lo, img.u8(p + 1), out)
+        p += 1
+    while p < entry + total:
+        p += decode_one(img, img.u8(p), img.u8(p + 1), out)
+    return out
+
+
 def main():
     if len(sys.argv) < 3:
         print("usage: dict.py DLL WORD...", file=sys.stderr)
@@ -209,8 +269,11 @@ def main():
         else:
             entry, pos = r
             total, shared, used = entry_header(img, entry)
-            print("%-14s encoded %-24s found at 0x%08x, %d nibbles, pron from nibble %d"
+            recs = decode_pron(img, entry, pos)
+            print("%-14s encoded %-24s found at 0x%08x, %d bytes, pron from nibble %d"
                   % (word, " ".join("%x" % n for n in enc), entry, total, pos))
+            print("   records: %s"
+                  % " ".join("%s%d,%d" % r for r in recs))
     return 0
 
 
