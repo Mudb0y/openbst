@@ -63,6 +63,10 @@ typedef struct {
     int     len;                 /* bytes written, excluding the leading slot */
 } bst_stream;
 
+/* Applies the phonological rule pass to a sentence phoneme stream in place.
+   Returns the number of rewrites; the stream may grow, up to cap. */
+int  bst_phrules(const bst_image *img, uint8_t *stream, int len, int cap, int emphasis);
+
 /* Pronounces a word the dictionary does not hold, by the letter-to-sound
    rules. Always succeeds: the rule set has a default for every letter. */
 void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out);
