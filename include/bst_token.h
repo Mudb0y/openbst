@@ -62,6 +62,7 @@ typedef struct {
 
 /* The reader, shared with the exception engine's lookahead. */
 int  bst_tok_read(bst_tok *t);
+int  bst_tok_peek_read(bst_tok *t);
 void bst_tok_unread(bst_tok *t, int n);
 
 /* Says a stored string of phoneme codes named by a pointer in the image. */

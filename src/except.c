@@ -114,7 +114,7 @@ static int peek_next(peek *p) {
     int c;
     do {
         if (p->at < p->t->cur) { p->at++; c = p->t->ring[p->at]; }
-        else { p->at++; p->pulled++; c = bst_tok_read(p->t); }
+        else { p->at++; c = bst_tok_peek_read(p->t); if (c == 0xFFFF) { p->at--; return c; } p->pulled++; }
     } while (c == 0x7F);
     return c;
 }
@@ -139,6 +139,29 @@ static int condition(bst_tok *t, int op, const uint8_t *word, int wlen) {
     switch (op - COND_LO) {
     case 0:                                   /* starts lower case */
         return (chattr(t, word[0]) & 0x20) == 0;
+    case 1: {                                 /* the stop after an abbreviation */
+        peek_init(&p, t);
+        c = peek_next(&p);
+        if (c == '-')      { peek_done(&p); return 0; }
+        if (c != '.')      { peek_done(&p); return 1; }
+        do {
+            do { c = peek_next(&p); } while (c == '"');
+        } while (c == 0xAF || c == '\'' || c == '}' || c == ']' || c == ')');
+        if (!is_space(c)) { peek_done(&p); return 1; }
+        if (c == ' ') {
+            int c2 = peek_next(&p);
+            if (c2 == '.') {
+                int c3 = peek_next(&p);
+                if (!(c3 == ' ' && peek_next(&p) == '.')) t->eat = 1;
+            } else if (c2 != ' ') {
+                t->eat = 1;
+            }
+        } else if (c == '\n') {
+            if (chattr(t, peek_next(&p)) & 2) t->eat = 1;
+        }
+        peek_done(&p);
+        return 1;
+    }
     case 2:                                   /* a full stop follows */
         peek_init(&p, t);
         r = peek_next(&p) == '.';

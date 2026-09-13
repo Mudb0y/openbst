@@ -84,6 +84,14 @@ static int rd(bst_tok *t) {
 
 int bst_tok_read(bst_tok *t) { return rd(t); }
 
+/* The lookahead stops at the end of the real text rather than running into
+   the tail the reader adds, which is why an abbreviation at the very end of a
+   text keeps its full stop and one in the middle does not. */
+int bst_tok_peek_read(bst_tok *t) {
+    if (!t->push && t->tp >= t->tn) return 0xFFFF;
+    return rd(t);
+}
+
 static void unread(bst_tok *t, int n) {
     t->push += n;
     t->cur -= n;
