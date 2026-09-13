@@ -121,6 +121,9 @@ static int peek_next(peek *p) {
 
 static void peek_done(peek *p) { if (p->pulled) bst_tok_unread(p->t, p->pulled); }
 
+static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
+                                    c == '\r' || c == '\v' || c == '\f'; }
+
 static int chattr(const bst_tok *t, int c) {
     const uint8_t *p = bst_at(t->img, CHATTR + (unsigned)(c & 0xFF), 1);
     return p ? *p : 0;
@@ -141,22 +144,29 @@ static int condition(bst_tok *t, int op, const uint8_t *word, int wlen) {
         r = peek_next(&p) == '.';
         peek_done(&p);
         return r;
-    case 3:                                   /* a full stop, then anything */
+    case 3:                                   /* a full stop the entry eats */
         peek_init(&p, t);
-        r = peek_next(&p) == '.';
+        if (peek_next(&p) == '.') {
+            c = peek_next(&p);
+            if (is_space(c)) t->eat = 1;
+        }
         peek_done(&p);
         return 1;
-    case 5:                                   /* an optional stop, then a capital */
+    case 5: {                                 /* an optional stop, then a capital */
+        int dot;
         peek_init(&p, t);
         c = peek_next(&p);
-        if (c == '.') c = peek_next(&p);
+        dot = (c == '.');
+        if (dot) c = peek_next(&p);
         r = 0;
         if (c == ' ') {
             c = peek_next(&p);
             r = (chattr(t, c) & 0x20) != 0;
         }
         peek_done(&p);
+        if (r) t->eat = dot;
         return r;
+    }
     case 6:                                   /* starts upper case */
         return (chattr(t, word[0]) & 0x20) != 0;
     case 7:                                   /* punctuation follows */
@@ -219,7 +229,10 @@ int bst_except(bst_tok *t, const uint8_t *word, int wlen,
     uint8_t rec[256];
     int n = record(&w, best, rec, (int)sizeof rec);
     int from, to;
+    t->eat = 0;
     choose(t, rec, n, word, wlen, &from, &to);
+    /* An entry that read a full stop as part of itself takes it. */
+    if (t->eat) { bst_tok_read(t); t->eat = 0; }
     int m = 0;
     for (int i = from; i <= to && m < max; i++) out[m++] = rec[i];
     return m;

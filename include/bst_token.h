@@ -57,6 +57,7 @@ typedef struct {
     int      window;     /* how far back the splitter looks */
     int      run;        /* how many words since the last sentence end */
     int      quest;      /* a spelled-out letter has been seen in this run */
+    int      eat;        /* the exception entry swallows the stop after it */
 } bst_tok;
 
 /* The reader, shared with the exception engine's lookahead. */
