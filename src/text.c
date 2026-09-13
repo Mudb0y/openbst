@@ -206,7 +206,7 @@ void bst_normalise(const bst_image *img, const char *word, bst_word *out) {
                 else if (p == 'i') {
                     if (vowels < 3 || (end >= 4 && w[end - 3] == 'r' && w[end - 4] == 'a'))
                         take = 0;
-                    else w[end - 2] = 'y';
+                    else { w[end - 2] = 'y'; out->y_from_i = 1; }
                 } else if (p == 'l') {
                     if (vowels < 3) take = 0;
                     else {

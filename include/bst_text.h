@@ -28,6 +28,8 @@ typedef struct {
     int     len;                 /* characters up to and including the stem */
     int     flags;               /* which suffix came off */
     int     vowels;              /* vowel count, the engine's syllable proxy */
+    int     y_from_i;            /* set when -ly stripping rewrote an i as y,
+                                    which changes how the suffix is restored */
 } bst_word;
 
 int  bst_image_init(bst_image *img, const void *data, size_t len);

@@ -11,7 +11,7 @@ trap 'rm -rf "$work"' EXIT
 
 "$root/build/normtest" "$dll" < "$words" > "$work/ours.txt"
 
-nok=0 nbad=0 nskip=0 dok=0 dbad=0 lok=0 lbad=0 lskip=0
+nok=0 nbad=0 nskip=0 dok=0 dbad=0 lok=0 lbad=0
 while read -r w mine flags kind recs; do
     eng=$("$root/build/oracle" --dll "$dll" --lts "$w" 2>/dev/null | grep '^B' | head -1 |
           sed 's/.*| //' | tr ' ' '\n' |
@@ -22,10 +22,7 @@ while read -r w mine flags kind recs; do
     else nskip=$((nskip + 1)); fi
 
     if [ "$kind" = "lts" ]; then
-        # A stripped suffix is restored by a later stage we have not built, so
-        # the engine's stream carries codes ours cannot yet produce.
-        if [ "$flags" != "00" ]; then lskip=$((lskip + 1)); continue; fi
-        engstream=$("$root/build/oracle" --dll "$dll" --speak "$w" --snap 0x1000efee:0x10019330:48 2>/dev/null |
+        engstream=$("$root/build/oracle" --dll "$dll" --speak "$w" --snap 0x1000effd:0x10019330:48 2>/dev/null |
                     head -1 | sed 's/^S | //' | cut -d' ' -f2-)
         [ -z "$engstream" ] && continue
         n=$(echo "$recs" | wc -w)
@@ -47,5 +44,5 @@ done < "$work/ours.txt"
 
 echo "ctexttest: normaliser $nok identical / $nbad differing / $nskip skipped"
 echo "           dictionary $dok identical / $dbad differing"
-echo "           rules      $lok identical / $lbad differing / $lskip with a stripped suffix"
+echo "           rules      $lok identical / $lbad differing"
 [ "$nbad" -eq 0 ] && [ "$dbad" -eq 0 ] && [ "$lbad" -eq 0 ]

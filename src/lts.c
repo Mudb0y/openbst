@@ -237,6 +237,70 @@ static void build_emit(const bst_image *img, builder *b, int code) {
     if (p + 2 >= 0 && p + 2 < (int)sizeof b->buf) b->buf[p + 2] = (unsigned char)code;
 }
 
+/* Puts back the sound of a suffix the normaliser removed. The flag byte is
+   walked from the top bit down, and each suffix appends codes chosen by what
+   the stem ended on: "churches" gets a different plural from "dogs". */
+static void restore_suffix(const bst_image *img, builder *b, int flags, int y_from_i) {
+    for (int slot = 0; flags; slot++, flags = (flags << 1) & 0xFF) {
+        if (!(flags & 0x80)) continue;
+        int last = (b->pos + 1 < (int)sizeof b->buf) ? b->buf[b->pos + 1] : 0;
+        int code;
+
+        switch (slot) {
+        case 0:                                   /* -ed */
+            build_emit(img, b, 0x49);
+            if (last == 0x18 || last == 0x14) {
+                build_emit(img, b, 0x24);
+                build_emit(img, b, 0x76);
+                code = 0x14;
+            } else if (last != 0 && (last < 4 || last == 0x0D || last == 0x1C ||
+                                     last == 0x16 || last == 0x0B)) {
+                code = 0x18;
+            } else {
+                code = 0x14;
+            }
+            break;
+        case 1:                                   /* -ing */
+            build_emit(img, b, 0x49);
+            build_emit(img, b, 0x29);
+            build_emit(img, b, 0x76);
+            code = 0x10;
+            break;
+        case 2:                                   /* -ly */
+            if (last == 0x11) {
+                code = 0x49;
+            } else {
+                /* When the stem's i became a y, a preceding vowel marker is
+                   promoted before the suffix goes on. */
+                if (y_from_i && b->pos >= 2 && b->buf[b->pos - 2] == 0x23)
+                    b->buf[b->pos - 2] = 0x24;
+                build_emit(img, b, 0x49);
+                code = 0x11;
+            }
+            build_emit(img, b, code);
+            build_emit(img, b, 0x23);
+            code = 0x76;
+            break;
+        case 3:                                   /* -s */
+        case 4:                                   /* -'s */
+            build_emit(img, b, 0x49);
+            if (last < 0x0E && ((1u << (last & 0x1F)) & 0x38C8u)) {
+                build_emit(img, b, 0x29);
+                build_emit(img, b, 0x76);
+                code = 6;
+            } else if (last < 0x1D && (last > 0x15 || last == 1 || last == 2)) {
+                code = 0x0D;
+            } else {
+                code = 6;
+            }
+            break;
+        default:
+            return;
+        }
+        build_emit(img, b, code);
+    }
+}
+
 void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
     const unsigned char *t = (const unsigned char *)w->buf;
     int len = w->len;
@@ -255,6 +319,8 @@ void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
         for (; *o; o++) build_emit(img, &b, (unsigned char)*o);
         pos += used > 0 ? used : 1;
     }
+
+    if (w->flags) restore_suffix(img, &b, w->flags, w->y_from_i);
 
     memset(out, 0, sizeof *out);
     int n = b.pos + 2;
