@@ -88,6 +88,13 @@ typedef struct {
        period target, and two timing words. */
     uint32_t intonation_push;
 
+    /* Inside the rule loop, where the current byte is fetched and every cursor
+       has been brought up to date. */
+    uint32_t rules_cursor;
+    uint32_t cur_next, cur_next_pos, cur_prev;
+    uint32_t cur_stress, cur_stress_pos;
+    uint32_t cur_eight, cur_eight_pos;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -137,6 +144,14 @@ static const profile profiles[] = {
         .rules_before  = 0x1001314e,
         .rules_after   = 0x10013153,
         .intonation_push = 0x10002a20,
+        .rules_cursor  = 0x1000ca4b,
+        .cur_next      = 0x10019a7c,
+        .cur_next_pos  = 0x10019a7e,
+        .cur_prev      = 0x1001c00c,
+        .cur_stress    = 0x1001b470,
+        .cur_stress_pos = 0x1001b472,
+        .cur_eight     = 0x10019a68,
+        .cur_eight_pos = 0x10019a6a,
         .default_level = 6,
     },
 };
