@@ -340,7 +340,7 @@ static void hook_dump(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
 
 void emu_hook_dump(emu *e, uint32_t pc, const uint32_t *addrs, const int *lens,
                    int n, char tag, FILE *out) {
-    if (e->dump_slots >= 2) return;
+    if (e->dump_slots >= (int)(sizeof e->dump / sizeof e->dump[0])) return;
     int s = e->dump_slots++;
     e->dumplog = out;
     e->dump[s].pc = pc;

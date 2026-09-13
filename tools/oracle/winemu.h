@@ -124,7 +124,7 @@ struct emu {
         uint32_t addr[8];
         int      len[8], n;
         char     tag;
-    } dump[2];
+    } dump[4];
     int dump_slots;
 
     uint32_t drain_idx, drain_buf;

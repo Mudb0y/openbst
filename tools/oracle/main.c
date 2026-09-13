@@ -22,7 +22,8 @@ static void usage(void) {
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --records TEXT              print the segment records driving frame generation\n"
         "  --recat PC:ARG:N            dump N bytes at pointer argument ARG on reaching PC\n"
-        "  --snap PC:ADDR:N[,ADDR:N]   dump N bytes at each ADDR on reaching PC\n"
+        "  --snap PC:ADDR:N[,ADDR:N]   dump N bytes at each ADDR on reaching PC;\n"
+        "                              may be given twice, tagged S then U\n"
         "  --regmem PC:REG:OFF:N       dump N bytes at REG+OFF on reaching PC\n"
         "  --phrules TEXT              the phoneme stream before and after the rule stage\n"
         "  --intonation TEXT           the intonation records: type, pitch period, timing\n"
@@ -86,7 +87,9 @@ int main(int argc, char **argv) {
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
     const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL, *ltsmode = NULL;
-    const char *snapspec = NULL, *regmemspec = NULL, *phrules = NULL, *intonation = NULL;
+    const char *snapspec[2] = { NULL, NULL };
+    int nsnaps = 0;
+    const char *regmemspec = NULL, *phrules = NULL, *intonation = NULL;
     const char *cursors = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0, nodllmain = 0, btrace = 0;
@@ -109,7 +112,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc)    pitchmode = argv[++i];
         else if (!strcmp(argv[i], "--recat") && i + 1 < argc)     recatspec = argv[++i];
         else if (!strcmp(argv[i], "--lts") && i + 1 < argc)       ltsmode = argv[++i];
-        else if (!strcmp(argv[i], "--snap") && i + 1 < argc)      snapspec = argv[++i];
+        else if (!strcmp(argv[i], "--snap") && i + 1 < argc && nsnaps < 2) snapspec[nsnaps++] = argv[++i];
         else if (!strcmp(argv[i], "--regmem") && i + 1 < argc)    regmemspec = argv[++i];
         else if (!strcmp(argv[i], "--phrules") && i + 1 < argc)   phrules = argv[++i];
         else if (!strcmp(argv[i], "--intonation") && i + 1 < argc) intonation = argv[++i];
@@ -208,9 +211,9 @@ int main(int argc, char **argv) {
             emu_hook_call(e, (uint32_t)pc, na, stdout);
         }
     }
-    if (snapspec) {
+    for (int si = 0; si < nsnaps; si++) {
         char ss[256];
-        snprintf(ss, sizeof ss, "%s", snapspec);
+        snprintf(ss, sizeof ss, "%s", snapspec[si]);
         char *q = NULL;
         unsigned long pc = strtoul(ss, &q, 0);
         uint32_t a[8];
@@ -220,7 +223,7 @@ int main(int argc, char **argv) {
             l[na] = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 32;
             na++;
         }
-        if (na) emu_hook_dump(e, (uint32_t)pc, a, l, na, 'S', stdout);
+        if (na) emu_hook_dump(e, (uint32_t)pc, a, l, na, si ? 'U' : 'S', stdout);
     }
 
     if (!nodllmain) {
@@ -233,7 +236,7 @@ int main(int argc, char **argv) {
     }
 
     if (speak || phonemes || frames || records || interp || gainmode || pitchmode
-        || ltsmode || snapspec || regmemspec || phrules || intonation || cursors) {
+        || ltsmode || nsnaps || regmemspec || phrules || intonation || cursors) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
