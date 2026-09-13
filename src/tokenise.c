@@ -162,6 +162,7 @@ static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next
 
 static void word_out(bst_tok *t);
 static int number_out(bst_tok *t);
+static void say_char(bst_tok *t, int c);
 
 /* Punctuation that closes a phrase versus punctuation that only groups. */
 static int closes(int b) {
@@ -187,6 +188,8 @@ static void punct_out(bst_tok *t, int c) {
     if (b == ':' && is_digit(t, t->prevch) && is_digit(t, c)) { emit(t, ','); return; }
     if (!t->sentence && b != '\'' && b != '`') { emit(t, b); return; }
     if (b == '-') { emit(t, ','); return; }
+    /* Anything else is said by name: "percent", "dollar", "at". */
+    say_char(t, b);
 }
 
 static void dot_out(bst_tok *t, int c) {
