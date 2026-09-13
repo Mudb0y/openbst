@@ -31,22 +31,8 @@ int main(int argc, char **argv) {
         for (int guard = 0; guard < 512; guard++) {
             memset(buf, 0, sizeof buf);
             int kind = bst_tok_next(&t, buf);
-            if (kind == 2) {
-                bst_recs r;
-                bst_stream st;
-                bst_word w;
-                char word[128];
-                int n3 = 0;
-                for (const uint8_t *q = buf + 1; *q && n3 < 120; q++) word[n3++] = (char)*q;
-                word[n3] = 0;
-                bst_normalise(&img, word, &w);
-                bst_word_pronounce(&img, word, &r, &st);
-                buf[0] = (uint8_t)(st.len > 1 ? st.len - 2 : 0);
-                memcpy(buf + 1, st.buf, (size_t)st.len);
-                kind = 3;
-            }
             printf("%d", kind);
-            int n2 = kind == 4 ? 1 : (kind == 3 ? buf[0] + 2 : 6);
+            int n2 = kind == 6 ? 0 : (kind == 4 ? 1 : (kind == 3 ? buf[0] + 2 : 6));
             for (int i = 0; i < n2; i++) printf(" %02X", buf[i]);
             putchar('\n');
             if (kind == 6) break;

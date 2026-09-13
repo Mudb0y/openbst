@@ -42,7 +42,26 @@ typedef struct {
 
     /* The classifier's position in the scratch buffer. */
     int      pos, raw, ended;
+
+    /* The token ring proper -- the input ring above is characters. Tokens
+       are read ahead of the assembler so that a sentence too long to say in
+       one breath can have a break put into it before any of it is spoken. */
+    struct {
+        uint8_t  type, flag, spare, pushback;
+        uint8_t  len;
+        uint8_t  buf[104];
+    } tok[20];
+    int      rd, wr, held, blocked, bytes;
+    int      total;      /* the text accumulated since the last break */
+    int      breath;     /* how long a breath group may be */
+    int      window;     /* how far back the splitter looks */
+    int      run;        /* how many words since the last sentence end */
 } bst_tok;
+
+/* Looks a word up in the exception table. Returns the number of phoneme
+   codes written, or zero if the table does not hold it. */
+int  bst_except(bst_tok *t, const uint8_t *word, int wlen,
+                uint8_t *out, int max);
 
 void bst_tok_init(bst_tok *t, const bst_image *img, const char *text);
 

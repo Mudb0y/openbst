@@ -37,7 +37,10 @@ def main():
             if l.startswith("S | "):
                 p = [x.strip().split() for x in l[4:].split("|")]
                 kind = le(p[0])
-                n = 1 if kind == 4 else (int(p[1][0], 16) + 2 if kind == 3 else 6)
+                # The buffer is meaningless for the end marker: it still
+                # holds whatever the last real token left there.
+                n = 0 if kind == 6 else (1 if kind == 4
+                                         else (int(p[1][0], 16) + 2 if kind == 3 else 6))
                 want.append((kind, p[1][:n]))
         if not want:
             continue
@@ -58,7 +61,7 @@ def main():
             same += 1
         else:
             diff += 1
-            if shown < 3:
+            if shown < 12:
                 shown += 1
                 print("  DIFFER: %s" % text)
                 for i in range(max(len(want), len(got))):

@@ -212,9 +212,25 @@ static int handler(bst_tok *t, unsigned h, int c) {
     }
 }
 
-/* The word the machine has just delimited, copied into the scratch buffer
-   with its case folded. */
+/* The word the machine has just delimited. The exception table gets first
+   refusal: a word it holds goes into the scratch buffer as phoneme codes and
+   never reaches the dictionary or the rules. */
 static void word_out(bst_tok *t) {
+    int n = t->cur - t->start + 1;
+    if (n > 0 && n < 64) {
+        uint8_t codes[256];
+        int m = bst_except(t, t->ring + t->start, n, codes, (int)sizeof codes);
+        if (m > 0) {
+            emit(t, ' ');
+            emit(t, 0xFE);
+            for (int i = 0; i < m; i++) emit(t, codes[i]);
+            emit(t, 0xFF);
+            emit(t, ' ');
+            t->prevkind = t->kind;
+            t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
+            return;
+        }
+    }
     for (int i = t->start; i <= t->cur; i++) {
         int c = t->ring[i];
         emit(t, is_upper(t, c) ? lower(t, c) : c);
@@ -300,6 +316,125 @@ static int classify(bst_tok *t, int *cls) {
     }
 }
 
+static int token(bst_tok *t, uint8_t *buf);
+
+/* ---- the token ring ----------------------------------------------------- */
+
+/* A sentence longer than one breath gets a break put into it, at the last
+   word whose opening marker allows one. The further back that word is, the
+   longer the run has to be to justify breaking there. */
+static void split(bst_tok *t) {
+    int prev = 0, n = t->held, i = t->rd;
+    int acc = 0;
+    if (!n) return;
+    while (n--) {
+        if (t->tok[i].type == 3) {
+            int f = t->tok[i].flag;
+            if (acc > t->window && (bst_ph_attr2(t->img, f) & 0x40) &&
+                !(bst_ph_attr2(t->img, prev) & 0x80)) {
+                int back = i ? i - 1 : 19;
+                if (t->tok[back].flag == 0x18) return;
+                int take = 0;
+                if (f == 0x53 || f == 0x57) take = 1;
+                else if (f == 0x54) take = acc > t->window * 2;
+                else if (f == 0x55 || f == 0x51) take = acc > t->window * 4;
+                if (take) {
+                    t->tok[i].pushback = 0x5D;
+                    t->blocked |= 1;
+                    return;
+                }
+            }
+            prev = t->tok[i].flag;
+            acc += t->tok[i].flag ? t->tok[i].len - 4 : t->tok[i].len;
+        }
+        if (t->total - t->window < acc) return;
+        i = (i + 1) % 20;
+    }
+}
+
+/* Reads one token and files it. */
+static void produce(bst_tok *t) {
+    uint8_t buf[128];
+    memset(buf, 0, sizeof buf);
+    int kind = token(t, buf);
+
+    /* A word arrives as text and is pronounced here, before it is filed, so
+       that the breath splitter can see the marker it opens with. */
+    if (kind == 2) {
+        char word[128];
+        int n = 0;
+        for (const uint8_t *q = buf + 1; *q && n < 120; q++) word[n++] = (char)*q;
+        word[n] = 0;
+        bst_recs r;
+        bst_stream st;
+        bst_word_pronounce(t->img, word, &r, &st);
+        int m = st.len > 1 ? st.len - 2 : 0;
+        buf[0] = (uint8_t)m;
+        memcpy(buf + 1, st.buf, (size_t)st.len);
+        kind = 3;
+    }
+
+    int i = t->wr;
+    t->wr = (t->wr + 1) % 20;
+    t->held++;
+    memset(&t->tok[i], 0, sizeof t->tok[i]);
+    t->tok[i].type = (uint8_t)kind;
+
+    int len = 0;
+    switch (kind) {
+    case 1:
+        len = 6;
+        t->tok[i].flag = 1;
+        t->tok[i].pushback = 1;
+        t->blocked |= 1;
+        break;
+    case 3:
+        if (t->run < 3) t->run++;
+        len = buf[0] + 2;
+        t->tok[i].flag = buf[1];
+        t->total += buf[1] ? len - 4 : len;
+        break;
+    case 4:
+        switch (buf[0]) {
+        case '!': case '.': case ';': case '>': buf[0] = '.'; t->run = 0; break;
+        case '(': case '-': case ':': case '[': buf[0] = ','; break;
+        case ')': buf[0] = '}'; break;
+        case '?': buf[0] = (uint8_t)(t->run ? '.' : '?'); /* fall through */
+        case '{': case '}': t->run = 0; break;
+        default: break;
+        }
+        len = 1;
+        t->tok[i].flag = 1;
+        t->tok[i].pushback = 1;
+        t->blocked |= 1;
+        break;
+    case 5:
+        len = 6;
+        if (buf[0] > 0x4C) { t->tok[i].pushback = 1; t->blocked |= 1; }
+        break;
+    case 6:
+        len = 0;
+        t->tok[i].flag = 1;
+        t->tok[i].pushback = 1;
+        t->blocked |= 1;
+        break;
+    default:
+        len = 0;
+        break;
+    }
+    if (len > (int)sizeof t->tok[i].buf) len = (int)sizeof t->tok[i].buf;
+    t->tok[i].len = (uint8_t)len;
+    memcpy(t->tok[i].buf, buf, (size_t)len);
+    t->bytes += len;
+
+    if (kind == 3 && t->total > t->breath) split(t);
+}
+
+static int can_read(const bst_tok *t) {
+    if (t->blocked & 1) return 0;
+    return t->held < 20 && t->bytes < 200;
+}
+
 /* ---- the front ---------------------------------------------------------- */
 
 void bst_tok_init(bst_tok *t, const bst_image *img, const char *text) {
@@ -311,9 +446,11 @@ void bst_tok_init(bst_tok *t, const bst_image *img, const char *text) {
     t->start = 0;
     t->lastout = ' ';
     t->textmode = 1;
+    t->breath = 0x3C;
+    t->window = 0x14;
 }
 
-int bst_tok_next(bst_tok *t, uint8_t *buf) {
+static int token(bst_tok *t, uint8_t *buf) {
     for (;;) {
         int cls;
         int b = classify(t, &cls);
@@ -348,6 +485,12 @@ int bst_tok_next(bst_tok *t, uint8_t *buf) {
             if (b != 0xFFFF) t->pos--;
             buf[0] = (uint8_t)w.pos;
             memcpy(buf + 1, w.buf + 1, (size_t)w.pos + 1);
+            /* A token that opens with a marker repeats it in the flags byte,
+               which is where the assembler looks for the emphasis it carries. */
+            if (!(bst_ph_attr2(t->img, buf[2]) & 0x10))       buf[1] = 0;
+            else if (buf[2] == 'X' && (bst_ph_attr2(t->img, buf[3]) & 0x10))
+                                                              buf[1] = buf[3];
+            else                                              buf[1] = buf[2];
             return 3;
         }
         case 0x146:
@@ -363,4 +506,24 @@ int bst_tok_next(bst_tok *t, uint8_t *buf) {
             break;
         }
     }
+}
+
+int bst_tok_next(bst_tok *t, uint8_t *buf) {
+    while (can_read(t)) produce(t);
+    if (!t->held) return 6;
+
+    int i = t->rd;
+    int pb = t->tok[i].pushback;
+    if (pb) {
+        t->tok[i].pushback = 0;
+        t->blocked &= ~1;
+        if (pb != 1) { buf[0] = (uint8_t)pb; return 4; }
+    }
+    memcpy(buf, t->tok[i].buf, (size_t)t->tok[i].len);
+    t->bytes -= t->tok[i].len;
+    t->held--;
+    t->rd = (t->rd + 1) % 20;
+    if (t->tok[i].type == 3)
+        t->total -= t->tok[i].flag ? t->tok[i].len - 4 : t->tok[i].len;
+    return t->tok[i].type;
 }
