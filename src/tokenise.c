@@ -52,6 +52,7 @@
 #define ORD_FIRST  0x1002E7DCu
 #define ORD_TH     0x1002E7E4u
 #define GRPSEP     0x1002E7ECu
+#define PLURAL     0x1002E7DCu
 #define H_PUNCTOUT 0x100070A0u
 #define H_DOTOUT   0x100074F0u
 
@@ -332,6 +333,19 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
             return;
         }
     }
+    /* A short word in capitals is an abbreviation, and is spelled. The run of
+       capitals has to be the whole word, or the whole word bar a plural s. */
+    int caps = 0;
+    while (caps < n && is_upper(t, t->ring[from + caps])) caps++;
+    if (caps < 5 && n > 1 &&
+        (caps == n || (caps == n - 1 && t->ring[to] == 's'))) {
+        for (int i = 0; i < caps; i++) say_char(t, lower(t, t->ring[from + i]));
+        if (caps != n) emit_ptr(t, PLURAL);
+        t->prevkind = t->kind;
+        t->kind = 5;
+        return;
+    }
+
     /* A word with no vowel in it cannot be pronounced, so it is spelled. */
     int vowel = 0;
     for (int i = from; i <= to; i++) if (chattr(t, t->ring[i]) & 0x10) { vowel = 1; break; }
