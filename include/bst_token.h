@@ -56,7 +56,12 @@ typedef struct {
     int      breath;     /* how long a breath group may be */
     int      window;     /* how far back the splitter looks */
     int      run;        /* how many words since the last sentence end */
+    int      quest;      /* a spelled-out letter has been seen in this run */
 } bst_tok;
+
+/* The reader, shared with the exception engine's lookahead. */
+int  bst_tok_read(bst_tok *t);
+void bst_tok_unread(bst_tok *t, int n);
 
 /* Looks a word up in the exception table. Returns the number of phoneme
    codes written, or zero if the table does not hold it. */

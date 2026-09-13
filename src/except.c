@@ -104,17 +104,75 @@ static int record(const trie *w, int at, uint8_t *out, int max) {
 
 /* ---- the conditions ---------------------------------------------------- */
 
-/* Each opcode asks something about the word's surroundings. The ones a plain
-   sentence reaches are answered; the rest, which ask about numbers, dates and
-   the host's own settings, are false. */
+/* The lookahead the conditions read: it runs past the end of what has been
+   consumed, pulling new input in and remembering how much to give back. */
+typedef struct { bst_tok *t; int at, pulled; } peek;
+
+static void peek_init(peek *p, bst_tok *t) { p->t = t; p->at = t->cur; p->pulled = 0; }
+
+static int peek_next(peek *p) {
+    int c;
+    do {
+        if (p->at < p->t->cur) { p->at++; c = p->t->ring[p->at]; }
+        else { p->at++; p->pulled++; c = bst_tok_read(p->t); }
+    } while (c == 0x7F);
+    return c;
+}
+
+static void peek_done(peek *p) { if (p->pulled) bst_tok_unread(p->t, p->pulled); }
+
+static int chattr(const bst_tok *t, int c) {
+    const uint8_t *p = bst_at(t->img, CHATTR + (unsigned)(c & 0xFF), 1);
+    return p ? *p : 0;
+}
+
+/* Each opcode asks something about the word's surroundings: how it is
+   capitalised, what follows it, whether it is one of a handful of things the
+   host can turn on. The ones a plain sentence reaches are answered; the rest,
+   which ask about numbers and dates, are false. */
 static int condition(bst_tok *t, int op, const uint8_t *word, int wlen) {
+    peek p;
+    int r = 0, c;
     switch (op - COND_LO) {
-    case 9:   /* the previous token was a marker and this one opens a phrase */
+    case 0:                                   /* starts lower case */
+        return (chattr(t, word[0]) & 0x20) == 0;
+    case 2:                                   /* a full stop follows */
+        peek_init(&p, t);
+        r = peek_next(&p) == '.';
+        peek_done(&p);
+        return r;
+    case 3:                                   /* a full stop, then anything */
+        peek_init(&p, t);
+        r = peek_next(&p) == '.';
+        peek_done(&p);
+        return 1;
+    case 5:                                   /* an optional stop, then a capital */
+        peek_init(&p, t);
+        c = peek_next(&p);
+        if (c == '.') c = peek_next(&p);
+        r = 0;
+        if (c == ' ') {
+            c = peek_next(&p);
+            r = (chattr(t, c) & 0x20) != 0;
+        }
+        peek_done(&p);
+        return r;
+    case 6:                                   /* starts upper case */
+        return (chattr(t, word[0]) & 0x20) != 0;
+    case 7:                                   /* punctuation follows */
+        peek_init(&p, t);
+        r = (chattr(t, peek_next(&p)) & 2) != 0;
+        peek_done(&p);
+        return r;
+    case 8:                                   /* no lower-case letter in it */
+        for (int i = 0; i < wlen; i++) {
+            if (chattr(t, word[i]) & 0x20) continue;
+            if (chattr(t, word[i]) & 8) return 0;
+        }
+        return 1;
+    case 9:
         return t->kind == 2 && t->prevkind == 5;
-    case 0x11:
-        return 0;
     default:
-        (void)word; (void)wlen;
         return 0;
     }
 }

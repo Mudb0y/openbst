@@ -8,6 +8,7 @@
 #define TABLE   0x10021748u   /* state, handler, next state; twelve bytes each */
 #define CHATTR  0x10021020u   /* per character: punctuation, digit, letter, ... */
 #define CASEMAP 0x10021220u
+#define NAMES   0x1002EBD0u   /* what each character is called, said aloud */
 
 /* The handlers, by the address the table names them at. */
 #define H_LETTER   0x10009800u
@@ -80,11 +81,15 @@ static int rd(bst_tok *t) {
     return c;
 }
 
+int bst_tok_read(bst_tok *t) { return rd(t); }
+
 static void unread(bst_tok *t, int n) {
     t->push += n;
     t->cur -= n;
     if (t->cur < -1) { t->cur = -1; t->push = 0; }
 }
+
+void bst_tok_unread(bst_tok *t, int n) { unread(t, n); }
 
 /* ---- output ------------------------------------------------------------ */
 
@@ -166,7 +171,6 @@ static void punct_out(bst_tok *t, int c) {
 }
 
 static void dot_out(bst_tok *t, int c) {
-    (void)emit_ptr;
     t->sentence = 0;
     t->prevkind = t->kind;
     t->kind = 3;
@@ -212,6 +216,17 @@ static int handler(bst_tok *t, unsigned h, int c) {
     }
 }
 
+/* What a character is called when it is said rather than read. The table is
+   indexed from five upward, with three ranges packed end to end. */
+static void say_char(bst_tok *t, int c) {
+    int idx;
+    if (c < 0x21) return;
+    if (c < 0x30)      idx = c - 0x21;
+    else if (c < 0x41) idx = c - 0x2B;
+    else               idx = (is_upper(t, c) ? lower(t, c) : c) - 0x45;
+    emit_ptr(t, NAMES + (unsigned)idx * 4);
+}
+
 /* The word the machine has just delimited. The exception table gets first
    refusal: a word it holds goes into the scratch buffer as phoneme codes and
    never reaches the dictionary or the rules. */
@@ -230,6 +245,13 @@ static void word_out(bst_tok *t) {
             t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
             return;
         }
+    }
+    if (n == 1) {
+        /* A lone letter is said rather than read. */
+        say_char(t, t->ring[t->start]);
+        t->prevkind = t->kind;
+        t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
+        return;
     }
     for (int i = t->start; i <= t->cur; i++) {
         int c = t->ring[i];
@@ -367,10 +389,15 @@ static void produce(bst_tok *t) {
         word[n] = 0;
         bst_recs r;
         bst_stream st;
+        bst_word w;
+        bst_normalise(t->img, word, &w);
         bst_word_pronounce(t->img, word, &r, &st);
         int m = st.len > 1 ? st.len - 2 : 0;
         buf[0] = (uint8_t)m;
         memcpy(buf + 1, st.buf, (size_t)st.len);
+        /* A word that lost an -ed or -ing is marked, because the assembler
+           treats it as one syllable longer than it looks. */
+        if (w.flags & 0xC0) buf[1] = 'V';
         kind = 3;
     }
 
@@ -389,18 +416,33 @@ static void produce(bst_tok *t) {
         t->blocked |= 1;
         break;
     case 3:
-        if (t->run < 3) t->run++;
+        /* A spelled-out letter opens with one marker and may carry a second
+           the assembler does not want. */
+        if (t->run < 3) {
+            t->run++;
+            if (buf[2] == 'X') {
+                t->quest = 1;
+                if (buf[3] == 'Q')      buf[3] = 0;
+                else if (buf[4] == 'Q') buf[4] = 0;
+            }
+        }
         len = buf[0] + 2;
         t->tok[i].flag = buf[1];
         t->total += buf[1] ? len - 4 : len;
         break;
     case 4:
         switch (buf[0]) {
-        case '!': case '.': case ';': case '>': buf[0] = '.'; t->run = 0; break;
-        case '(': case '-': case ':': case '[': buf[0] = ','; break;
-        case ')': buf[0] = '}'; break;
-        case '?': buf[0] = (uint8_t)(t->run ? '.' : '?'); /* fall through */
-        case '{': case '}': t->run = 0; break;
+        case '!': case '.': case ';': case '>':
+            buf[0] = '.'; t->run = 0; t->quest = 0; break;
+        case '(': case '-': case ':': case '[':
+            buf[0] = ','; break;
+        case ')':
+            buf[0] = '}'; break;
+        case '?':
+            buf[0] = (uint8_t)(t->quest ? '.' : '?');
+            t->run = 0; t->quest = 0; break;
+        case '{': case '}':
+            t->run = 0; t->quest = 0; break;
         default: break;
         }
         len = 1;
