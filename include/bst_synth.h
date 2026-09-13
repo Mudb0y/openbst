@@ -23,6 +23,7 @@ typedef struct {
     int16_t gain[BST_GAIN_ENTRIES];
     int16_t log[256];
     int16_t alog[256];
+    int16_t duration[16];   /* base segment durations, before rate scaling */
 } bst_tables;
 
 /* Parameter interpolator. The engine never jumps to a target: each frame it
@@ -69,6 +70,19 @@ typedef struct {
 void bst_pitch_init(bst_pitch *p, const bst_tables *t);
 void bst_pitch_step(bst_pitch *p, uint16_t target, int dur, int clock);
 int  bst_pitch_period(const bst_pitch *p);
+
+/* Segment duration. The scale table is indexed by the low nibble of a segment
+   record's first byte and has already been adjusted for the speaking rate;
+   the rate argument is the per-position byte the engine keeps alongside each
+   segment. Transcribed from the instruction sequence rather than established
+   by differential test: two observed durations, 42 and 1078, reproduce
+   exactly, which is evidence but not the coverage the other stages have. */
+int  bst_segment_duration(const int16_t scale[16], int first_byte, int rate,
+                          int slow);
+
+/* Builds the runtime scale table from the stored base table for a speaking
+   rate in the engine's units, where 0 is normal and -100 the slowest. */
+void bst_duration_scale(const int16_t base[16], int rate, int16_t out[16]);
 
 typedef struct {
     const bst_tables *t;

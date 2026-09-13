@@ -89,3 +89,26 @@ void bst_pitch_step(bst_pitch *p, uint16_t target, int dur, int clock) {
 int bst_pitch_period(const bst_pitch *p) {
     return p->acc >> 8;
 }
+
+int bst_segment_duration(const int16_t scale[16], int first_byte, int rate,
+                         int slow) {
+    /* (scale * rate) >> 6, then times fourteen, reached as (x * 7) << 3 >> 2. */
+    int32_t v = (int32_t)(uint16_t)scale[first_byte & 0x0F] * rate;
+    v >>= 6;
+    v &= 0xFFFF;
+    v = ((v * 7) << 3) >> 2;
+    if (slow) v = (int16_t)(v << 2);
+    return (int16_t)v;
+}
+
+void bst_duration_scale(const int16_t base[16], int rate, int16_t out[16]) {
+    if (rate < -100) rate = -100;
+    for (int i = 0; i < 16; i++) {
+        int16_t v = base[i];
+        if (rate != 0 && v > 11) {
+            v = (int16_t)(((rate + 100) * (int32_t)v) / 100);
+            if (v < 12) v = 12;
+        }
+        out[i] = v;
+    }
+}
