@@ -59,6 +59,8 @@ typedef struct {
     int      run;        /* how many words since the last sentence end */
     int      quest;      /* a spelled-out letter has been seen in this run */
     int      eat;        /* the exception entry swallows the stop after it */
+    int      money;      /* a currency sign is in force */
+    int      ord, ordlast, ordprev;
 } bst_tok;
 
 /* The reader, shared with the exception engine's lookahead. */
@@ -74,6 +76,9 @@ void bst_say_number(bst_tok *t, const uint8_t *digits, int n);
 
 /* Says a run of digits one at a time. */
 void bst_say_digits(bst_tok *t, const uint8_t *digits, int n);
+
+/* Says a number written in groups of three. */
+void bst_say_grouped(bst_tok *t, const uint8_t *digits, int n);
 
 /* Looks a word up in the exception table. Returns the number of phoneme
    codes written, or zero if the table does not hold it. */

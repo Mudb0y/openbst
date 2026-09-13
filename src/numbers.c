@@ -70,6 +70,19 @@ static void spell(bst_tok *t, const uint8_t *d, int n) {
 
 void bst_say_digits(bst_tok *t, const uint8_t *d, int n) { spell(t, d, n); }
 
+/* A number written in groups: the digits are padded out to a whole number of
+   threes and then read group by group, each followed by its scale. */
+void bst_say_grouped(bst_tok *t, const uint8_t *d, int n) {
+    uint8_t buf[32];
+    if (n <= 0 || n > 24) { spell(t, d, n); return; }
+    int g = (n + 2) / 3;
+    int pad = g * 3 - n;
+    for (int i = 0; i < pad; i++) buf[i] = '0';
+    memcpy(buf + pad, d, (size_t)n);
+    buf[g * 3] = 0;
+    groups(t, buf, g);
+}
+
 void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
     if (n < 5 && n > 0 && d[0] != '0') {
         uint8_t pad[8];

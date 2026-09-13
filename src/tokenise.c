@@ -35,6 +35,21 @@
 #define H_DOTTED   0x10007BA0u
 #define H_SEP      0x10009DE0u
 #define H_GROUPS   0x10005460u
+#define H_SEPNUM   0x10005FA0u
+#define POINT      0x1002E7A0u
+#define DOLLARS    0x1002E780u
+#define AND        0x1002E784u
+#define CENTS      0x1002E790u
+#define H_MONEY    0x100046D0u
+#define H_ORDINAL  0x10009930u
+#define H_ORDEMIT  0x10001B00u
+#define ORD_ST     0x1002E7CCu
+#define ORD_ND     0x1002E7D0u
+#define ORD_RD     0x1002E7D4u
+#define ORD_TIETH  0x1002E7E0u
+#define ORD_FIFTH  0x1002E7D8u
+#define ORD_FIRST  0x1002E7DCu
+#define ORD_TH     0x1002E7E4u
 #define GRPSEP     0x1002E7ECu
 #define H_PUNCTOUT 0x100070A0u
 #define H_DOTOUT   0x100074F0u
@@ -169,6 +184,9 @@ static void word_out(bst_tok *t);
 static int dotted_out(bst_tok *t);
 static int number_out(bst_tok *t);
 static int groups_out(bst_tok *t);
+static int sepnum_out(bst_tok *t);
+static int ordinal_seen(bst_tok *t, int c);
+static void ordinal_emit(bst_tok *t);
 static void say_char(bst_tok *t, int c);
 
 /* Punctuation that closes a phrase versus punctuation that only groups. */
@@ -245,6 +263,13 @@ static int handler(bst_tok *t, unsigned h, int c) {
     case H_NUMBER:   return number_out(t);
     case H_DOTTED:   return dotted_out(t);
     case H_GROUPS:   return groups_out(t);
+    case H_SEPNUM:   return sepnum_out(t);
+    case H_ORDINAL:  return ordinal_seen(t, c);
+    case H_ORDEMIT:  ordinal_emit(t); unread(t, 1); return 1;
+    case H_MONEY:    /* a currency sign: the number after it is an amount */
+        t->money = 1;
+        unread(t, 1);
+        return 1;
     case H_SEP:      /* what may sit between two runs of digits */
         return c == ':' || c == '.' || c == ',' || c == '/' || c == '-' || c == ' ';
     default:         return 0;
@@ -353,6 +378,137 @@ static int number_out(bst_tok *t) {
     for (int i = 0; i < n; i++)
         if (!is_digit(t, t->ring[t->start + i])) return 0;
     bst_say_number(t, t->ring + t->start, n);
+    t->prevkind = t->kind;
+    t->kind = 6;
+    return 1;
+}
+
+/* "1st", "2nd", "3rd", "4th": the two letters after a number, if they are the
+   right ones for its last digit. */
+static int ordinal_seen(bst_tok *t, int c) {
+    int a = is_upper(t, c) ? lower(t, c) : c;
+    if (a != 't' && a != 'n' && a != 'r' && a != 's') return 0;
+    int b = rd(t);
+    b = is_upper(t, b) ? lower(t, b) : b;
+    int kind;
+    if      (a == 'n' && b == 'd') kind = 1;
+    else if (a == 'r' && b == 'd') kind = 2;
+    else if (a == 's' && b == 't') kind = 3;
+    else if (a == 't' && b == 'h') kind = 0;
+    else { unread(t, 1); return 0; }
+
+    /* Nothing but a plural s may follow. */
+    int d = rd(t);
+    int dl = is_upper(t, d) ? lower(t, d) : d;
+    if (is_letter(t, dl)) {
+        if (dl != 's') { unread(t, 2); return 0; }
+        int e = rd(t);
+        if (is_letter(t, is_upper(t, e) ? lower(t, e) : e)) { unread(t, 3); return 0; }
+        unread(t, 1);
+    }
+    unread(t, 1);
+
+    /* The suffix has to agree with the last digit, and the teens take th. */
+    int last = 0, prev = '0';
+    for (int i = t->cur; i >= t->start; i--)
+        if (is_digit(t, t->ring[i])) {
+            last = t->ring[i];
+            if (i > t->start && is_digit(t, t->ring[i - 1])) prev = t->ring[i - 1];
+            break;
+        }
+    if (!last) return 0;
+    switch (kind) {
+    case 0: if (prev != '1' && last > '0' && last < '4') return 0; break;
+    case 1: if (last != '2' || prev == '1') return 0; break;
+    case 2: if (last != '3' || prev == '1') return 0; break;
+    case 3: if (last != '1' || prev == '1') return 0; break;
+    default: return 0;
+    }
+    t->ord = kind + 1;
+    t->ordlast = last;
+    t->ordprev = prev;
+    return 1;
+}
+
+/* Rewrites the tail of what has just been said into the ordinal form: the
+   scratch is wound back to a chosen sound and the suffix put on instead. */
+static void ordinal_emit(bst_tok *t) {
+    int stop;
+    unsigned str;
+    switch (t->ord) {
+    case 4: stop = 8;    str = ORD_ST; break;
+    case 2: stop = 0x18; str = ORD_ND; break;
+    case 3: stop = 0x12; str = ORD_RD; break;
+    case 1:
+        if (t->ordlast == '0' && (t->ordprev > '1' ||
+                                  (t->ordprev != '1' && t->ordprev != '0'))) {
+            stop = 0; str = ORD_TIETH;
+        } else if (t->ordlast == '5' && t->ordprev != '1') {
+            stop = 0x1F; str = ORD_FIFTH;
+        } else if (t->ordlast == '2' && t->ordprev == '1') {
+            stop = 4; str = ORD_FIRST;
+        } else {
+            stop = 0; str = ORD_TH;
+        }
+        break;
+    default:
+        t->ord = 0;
+        return;
+    }
+    t->ord = 0;
+    int marker = stop ? stop : 0xFF;
+    while (t->nout > 0) { t->nout--; if (t->out[t->nout] == marker) break; }
+    const uint8_t *e = bst_at(t->img, str, 4);
+    if (e) {
+        uint32_t va = (uint32_t)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
+        const uint8_t *p = va ? bst_at(t->img, va, 1) : NULL;
+        for (; p && *p; p++) emit(t, *p);
+    }
+    emit(t, 0xFF);
+}
+
+/* A number written with thousands separators, and optionally a decimal part.
+   The first group may be one to three digits and every later group is three;
+   what follows the last group, if anything, is the decimal separator and the
+   digits after it are spelled. */
+static int sepnum_out(bst_tok *t) {
+    uint8_t digits[32];
+    int nd = 0, p = t->start, first = 1;
+    if (p > t->cur || !is_digit(t, t->ring[p])) return 0;
+    for (;;) {
+        int q = p;
+        while (q <= t->cur && is_digit(t, t->ring[q])) q++;
+        int len = q - p;
+        if (first ? (len < 1 || len > 3) : (len != 3)) return 0;
+        first = 0;
+        for (int i = 0; i < len && nd < 24; i++) digits[nd++] = t->ring[p + i];
+        if (q > t->cur || t->ring[q] != ',') { p = q; break; }
+        p = q + 1;
+    }
+    if (nd == 0) return 0;
+
+    int frac = -1, fn = 0;
+    if (p <= t->cur && t->ring[p] == '.') {
+        int q = p + 1;
+        while (q <= t->cur && is_digit(t, t->ring[q])) q++;
+        if (q > p + 1) { frac = p + 1; fn = q - (p + 1); p = q; }
+    }
+    if (nd <= 3 && frac < 0) return 0;   /* a plain number is not our business */
+
+    bst_say_grouped(t, digits, nd);
+    if (t->money) {
+        emit_ptr(t, DOLLARS);
+        if (frac >= 0) {
+            emit_ptr(t, AND);
+            bst_say_number(t, t->ring + frac, fn);
+            emit_ptr(t, CENTS);
+        }
+        t->money = 0;
+    } else if (frac >= 0) {
+        emit_ptr(t, POINT);
+        bst_say_digits(t, t->ring + frac, fn);
+    }
+    unread(t, t->cur - (p - 1));
     t->prevkind = t->kind;
     t->kind = 6;
     return 1;
