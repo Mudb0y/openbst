@@ -21,6 +21,7 @@ static void usage(void) {
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --records TEXT              print the segment records driving frame generation\n"
         "  --recat PC:ARG:N            dump N bytes at pointer argument ARG on reaching PC\n"
+        "  --snap PC:ADDR:N            dump N bytes at ADDR on reaching PC\n"
         "  --interp TEXT               print the interpolator state at each frame\n"
         "  --gain TEXT                 print the gain smoother state at each frame\n"
         "  --pitch TEXT                print the pitch smoother state at each frame\n"
@@ -80,6 +81,7 @@ int main(int argc, char **argv) {
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
     const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL, *ltsmode = NULL;
+    const char *snapspec = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -101,6 +103,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc)    pitchmode = argv[++i];
         else if (!strcmp(argv[i], "--recat") && i + 1 < argc)     recatspec = argv[++i];
         else if (!strcmp(argv[i], "--lts") && i + 1 < argc)       ltsmode = argv[++i];
+        else if (!strcmp(argv[i], "--snap") && i + 1 < argc)      snapspec = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
@@ -152,7 +155,8 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "DllMain ok\n");
 
-    if (speak || phonemes || frames || records || interp || gainmode || pitchmode || ltsmode) {
+    if (speak || phonemes || frames || records || interp || gainmode || pitchmode
+        || ltsmode || snapspec) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
@@ -169,7 +173,8 @@ int main(int argc, char **argv) {
         const char *text = speak ? speak : (phonemes ? phonemes :
                            (frames ? frames : (records ? records :
                            (interp ? interp : (gainmode ? gainmode :
-                           (pitchmode ? pitchmode : ltsmode))))));
+                           (pitchmode ? pitchmode :
+                           (ltsmode ? ltsmode : (speak ? speak : ""))))))));
         uint32_t gtext = emu_push_str(e, text);
         /* The engine holds this capacity in a signed 16-bit field and refuses
            to write when it is not greater than the index, so anything above
@@ -212,6 +217,18 @@ int main(int argc, char **argv) {
             int argno = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 0;
             int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
             emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
+        }
+
+        if (snapspec) {
+            char ss[160];
+            snprintf(ss, sizeof ss, "%s", snapspec);
+            char *q = NULL;
+            unsigned long pc = strtoul(ss, &q, 0);
+            uint32_t a[1];
+            int l[1];
+            a[0] = (q && *q == ':') ? (uint32_t)strtoul(q + 1, &q, 0) : 0;
+            l[0] = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 32;
+            emu_hook_dump(e, (uint32_t)pc, a, l, 1, 'S', stdout);
         }
 
         if (ltsmode) {

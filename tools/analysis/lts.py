@@ -34,6 +34,8 @@ DISPATCH = 0x10022ED0
 RULES = 0x10093000
 PATTERNS = 0x1002EFB8
 OUTPUTS = 0x10021C80
+PH_ATTR1 = 0x10021648   # bit 0x80 opens a new group
+PH_ATTR2 = 0x100216C8   # bits 2 and 4 choose which slot a code lands in
 
 
 class Img:
@@ -243,6 +245,74 @@ class Lts:
         return out
 
 
+class Builder:
+    """Turns a stream of phoneme codes into the engine's record buffer.
+
+    A code that opens a group takes three slots: one before it, itself, and
+    one after. Codes that do not open a group are written into whichever of
+    those slots their attributes select, which is how stress and allophone
+    markers attach to the segment they modify.
+    """
+
+    LIMIT = 0x60
+
+    def __init__(self, img):
+        self.img = img
+        self.buf = bytearray(128)
+        self.pos = 0
+        self.before = -1
+        self.at = -1
+        self.after = -1
+        self.stopped = False
+
+    def emit(self, code):
+        if self.stopped:
+            return
+        p = self.pos
+        if p >= self.LIMIT:
+            self.stopped = True
+            return
+
+        a1 = self.img.u8(PH_ATTR1 + code)
+        a2 = self.img.u8(PH_ATTR2 + code)
+        opens = (a1 & 0x80) or code == 0x4C or code == 0x49
+
+        if not opens:
+            special = 0x75 < code < 0x7C
+            if (a2 & 2) == 0 and not special:
+                if (a2 & 4) == 0:
+                    p = self.pos
+                    self.pos = p + 1
+                    self.before = self.at = self.after = -1
+                elif self.at == -1:
+                    if self.after == -1:
+                        return
+                    p = self.after
+                    self.after = -1
+                else:
+                    p = self.at
+                    self.before = self.at = -1
+            else:
+                p = self.before
+                if p == -1:
+                    return
+                self.before = -1
+        else:
+            self.before = p + 1
+            self.at = p + 2
+            self.after = p + 3
+            self.pos = p + 4
+            for k in (3, 4, 5):
+                if p + k < len(self.buf):
+                    self.buf[p + k] = 0
+
+        if 0 <= p + 2 < len(self.buf):
+            self.buf[p + 2] = code
+
+    def result(self):
+        return bytes([self.pos & 0xFF]) + bytes(self.buf[1:self.pos + 2])
+
+
 def main():
     if len(sys.argv) < 3:
         print("usage: lts.py DLL WORD...", file=sys.stderr)
@@ -256,7 +326,13 @@ def main():
         args = args[1:]
     for w in args:
         fired = lts.pronounce(w, pre)
-        print("%-12s %s" % (w, " ".join("r%d@0x%x" % (i, a) for i, a in fired)))
+        b = Builder(img)
+        for _, addr in fired:
+            for c in img.cstr(addr).encode("latin1"):
+                b.emit(c)
+        print("%-12s rules %-44s buffer %s"
+              % (w, " ".join("r%d" % i for i, _ in fired),
+                 " ".join("%02X" % c for c in b.result())))
     return 0
 
 
