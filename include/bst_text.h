@@ -146,4 +146,15 @@ typedef struct {
 int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
               bst_pair_state *st, bst_emit *out, int max);
 
+/* ---- diphone expansion --------------------------------------------------
+
+   A segment's index names an entry in the diphone inventory, and the entry
+   holds one sub-sequence of acoustic targets per position the sound covers.
+   The segment's count says how many positions to take. */
+
+int  bst_diphone_count(const bst_image *img);
+int  bst_diphone(const bst_image *img, int index, int positions,
+                 uint16_t *out, int max);
+void bst_target_coeffs(const bst_image *img, int voice, int target, int16_t k[10]);
+
 #endif

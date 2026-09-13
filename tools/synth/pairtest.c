@@ -12,7 +12,9 @@
 
        S <index> <count>
        T <index> <duration> <pitch1> <pitch2>
- */
+
+   With -t, prints instead the acoustic targets the segments expand to, one
+   line of indices per snapshot, which is what the frame builder fetches. */
 
 int main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: pairtest DLL < snapshots\n"); return 2; }
@@ -30,6 +32,8 @@ int main(int argc, char **argv) {
     char line[4096];
     uint8_t stream[1024];
     bst_emit rec[2048];
+
+    int targets = argc > 2 && !strcmp(argv[2], "-t");
 
     while (fgets(line, sizeof line, stdin)) {
         if (line[0] != 'P') continue;
@@ -49,6 +53,19 @@ int main(int argc, char **argv) {
         int m = bst_pairs(&img, stream, len, &st, rec,
                           (int)(sizeof rec / sizeof rec[0]));
         printf("#\n");
+        if (targets) {
+            uint16_t t[4096];
+            for (int i = 0; i < m; i++) {
+                if (rec[i].kind != BST_EMIT_SEG) continue;
+                /* A command record is not an allophone and expands to
+                   nothing. */
+                if (rec[i].index & 0xF000) continue;
+                int nt = bst_diphone(&img, rec[i].index, rec[i].count,
+                                     t, (int)(sizeof t / sizeof t[0]));
+                for (int j = 0; j < nt; j++) printf("%u\n", t[j]);
+            }
+            continue;
+        }
         for (int i = 0; i < m; i++) {
             if (rec[i].kind == BST_EMIT_SEG)
                 printf("S %u %u\n", rec[i].index, rec[i].count);

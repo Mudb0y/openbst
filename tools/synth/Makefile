@@ -16,7 +16,7 @@ durtest_MODS    := synth interp
 normtest_MODS   := text dict lts cursors
 curtest_MODS    := text cursors
 phtest_MODS     := text cursors phrules
-pairtest_MODS   := text cursors pairs
+pairtest_MODS   := text cursors pairs diphone
 say_MODS        := text dict lts cursors
 
 BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest say
