@@ -1,0 +1,222 @@
+#include <string.h>
+#include "bst_text.h"
+
+/* Sentence assembly: tokens to the phoneme stream a phrase is spoken from.
+ *
+ * The stream opens with a five-byte header saying how the previous phrase
+ * ended, then a command record carrying the sentence type, then the words'
+ * codes with emphasis markers between them, and closes on a marker that tells
+ * the rest of the engine where the phrase stops. Punctuation does not appear
+ * in the stream as itself: it chooses the closing marker, sets the sentence
+ * type, and pads the end with a run of silences whose length says how long the
+ * pause is.
+ *
+ * The command record's payload sits at fixed offsets in the stream, and the
+ * later stages read the sentence type straight out of it, so the header's
+ * width is load-bearing: the record has to land where they look. */
+
+#define STREAM_MAX 0x191
+
+static int a2(const bst_image *img, int c) { return bst_ph_attr2(img, c); }
+
+static void put(bst_assembler *z, int c) {
+    if (z->wp + 1 >= STREAM_MAX) { z->full = 1; return; }
+    z->s[++z->wp] = (uint8_t)c;
+}
+
+/* The phrase header: a marker and, unless it is the "continues" marker, four
+   bytes describing the break. */
+static void header(bst_assembler *z, const uint8_t *rec) {
+    put(z, rec[0]);
+    z->hdr = z->wp;
+    if (rec[0] == 'L') return;
+    put(z, rec[4]);
+    put(z, rec[5]);
+    put(z, rec[1]);
+    put(z, rec[2]);
+}
+
+static void command(bst_assembler *z, const uint8_t *rec) {
+    if (z->hdr < 0) {
+        static const uint8_t l[6] = { 'L', 0, 0, 0, 0, 0 };
+        header(z, l);
+    }
+    if (z->wp + 0x2B < STREAM_MAX) {
+        put(z, 0x7C);
+        put(z, rec[0]);
+        put(z, rec[3]);
+        put(z, rec[2]);
+        put(z, rec[5]);
+        put(z, rec[4]);
+        put(z, 0x7C);
+        z->wp--;              /* the closing byte is a placeholder */
+        z->wp++;
+    }
+}
+
+/* Ends the phrase, or records how it broke if it does not. */
+static void close_phrase(bst_assembler *z, uint8_t *rec) {
+    int direct = 0;
+    if (z->hdr == 0) {
+        if (rec[3] != 0) direct = 1;
+        else {
+            if (rec[0] < 0x4D) return;
+            z->wp = -1;
+            int b = rec[1];
+            if (b != 0 && rec[2] == 0) { rec[1] = 0; rec[2] = (uint8_t)b; }
+        }
+    }
+    if (!direct && rec[3] == 0) {
+        if (rec[0] == 0x4E) z->punct = 2;
+        if (rec[0] == 0x4D) z->punct = 1;
+    }
+    header(z, rec);
+    if ((rec[0] != 0x4E && rec[0] != 0x4D) || z->hdr == 0) return;
+
+    /* How this break follows the last one decides the contour's shape. */
+    if (z->punct == 0) z->hist = 3;
+    if (z->punct != 3) {
+        if (z->hist == 6)                       z->hist = (z->punct == 1) ? 5 : 7;
+        else if (z->punct == 5)                 z->hist = 6;
+        else if (z->hist == 1 || z->hist == 5 || z->hist == 2)
+                                                z->hist = (z->punct != 2) ? 2 : 3;
+        else if (z->punct == 2)                 z->hist = 4;
+        else                                    z->hist = 1;
+    }
+    if (z->s[6] == 'I') z->s[10] = (uint8_t)z->hist;
+    z->s[z->hdr + 4] = 0;
+    put(z, 0x5C);
+    z->last = z->wp + 1;
+    z->len = z->last;
+    if (rec[2] == 0) rec[2] = rec[1];
+    rec[1] = 0;
+    memcpy(z->carry, rec, 6);
+    z->done = 1;
+}
+
+/* Punctuation: the marker it closes on, the pause it leaves, the sentence
+   type it sets. The type and the contour shape are bytes of the command
+   record at the head of the stream rather than variables, because that is
+   where the later stages read them. */
+static void punctuation(bst_assembler *z, int c) {
+    int pause, tmpl;
+    switch (c) {
+    case 0x2A: pause = 0; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; break;
+    case 0x2C: pause = 3; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; break;
+    case 0x2E: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 4; break;
+    case 0x3F: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 1; break;
+    case 0x40: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 3; break;
+    case 0x5D: pause = 1; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; break;
+    case 0x7B: pause = 7; tmpl = 0x4E; z->punct = 5; z->s[8] = 4; z->s[9] = 0x48; break;
+    case 0x7C: pause = 1; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; break;
+    case 0x7D: pause = 1; tmpl = 0x4E; z->punct = 2; z->s[8] = 4; break;
+    default: return;
+    }
+    uint8_t rec[6] = { (uint8_t)tmpl, 0, 0, (uint8_t)c, 0, 0 };
+    while (pause--) put(z, 0x2F);
+    close_phrase(z, rec);
+}
+
+/* The stress pass runs over the word, split where a boundary marker says the
+   word is really two. */
+static void stress_word(bst_assembler *z, uint8_t *b, int n) {
+    int has_break = 0, has_open = 0;
+    for (int i = 1; i < n; i++) {
+        if (b[i] == 0x4B) has_break = 1;
+        if (b[i] == 0x51) has_open = 1;
+    }
+    if (b[0] == 0x51 && has_break) {
+        int p = 1;
+        if (p >= n) return;
+        while (b[p] != 0x4B && b[p] != 0x4C) { if (++p >= n) return; }
+        bst_word_stress(z->img, b, p - 1, z->emph, z->mode);
+        b[0] = 0;
+        if (p + 1 < n) bst_word_stress(z->img, b + p + 1, n - p - 1, z->emph, z->mode);
+    } else if (has_open && has_break) {
+        int p = 1;
+        if (p >= n) return;
+        while (!((b[p] == 0x4B || b[p] == 0x4C) && b[p + 1] == 0x51)) {
+            if (++p >= n) return;
+        }
+        bst_word_stress(z->img, b, p - 1, z->emph, z->mode);
+        if (p + 1 < n) bst_word_stress(z->img, b + p + 1, n - p - 1, z->emph, z->mode);
+        b[p + 1] = 0;
+    } else {
+        bst_word_stress(z->img, b, n, z->emph, z->mode);
+    }
+}
+
+static int word(bst_assembler *z, uint8_t *buf) {
+    if (z->hdr < 0) {
+        static const uint8_t l[6] = { 'L', 0, 0, 0, 0, 0 };
+        header(z, l);
+    }
+    int n = buf[0];
+    if (z->wp + n + 0x25 >= STREAM_MAX) { punctuation(z, 0x7C); return 0; }
+
+    stress_word(z, buf + 2, n);
+    if (!(z->emph & 2)) {
+        if (z->emph & 1) {
+            put(z, 0x51);
+            if (z->emph & 4) put(z, 0x4F);
+        }
+    } else if (z->emph & 4) {
+        put(z, 0x52);
+    }
+    for (int i = 0; i < n; i++) {
+        int c = buf[2 + i];
+        if (!(z->emph & 2) || (c != 0x4F && c != 0x50 && c != 0x51)) put(z, c);
+    }
+    z->emph = 0;
+    z->hdr = -1;
+    return 1;
+}
+
+void bst_assemble_start(bst_assembler *z) {
+    z->last = -1;
+    z->wp = -1;
+    z->len = -1;
+    z->hdr = -1;
+    z->done = 0;
+    z->full = 0;
+    header(z, z->carry);
+    static const uint8_t iv[6] = { 'I', 2, 0, 0, 0, 0 };
+    command(z, iv);
+    z->emph = 0;
+    z->s[9] = 0x4C;
+}
+
+int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {
+    switch (kind) {
+    case 1: {
+        /* A mode command. Anything that is not a tilde record goes into the
+           stream as a command for the later stages to read. */
+        if (buf[0] != '~') command(z, buf);
+        break;
+    }
+    case 3:
+        word(z, buf);
+        break;
+    case 4:
+        punctuation(z, buf[0]);
+        break;
+    case 5:
+        close_phrase(z, buf);
+        break;
+    case 6:
+        return 1;
+    default:
+        break;
+    }
+    return z->wp >= 0 && z->s[z->wp] == 0x5C;
+}
+
+void bst_assemble_init(bst_assembler *z, const bst_image *img, uint8_t *stream) {
+    memset(z, 0, sizeof *z);
+    z->img = img;
+    z->s = stream;
+    z->wp = -1;
+    z->hdr = -1;
+    z->carry[0] = 0x4E;
+    (void)a2;
+}

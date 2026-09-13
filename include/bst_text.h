@@ -88,6 +88,24 @@ void bst_build_emit(const bst_image *img, bst_builder *b, int code);
 void bst_build_suffix(const bst_image *img, bst_builder *b, int flags, int y_from_i);
 void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *b);
 
+/* ---- sentence assembly --------------------------------------------------
+
+   Tokens in, one phrase's phoneme stream out. */
+
+typedef struct {
+    const bst_image *img;
+    uint8_t *s;
+    int      wp, hdr, last, len;
+    int      emph, punct, hist, mode;
+    int      done, full;
+    uint8_t  carry[6];
+} bst_assembler;
+
+void bst_assemble_init(bst_assembler *z, const bst_image *img, uint8_t *stream);
+void bst_assemble_start(bst_assembler *z);
+/* Returns non-zero once the phrase is complete. */
+int  bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf);
+
 /* Chooses which syllable of a word carries the accent and fills in every
    syllable's mark. `emph` is the emphasis state the surrounding text set and
    `mode` the engine's mode bits. */
