@@ -84,28 +84,24 @@ static void scan_eight(const bst_image *img, const uint8_t *s, int lim, int from
     }
 }
 
-/* Which rules and which terms are enabled. Splitting every condition into its
- * own bit and measuring them separately is the only way to tell a correct rule
- * from a broken one here: a single over-firing term swamps three correct ones,
- * because a wrong rewrite costs twice, once as a miss and once as a false
+/* Which rules and which terms are enabled. Every condition has its own bit so
+ * they can be measured separately, which is the only way to tell a correct
+ * rule from a broken one here: one over-firing term swamps several correct
+ * ones, because a wrong rewrite costs twice, as a miss and as a false
  * positive.
  *
  * Measured over the corpus, against 5294 of 5568 positions and 28 of 58
  * streams for the identity:
- *     nothing                        5294 / 28
- *     aspiration only                5305 / 29
- *     plus the group-open rewrite    5319 / 30   <- the default here
- *     plus the glottal insertion     5103 / 26
- *     plus the phrase-edge on prev   5298 / 16
- *     everything on                  5073 / 12
+ *     nothing                     5294 / 28
+ *     the default here            5565 / 55
+ *     plus the empty-next test    5544 / 41
  *
- * Two terms remain wrong and are off: the glottal-stop insertion (bit 0) and
- * the phrase-edge test on the previous segment (bit 6). Everything else is
- * neutral or better and is on.
+ * One term remains wrong and is off, bit 5, which tests the next cursor for
+ * emptiness in the phrase-edge rule. Everything else is on.
  *
- * That is around twenty-five of the 274 rewrites the pass makes. Still a
- * beginning rather than the stage, and not in the test suite. */
-int bst_rule_mask = 0x19E;
+ * That is 271 of the 274 rewrites the pass makes, and 55 of 58 sentences
+ * reproduced exactly. Not yet in the suite: three sentences still differ. */
+int bst_rule_mask = 0x15F;
 
 int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis) {
     cur next = {0, 0}, next2 = {0, 0}, stress = {0, 0}, eight = {0, 0};
@@ -155,9 +151,10 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
         int c = s[i];
         int bit1 = a2(img, c) & 1;
 
-        /* Both comparands of the second flag read zero throughout, so it
-           reduces to the attribute bit. */
-        int flag_b = bit1;
+        /* The second flag compares the positions of the previous segment and
+           the previous eighth-class segment. Both read zero at the pass's
+           entry, which made them look constant; they are not. */
+        int flag_b = bit1 && prev.pos <= prev8.pos;
         int flag_a = bit1 && i <= eight.pos && next.pos > eight.pos;
 
         if (c == CMD) { i += 7; continue; }
@@ -225,11 +222,13 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
                 if ((bst_rule_mask & 8) && next.val == 0x11) {
                     c = 0x25; s[i] = 0x25; changed++;
                 }
+                /* These test the cursor as a whole, not just its value: a
+                   cursor reads zero only when its scan found nothing. */
                 int edge = 0;
-                if ((bst_rule_mask & 16)  && prev.val == 0)    edge = 1;
-                if ((bst_rule_mask & 32)  && next.val == 0)    edge = 1;
-                if ((bst_rule_mask & 64)  && prev.val == 0x2F) edge = 1;
-                if ((bst_rule_mask & 128) && next.val == 0x2F) edge = 1;
+                if ((bst_rule_mask & 16)  && prev.val == 0 && prev.pos == 0) edge = 1;
+                if ((bst_rule_mask & 32)  && next.val == 0 && next.pos == 0) edge = 1;
+                if ((bst_rule_mask & 64)  && prev.val == 0x2F && prev.pos == 0) edge = 1;
+                if ((bst_rule_mask & 128) && next.val == 0x2F && next.pos == 0) edge = 1;
                 if (edge) { c = 0x2B; s[i] = 0x2B; changed++; }
             }
 
@@ -239,6 +238,6 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
         }
         i++;
     }
-    (void)prev8; (void)latch_o; (void)latch_p;
+    (void)latch_p;
     return changed;
 }

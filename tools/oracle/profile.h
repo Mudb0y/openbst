@@ -94,6 +94,7 @@ typedef struct {
     uint32_t cur_next, cur_next_pos, cur_prev;
     uint32_t cur_stress, cur_stress_pos;
     uint32_t cur_eight, cur_eight_pos;
+    uint32_t flag_lo, flag_hi;   /* the pair the second rule flag compares */
 
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
@@ -152,6 +153,8 @@ static const profile profiles[] = {
         .cur_stress_pos = 0x1001b472,
         .cur_eight     = 0x10019a68,
         .cur_eight_pos = 0x10019a6a,
+        .flag_lo       = 0x1001c00e,
+        .flag_hi       = 0x1001c032,
         .default_level = 6,
     },
 };

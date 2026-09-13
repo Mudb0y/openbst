@@ -234,11 +234,11 @@ int main(int argc, char **argv) {
         if (intonation) emu_hook_call(e, pr->intonation_push, 4, stdout);
 
         if (cursors) {
-            const uint32_t a[7] = { pr->cur_next, pr->cur_next_pos, pr->cur_prev,
+            const uint32_t a[8] = { pr->cur_next, pr->cur_next_pos, pr->cur_prev,
                                     pr->cur_stress, pr->cur_stress_pos,
-                                    pr->cur_eight, pr->cur_eight_pos };
-            const int      l[7] = { 1, 2, 1, 1, 2, 1, 2 };
-            emu_hook_dump(e, pr->rules_cursor, a, l, 7, 'C', stdout);
+                                    pr->cur_eight, pr->cur_eight_pos, pr->flag_lo };
+            const int      l[8] = { 1, 2, 1, 1, 2, 1, 2, 4 };
+            emu_hook_dump(e, pr->rules_cursor, a, l, 8, 'C', stdout);
         }
 
         if (phrules) {
