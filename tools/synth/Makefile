@@ -5,10 +5,11 @@ BIN2   := $(BUILD)/interptest
 BIN3   := $(BUILD)/prosodytest
 BIN4   := $(BUILD)/durtest
 BIN5   := $(BUILD)/normtest
+BIN6   := $(BUILD)/curtest
 OBJ    := $(BUILD)/synth_core.o $(BUILD)/synth_main.o
 CORE   := $(BUILD)/synth_core.o $(BUILD)/interp_core.o
 
-all: $(BIN) $(BIN2) $(BIN3) $(BIN4) $(BIN5)
+all: $(BIN) $(BIN2) $(BIN3) $(BIN4) $(BIN5) $(BIN6)
 
 $(BUILD)/synth_core.o: ../../src/synth.c ../../include/bst_synth.h
 	@mkdir -p $(BUILD)
@@ -64,6 +65,13 @@ $(BUILD)/lts_core.o: ../../src/lts.c ../../include/bst_text.h
 
 $(BIN5): $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/normtest.o
 	$(CC) $(BUILD)/text_core.o $(BUILD)/dict_core.o $(BUILD)/lts_core.o $(BUILD)/normtest.o -o $@
+
+$(BUILD)/curtest.o: curtest.c ../../include/bst_text.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN6): $(BUILD)/text_core.o $(BUILD)/curtest.o
+	$(CC) $(BUILD)/text_core.o $(BUILD)/curtest.o -o $@
 
 clean:
 	rm -f $(OBJ) $(CORE) $(BIN) $(BIN2) $(BUILD)/interptest.o
