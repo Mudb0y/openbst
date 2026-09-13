@@ -111,6 +111,11 @@ struct emu {
     /* Snapshots chosen memory regions each time a chosen instruction runs.
        Two independent slots, so a value can be sampled before and after the
        code that changes it. */
+    FILE    *regmemlog;
+    uint32_t regmem_pc;
+    int      regmem_reg, regmem_len;
+    int32_t  regmem_off;
+
     FILE    *dumplog;
     struct {
         uint32_t pc;
@@ -151,6 +156,12 @@ void     emu_hook_record(emu *e, uint32_t pc, int argno, int nbytes, FILE *out);
 void     emu_hook_dump(emu *e, uint32_t pc, const uint32_t *addrs, const int *lens,
                        int n, char tag, FILE *out);
 void     emu_hook_regs(emu *e, uint32_t pc, FILE *out);
+
+/* Dumps memory at an address held in a register, which is how the engine
+   reaches most of its per-segment state. reg is an index into the same order
+   emu_hook_regs prints: eax ebx ecx edx esi edi ebp esp. */
+void     emu_hook_regmem(emu *e, uint32_t pc, int reg, int32_t offset,
+                         int nbytes, FILE *out);
 void     emu_drain_flush(emu *e);
 const char *emu_drained(emu *e, size_t *len);
 void     emu_report_shims(emu *e);

@@ -2,6 +2,11 @@
 #include <string.h>
 #include "winemu.h"
 
+static const int REGIDS[8] = {
+    UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX,
+    UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EBP, UC_X86_REG_ESP
+};
+
 static uint32_t align_up(uint32_t v, uint32_t a) { return (v + a - 1) & ~(a - 1); }
 
 int emu_read(emu *e, uint32_t addr, void *dst, uint32_t n) {
@@ -303,16 +308,40 @@ static void hook_regs(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     (void)uc; (void)addr; (void)size;
     emu *e = ud;
     if (!e->dumplog) return;
-    int ids[8] = { UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC_X86_REG_EDX,
-                   UC_X86_REG_ESI, UC_X86_REG_EDI, UC_X86_REG_EBP, UC_X86_REG_ESP };
+    const int *ids = REGIDS;
     const char *nm[8] = { "eax","ebx","ecx","edx","esi","edi","ebp","esp" };
     fprintf(e->dumplog, "G");
     for (int i = 0; i < 8; i++) {
         uint32_t v = 0;
         uc_reg_read(e->uc, ids[i], &v);
-        fprintf(e->dumplog, " %s=%d", nm[i], (int32_t)(int16_t)v);
+        fprintf(e->dumplog, " %s=%u", nm[i], v);
     }
     fprintf(e->dumplog, "\n");
+}
+
+static void hook_regmem(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)addr; (void)size;
+    emu *e = ud;
+    if (!e->regmemlog) return;
+    uint32_t base = 0;
+    uc_reg_read(e->uc, REGIDS[e->regmem_reg & 7], &base);
+    uint8_t buf[64];
+    int n = e->regmem_len > (int)sizeof buf ? (int)sizeof buf : e->regmem_len;
+    if (uc_mem_read(e->uc, base + e->regmem_off, buf, n) != UC_ERR_OK) return;
+    fprintf(e->regmemlog, "M %08x", base + e->regmem_off);
+    for (int i = 0; i < n; i++) fprintf(e->regmemlog, " %02X", buf[i]);
+    fprintf(e->regmemlog, "\n");
+}
+
+void emu_hook_regmem(emu *e, uint32_t pc, int reg, int32_t offset,
+                     int nbytes, FILE *out) {
+    e->regmemlog = out;
+    e->regmem_pc = pc;
+    e->regmem_reg = reg;
+    e->regmem_off = offset;
+    e->regmem_len = nbytes;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_regmem, e, pc, pc);
 }
 
 void emu_hook_regs(emu *e, uint32_t pc, FILE *out) {

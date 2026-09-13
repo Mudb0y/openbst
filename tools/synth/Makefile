@@ -3,10 +3,11 @@ BUILD  := ../../build
 BIN    := $(BUILD)/synth
 BIN2   := $(BUILD)/interptest
 BIN3   := $(BUILD)/prosodytest
+BIN4   := $(BUILD)/durtest
 OBJ    := $(BUILD)/synth_core.o $(BUILD)/synth_main.o
 CORE   := $(BUILD)/synth_core.o $(BUILD)/interp_core.o
 
-all: $(BIN) $(BIN2) $(BIN3)
+all: $(BIN) $(BIN2) $(BIN3) $(BIN4)
 
 $(BUILD)/synth_core.o: ../../src/synth.c ../../include/bst_synth.h
 	@mkdir -p $(BUILD)
@@ -36,6 +37,13 @@ $(BUILD)/prosodytest.o: prosodytest.c ../../include/bst_synth.h
 
 $(BIN3): $(CORE) $(BUILD)/prosodytest.o
 	$(CC) $(CORE) $(BUILD)/prosodytest.o -o $@
+
+$(BUILD)/durtest.o: durtest.c ../../include/bst_synth.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN4): $(CORE) $(BUILD)/durtest.o
+	$(CC) $(CORE) $(BUILD)/durtest.o -o $@
 
 clean:
 	rm -f $(OBJ) $(CORE) $(BIN) $(BIN2) $(BUILD)/interptest.o

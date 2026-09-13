@@ -22,6 +22,7 @@ static void usage(void) {
         "  --records TEXT              print the segment records driving frame generation\n"
         "  --recat PC:ARG:N            dump N bytes at pointer argument ARG on reaching PC\n"
         "  --snap PC:ADDR:N            dump N bytes at ADDR on reaching PC\n"
+        "  --regmem PC:REG:OFF:N       dump N bytes at REG+OFF on reaching PC\n"
         "  --interp TEXT               print the interpolator state at each frame\n"
         "  --gain TEXT                 print the gain smoother state at each frame\n"
         "  --pitch TEXT                print the pitch smoother state at each frame\n"
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
     const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL, *ltsmode = NULL;
-    const char *snapspec = NULL;
+    const char *snapspec = NULL, *regmemspec = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -104,6 +105,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--recat") && i + 1 < argc)     recatspec = argv[++i];
         else if (!strcmp(argv[i], "--lts") && i + 1 < argc)       ltsmode = argv[++i];
         else if (!strcmp(argv[i], "--snap") && i + 1 < argc)      snapspec = argv[++i];
+        else if (!strcmp(argv[i], "--regmem") && i + 1 < argc)    regmemspec = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
@@ -156,7 +158,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "DllMain ok\n");
 
     if (speak || phonemes || frames || records || interp || gainmode || pitchmode
-        || ltsmode || snapspec) {
+        || ltsmode || snapspec || regmemspec) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
@@ -217,6 +219,28 @@ int main(int argc, char **argv) {
             int argno = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 0;
             int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
             emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
+        }
+
+        if (regmemspec) {
+            char rm[160];
+            snprintf(rm, sizeof rm, "%s", regmemspec);
+            char *q = NULL;
+            unsigned long pc = strtoul(rm, &q, 0);
+            static const char *names = "";
+            (void)names;
+            int reg = 0;
+            int32_t offv = 0;
+            int len = 8;
+            if (q && *q == ':') {
+                q++;
+                const char *rn[8] = { "eax","ebx","ecx","edx","esi","edi","ebp","esp" };
+                for (int k = 0; k < 8; k++)
+                    if (!strncmp(q, rn[k], 3)) { reg = k; break; }
+                q += 3;
+            }
+            if (q && *q == ':') offv = (int32_t)strtol(q + 1, &q, 0);
+            if (q && *q == ':') len = (int)strtol(q + 1, NULL, 0);
+            emu_hook_regmem(e, (uint32_t)pc, reg, offv, len, stdout);
         }
 
         if (snapspec) {
