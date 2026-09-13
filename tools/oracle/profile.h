@@ -71,6 +71,13 @@ typedef struct {
     uint32_t pitch_clock;
     uint32_t pitch_period;
 
+    /* Letter-to-sound: the position counter and the word buffer, sampled
+       before and after a rule consumes input. */
+    uint32_t lts_before;
+    uint32_t lts_after;
+    uint32_t lts_pos;
+    uint32_t lts_word;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -112,6 +119,10 @@ static const profile profiles[] = {
         .pitch_target  = 0x1001c014,
         .pitch_clock   = 0x1001e3ac,
         .pitch_period  = 0x1001b46a,
+        .lts_before    = 0x1000d5ae,
+        .lts_after     = 0x1000d5f0,
+        .lts_pos       = 0x1001b6ec,
+        .lts_word      = 0x1001a920,
         .default_level = 6,
     },
 };

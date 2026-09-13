@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
     const char *calls[32], *pokes[16], *dumps[8];
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
-    const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL;
+    const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL, *ltsmode = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -100,6 +100,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--gain") && i + 1 < argc)     gainmode = argv[++i];
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc)    pitchmode = argv[++i];
         else if (!strcmp(argv[i], "--recat") && i + 1 < argc)     recatspec = argv[++i];
+        else if (!strcmp(argv[i], "--lts") && i + 1 < argc)       ltsmode = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
@@ -151,7 +152,7 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "DllMain ok\n");
 
-    if (speak || phonemes || frames || records || interp || gainmode || pitchmode) {
+    if (speak || phonemes || frames || records || interp || gainmode || pitchmode || ltsmode) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
@@ -167,7 +168,8 @@ int main(int argc, char **argv) {
 
         const char *text = speak ? speak : (phonemes ? phonemes :
                            (frames ? frames : (records ? records :
-                           (interp ? interp : (gainmode ? gainmode : pitchmode)))));
+                           (interp ? interp : (gainmode ? gainmode :
+                           (pitchmode ? pitchmode : ltsmode))))));
         uint32_t gtext = emu_push_str(e, text);
         /* The engine holds this capacity in a signed 16-bit field and refuses
            to write when it is not greater than the index, so anything above
@@ -210,6 +212,15 @@ int main(int argc, char **argv) {
             int argno = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 0;
             int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
             emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
+        }
+
+        if (ltsmode) {
+            const uint32_t a[2] = { pr->lts_pos, pr->lts_word };
+            const int      l[2] = { 2, 24 };
+            emu_hook_dump(e, pr->lts_before, a, l, 2, 'B', stdout);
+            const uint32_t b[1] = { pr->lts_pos };
+            const int      m[1] = { 2 };
+            emu_hook_dump(e, pr->lts_after, b, m, 1, 'A', stdout);
         }
 
         if (pitchmode) {
