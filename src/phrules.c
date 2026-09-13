@@ -84,33 +84,37 @@ static void scan_eight(const bst_image *img, const uint8_t *s, int lim, int from
     }
 }
 
-/* Which rules and which terms are enabled.
- *
- * Splitting the conditions and measuring them one at a time gives a sharper
- * answer than "two rules of five work": everything that reads the previous
- * segment cursor hurts, and everything that reads the next segment cursor
- * helps or is neutral. The glottal-stop insertion (bit 0), the phrase-edge
- * test on the previous segment (bit 6) and the test for an empty next value
- * (bit 5) are all off for that reason. The fault is one cursor, not four
- * rules, which matches the cursor check: prev was the only one that diverged.
+/* Which rules and which terms are enabled. Splitting every condition into its
+ * own bit and measuring them separately is the only way to tell a correct rule
+ * from a broken one here: a single over-firing term swamps three correct ones,
+ * because a wrong rewrite costs twice, once as a miss and once as a false
+ * positive.
  *
  * Measured over the corpus, against 5294 of 5568 positions and 28 of 58
  * streams for the identity:
- *     nothing                       5294 / 28
- *     aspiration only               5305 / 29
- *     the default here              5306 / 29
- *     plus any prev-dependent term  5285 / 14
- *     everything on                 5073 / 12
+ *     nothing                        5294 / 28
+ *     aspiration only                5305 / 29
+ *     plus the group-open rewrite    5319 / 30   <- the default here
+ *     plus the glottal insertion     5103 / 26
+ *     plus the phrase-edge on prev   5298 / 16
+ *     everything on                  5073 / 12
  *
- * So this reproduces on the order of twelve of the 274 rewrites the pass
- * makes. It is a beginning, not the stage. */
-int bst_rule_mask = 0x0C;
+ * Two terms remain wrong and are off: the glottal-stop insertion (bit 0) and
+ * the phrase-edge test on the previous segment (bit 6). Everything else is
+ * neutral or better and is on.
+ *
+ * That is around twenty-five of the 274 rewrites the pass makes. Still a
+ * beginning rather than the stage, and not in the test suite. */
+int bst_rule_mask = 0x19E;
 
 int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis) {
     cur next = {0, 0}, next2 = {0, 0}, stress = {0, 0}, eight = {0, 0};
     cur pend = {0, 0}, prev = {0, 0};
     cur pend8 = {0, 0}, prev8 = {0, 0};
     int changed = 0, inserted = 0, first = 1;
+    /* Two latches carried across positions, set by the two marker codes and
+       cleared by any segment of the eighth class. */
+    int latch_o = 0, latch_p = 0;
     int i = 0;
     int lim = len;              /* the engine's stream bound, grows on insert */
 
@@ -158,7 +162,24 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
 
         if (c == CMD) { i += 7; continue; }
 
+        if (c == 0x4F && stress.val < 5 && eight.val < 0x4E)      latch_o = 1;
+        else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E)  latch_p = 1;
+        else if (a2(img, c) & 8)                                   latch_o = latch_p = 0;
+
         if (c != 0 && c < 0x31) {
+            /* Segments that open a group: one marker maps to another, and
+               otherwise the segment reduces when what follows does not open a
+               group of its own. This is the commonest rewrite in the pass, and
+               leaving it out was what made the previous-segment cursor look
+               broken -- prev picks up the rewritten value. */
+            if ((bst_rule_mask & 256) && (a1(img, c) & 0x80) &&
+                latch_o && emphasis >= 0) {
+                if (c == 0x2C) { c = 0x2A; s[i] = 0x2A; changed++; }
+                else if (!(a1(img, next.val) & 0x80)) {
+                    c = 0x24; s[i] = 0x24; changed++;
+                }
+            }
+
             /* Glottal stop between two vowels of the listed kinds. */
             if ((bst_rule_mask & 1) && flag_b && (a1(img, prev.val) & 1) &&
                 prev.val != 0x12 && prev.val != 0x11 && prev.val != 8 && prev.val != 9 &&
@@ -218,6 +239,6 @@ int bst_phrules(const bst_image *img, uint8_t *s, int len, int cap, int emphasis
         }
         i++;
     }
-    (void)prev8;
+    (void)prev8; (void)latch_o; (void)latch_p;
     return changed;
 }
