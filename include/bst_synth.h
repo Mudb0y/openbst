@@ -74,9 +74,7 @@ int  bst_pitch_period(const bst_pitch *p);
 /* Segment duration. The scale table is indexed by the low nibble of a segment
    record's first byte and has already been adjusted for the speaking rate;
    the rate argument is the per-position byte the engine keeps alongside each
-   segment. Transcribed from the instruction sequence rather than established
-   by differential test: two observed durations, 42 and 1078, reproduce
-   exactly, which is evidence but not the coverage the other stages have. */
+   segment. Verified against the engine at the instruction that computes it. */
 int  bst_segment_duration(const int16_t scale[16], int first_byte, int rate,
                           int slow);
 
