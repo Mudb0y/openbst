@@ -88,6 +88,21 @@ struct emu {
     uint64_t insn_limit;
 
     FILE *trace;
+
+    /* Write watch over a small address range, for following filter state. */
+    FILE    *watch;
+    uint32_t watch_lo, watch_hi;
+
+    /* The engine's diagnostic buffer is addressed by a signed 16-bit index,
+       so it cannot hold more than 32767 bytes. Long utterances overflow it.
+       Draining copies the contents out and rewinds the index whenever it
+       approaches the limit, which the append routine tolerates because it
+       re-reads the index for every character. */
+    uint32_t drain_idx, drain_buf;
+    int      drain_at;
+    char    *acc;
+    size_t   acc_len, acc_cap;
+
     int   verbose;
 };
 
@@ -107,6 +122,10 @@ void     emu_wr32(emu *e, uint32_t addr, uint32_t v);
 int      emu_read(emu *e, uint32_t addr, void *dst, uint32_t n);
 int      emu_write(emu *e, uint32_t addr, const void *src, uint32_t n);
 void     emu_trace_reads(emu *e, FILE *out);
+void     emu_watch_writes(emu *e, FILE *out, uint32_t lo, uint32_t hi);
+void     emu_drain_setup(emu *e, uint32_t idx_addr, uint32_t buf_addr, int threshold, uint32_t after_pc);
+void     emu_drain_flush(emu *e);
+const char *emu_drained(emu *e, size_t *len);
 void     emu_report_shims(emu *e);
 void     emu_post(emu *e, uint32_t hwnd, uint32_t msg, uint32_t wp, uint32_t lp);
 int      emu_peek(emu *e, uint32_t *hwnd, uint32_t *msg, uint32_t *wp, uint32_t *lp, int remove);

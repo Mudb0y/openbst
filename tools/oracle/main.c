@@ -20,6 +20,7 @@ static void usage(void) {
         "  --phonemes TEXT             print the engine's phoneme transcription\n"
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --level N                   verbosity for --phonemes (default 6)\n"
+        "  --watch ADDR:LEN[:FILE]     log writes into an address range\n"
         "  -v                          verbose\n"
         "\n"
         "argument forms: 12345 | 0xabc | str:TEXT | wstr:TEXT | buf:N | ptr:N\n"
@@ -70,7 +71,7 @@ static void write_wav(FILE *f, emu *e) {
 int main(int argc, char **argv) {
     const char *dll = NULL, *out = NULL, *tracepath = NULL;
     const char *calls[32], *pokes[16], *dumps[8];
-    const char *speak = NULL, *phonemes = NULL, *frames = NULL;
+    const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -87,6 +88,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--phonemes") && i + 1 < argc) phonemes = argv[++i];
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc)   frames = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--raw"))  raw = 1;
         else if (!strcmp(argv[i], "--list")) list = 1;
         else if (!strcmp(argv[i], "-v"))     verbose++;
@@ -160,6 +162,19 @@ int main(int argc, char **argv) {
             FILE *tf = fopen(tracepath, "wb");
             if (tf) emu_trace_reads(e, tf);
         }
+        if (watchspec) {
+            char ws[256];
+            snprintf(ws, sizeof ws, "%s", watchspec);
+            char *q = NULL;
+            unsigned long lo = strtoul(ws, &q, 0);
+            unsigned long len = (q && *q == ':') ? strtoul(q + 1, &q, 0) : 64;
+            const char *wf = (q && *q == ':') ? q + 1 : NULL;
+            FILE *w = wf ? fopen(wf, "w") : stderr;
+            if (w) emu_watch_writes(e, w, (uint32_t)lo, (uint32_t)(lo + len));
+        }
+
+        if (phonemes || frames)
+            emu_drain_setup(e, pr->phbuf_idx, gbuf, (int)cap - 64, pr->phbuf_after_inc);
 
         if (phonemes) {
             uint32_t a[6] = { 0, 0, gtext,
@@ -185,17 +200,12 @@ int main(int argc, char **argv) {
         }
 
         if (phonemes || frames) {
-            /* GetPhBuf zeroes the write index on the way out, so the length
-               comes from the terminator the append routine maintains. */
-            char *t = malloc(cap + 1);
-            if (t && emu_read(e, gbuf, t, cap) == 0) {
-                t[cap] = 0;
-                size_t n = strlen(t);
-                fputs(t, stdout);
-                if (n && t[n - 1] != '\n') putchar('\n');
-                fprintf(stderr, "%zu bytes of diagnostic output\n", n);
-            }
-            free(t);
+            emu_drain_flush(e);
+            size_t n = 0;
+            const char *t = emu_drained(e, &n);
+            fwrite(t, 1, n, stdout);
+            if (n && t[n - 1] != '\n') putchar('\n');
+            fprintf(stderr, "%zu bytes of diagnostic output\n", n);
         }
 
         if (e->trace) fclose(e->trace);

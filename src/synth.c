@@ -1,0 +1,112 @@
+#include <string.h>
+#include "bst_synth.h"
+
+/* Every arithmetic step here mirrors the original's fixed-point exactly:
+   Q8 products with an arithmetic shift right of 8, 32-bit lattice state,
+   and a final shift of 3 before clamping. Deviating anywhere costs
+   bit-exactness even where the audible difference would be nil. */
+
+void bst_synth_init(bst_synth *s, const bst_tables *t) {
+    memset(s, 0, sizeof *s);
+    s->t = t;
+    s->rand = 0xa396;   /* the seed the engine resets to */
+}
+
+int bst_synth_frame(bst_synth *s, const uint8_t f[16]) {
+    if (f[0] == 0x00 || f[0] == 0xff) return 0;
+
+    s->periods_left = f[0] & 0x0f;
+    s->mode         = f[0] & 0x30;
+    s->gain         = s->t->gain[f[2]];
+    s->period       = (uint16_t)(((uint16_t)f[3] << 4) | (f[1] & 0x0f));
+
+    /* Reflection coefficients are signed bytes scaled by two, so they span
+       the full Q8 range of plus or minus one. The first one carries an extra
+       low bit in the top bit of byte 1. */
+    s->k[0] = (int16_t)((int16_t)(int8_t)f[4] * 2 | (f[1] >> 7));
+    for (int i = 1; i < BST_ORDER; i++)
+        s->k[i] = (int16_t)((int16_t)(int8_t)f[4 + i] * 2);
+
+    return 1;
+}
+
+static inline int32_t excitation(bst_synth *s) {
+    int32_t x;
+
+    if (s->mode == BST_NOISE) {
+        s->rand = (uint16_t)(s->rand * 5 + 3);
+        int idx = (s->rand & 0x1f00) >> 7;          /* byte offset, always even */
+        x = s->t->noise[idx / 2];
+        return (x * s->gain) >> 8;
+    }
+
+    if (s->mode == BST_MIXED && s->phase >= BST_PULSE_LEN) {
+        s->rand = (uint16_t)(s->rand * 5 + 3);
+        int idx = (s->rand & 0x1f00) >> 7;
+        x = s->t->noise[idx / 2];
+        /* The noise half of a mixed frame runs at half amplitude. */
+        return ((x * s->gain) >> 1) >> 8;
+    }
+
+    if (s->phase < BST_PULSE_LEN) {
+        x = s->t->pulse[s->phase];
+        return (x * s->gain) >> 8;
+    }
+    return 0;
+}
+
+/* One pass of the lattice, from the highest-order stage down. The recursion
+   is the standard reflection-coefficient ladder:
+       f[i-1] = f[i] - k[i] * b[i-1]
+       b[i]   = b[i-1] + k[i] * f[i-1]
+   with b[] carried between samples. */
+static inline int16_t lattice(bst_synth *s, int32_t x) {
+    /* The top stage only subtracts; it has no backward state above it to
+       update. Every stage below both subtracts and writes the state one
+       position up, so stage i pairs coefficient i with state i but produces
+       state i+1. */
+    x -= (s->b[BST_ORDER - 1] * s->k[BST_ORDER - 1]) >> 8;
+
+    for (int i = BST_ORDER - 2; i >= 0; i--) {
+        int32_t k = s->k[i];
+        x -= (s->b[i] * k) >> 8;
+        s->b[i + 1] = ((x * k) >> 8) + s->b[i];
+    }
+    s->b[0] = x;
+
+    x >>= 3;
+    if (x < -32767) x = -32767;
+    if (x > 32767) x = 32767;
+    return (int16_t)x;
+}
+
+size_t bst_synth_run(bst_synth *s, int16_t *out, size_t max) {
+    size_t n = 0;
+
+    /* A silent frame emits zeroes without disturbing the filter state. */
+    for (;;) {
+        if (n >= max) break;
+
+        if (s->mode == BST_SILENT) out[n++] = 0;
+        else                       out[n++] = lattice(s, excitation(s));
+
+        s->phase = (uint16_t)(s->phase + 16);
+        if (s->phase < s->period) continue;
+
+        s->phase = (uint16_t)(s->phase - s->period);
+        if (--s->periods_left <= 0) break;
+    }
+    return n;
+}
+
+int bst_tables_load(bst_tables *t, const void *image, size_t len) {
+    const uint8_t *p = image;
+    /* File offsets within the 1995 build, derived from the .rdata mapping. */
+    const size_t pulse_off = 0x17e48, noise_off = 0x17e08, gain_off = 0x18488;
+
+    if (len < gain_off + BST_GAIN_ENTRIES * 2) return -1;
+    memcpy(t->pulse, p + pulse_off, sizeof t->pulse);
+    memcpy(t->noise, p + noise_off, sizeof t->noise);
+    memcpy(t->gain,  p + gain_off,  sizeof t->gain);
+    return 0;
+}

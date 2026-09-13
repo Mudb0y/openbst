@@ -21,6 +21,10 @@ typedef struct {
        suppresses it again. */
     uint32_t frame_flags;
 
+    /* Instruction immediately after the append routine increments its write
+       index; where the buffer can safely be drained and rewound. */
+    uint32_t phbuf_after_inc;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -35,6 +39,7 @@ static const profile profiles[] = {
         .phbuf_idx     = 0x10096280,
         .phbuf_cap     = 0x10096284,
         .frame_flags   = 0x1001c020,
+        .phbuf_after_inc = 0x1000bbdb,
         .default_level = 6,
     },
 };

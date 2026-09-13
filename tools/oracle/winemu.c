@@ -174,8 +174,90 @@ static bool hook_unmapped(uc_engine *uc, uc_mem_type t, uint64_t addr,
     return false;
 }
 
+static void hook_write(uc_engine *uc, uc_mem_type t, uint64_t addr,
+                       int size, int64_t val, void *ud) {
+    (void)uc; (void)t;
+    emu *e = ud;
+    if (!e->watch || addr < e->watch_lo || addr >= e->watch_hi) return;
+    uint32_t pc = 0;
+    uc_reg_read(e->uc, UC_X86_REG_EIP, &pc);
+    fprintf(e->watch, "%08x %d %lld %08x\n", (uint32_t)addr, size,
+            (long long)val, pc);
+}
+
 void emu_trace_reads(emu *e, FILE *out) {
     e->trace = out;
+}
+
+static void acc_append(emu *e, const char *p, size_t n) {
+    if (e->acc_len + n + 1 > e->acc_cap) {
+        size_t cap = e->acc_cap ? e->acc_cap * 2 : (1 << 16);
+        while (cap < e->acc_len + n + 1) cap *= 2;
+        char *q = realloc(e->acc, cap);
+        if (!q) return;
+        e->acc = q;
+        e->acc_cap = cap;
+    }
+    memcpy(e->acc + e->acc_len, p, n);
+    e->acc_len += n;
+    e->acc[e->acc_len] = 0;
+}
+
+/* Hooked on the instruction immediately after the append routine bumps its
+   index. A write hook cannot do this job: it runs before the write commits,
+   so a rewind issued there is overwritten by the increment landing, and the
+   buffer gets copied out again for every subsequent character. */
+static void hook_drain(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)addr; (void)size;
+    emu *e = ud;
+    if (!e->drain_at) return;
+
+    uint16_t idx = 0;
+    uc_mem_read(e->uc, e->drain_idx, &idx, 2);
+    if (idx < e->drain_at) return;
+
+    char *tmp = malloc(idx);
+    if (tmp && uc_mem_read(e->uc, e->drain_buf, tmp, idx) == UC_ERR_OK)
+        acc_append(e, tmp, idx);
+    free(tmp);
+
+    uint16_t zero = 0;
+    uc_mem_write(e->uc, e->drain_idx, &zero, 2);
+}
+
+void emu_drain_setup(emu *e, uint32_t idx_addr, uint32_t buf_addr, int threshold,
+                     uint32_t after_pc) {
+    e->drain_idx = idx_addr;
+    e->drain_buf = buf_addr;
+    e->drain_at = threshold;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_drain, e, after_pc, after_pc);
+}
+
+/* Takes whatever is left in the guest buffer. Uses the terminator rather than
+   the index, because GetPhBuf zeroes the index on its way out. */
+void emu_drain_flush(emu *e) {
+    if (!e->drain_at) return;
+    char *tmp = malloc(e->drain_at + 1);
+    if (!tmp) return;
+    if (uc_mem_read(e->uc, e->drain_buf, tmp, e->drain_at) == UC_ERR_OK) {
+        tmp[e->drain_at] = 0;
+        acc_append(e, tmp, strlen(tmp));
+    }
+    free(tmp);
+}
+
+const char *emu_drained(emu *e, size_t *len) {
+    if (len) *len = e->acc_len;
+    return e->acc ? e->acc : "";
+}
+
+void emu_watch_writes(emu *e, FILE *out, uint32_t lo, uint32_t hi) {
+    e->watch = out;
+    e->watch_lo = lo;
+    e->watch_hi = hi;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_MEM_WRITE, hook_write, e, lo, hi - 1);
 }
 
 void emu_report_shims(emu *e) {
@@ -221,6 +303,7 @@ void emu_free(emu *e) {
     if (!e) return;
     if (e->uc) uc_close(e->uc);
     free(e->pcm);
+    free(e->acc);
     free(e);
 }
 
