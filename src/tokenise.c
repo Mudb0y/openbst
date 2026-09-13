@@ -33,6 +33,9 @@
 #define H_WORD     0x10007AC0u
 #define H_NUMBER   0x10005E40u
 #define H_DOTTED   0x10007BA0u
+#define H_SEP      0x10009DE0u
+#define H_GROUPS   0x10005460u
+#define GRPSEP     0x1002E7ECu
 #define H_PUNCTOUT 0x100070A0u
 #define H_DOTOUT   0x100074F0u
 
@@ -165,6 +168,7 @@ static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next
 static void word_out(bst_tok *t);
 static int dotted_out(bst_tok *t);
 static int number_out(bst_tok *t);
+static int groups_out(bst_tok *t);
 static void say_char(bst_tok *t, int c);
 
 /* Punctuation that closes a phrase versus punctuation that only groups. */
@@ -240,6 +244,9 @@ static int handler(bst_tok *t, unsigned h, int c) {
     case H_WORD:     unread(t, 1); word_out(t); return 1;
     case H_NUMBER:   return number_out(t);
     case H_DOTTED:   return dotted_out(t);
+    case H_GROUPS:   return groups_out(t);
+    case H_SEP:      /* what may sit between two runs of digits */
+        return c == ':' || c == '.' || c == ',' || c == '/' || c == '-' || c == ' ';
     default:         return 0;
     }
 }
@@ -346,6 +353,52 @@ static int number_out(bst_tok *t) {
     for (int i = 0; i < n; i++)
         if (!is_digit(t, t->ring[t->start + i])) return 0;
     bst_say_number(t, t->ring + t->start, n);
+    t->prevkind = t->kind;
+    t->kind = 6;
+    return 1;
+}
+
+/* Runs of digits joined by hyphens: a telephone number, a date. Any group
+   longer than three means the whole thing is spelled digit by digit with a
+   pause between the groups; otherwise each group is read as a number. */
+static int groups_out(bst_tok *t) {
+    int p = t->start;
+    if (p > t->cur || !is_digit(t, t->ring[p])) return 0;
+
+    int ends[12], n = 0, longest = 0;
+    while (p <= t->cur && n < 12) {
+        int q = p;
+        while (q <= t->cur && is_digit(t, t->ring[q])) q++;
+        if (q == p) break;
+        if (q - p > longest) longest = q - p;
+        ends[n++] = q;
+        if (q > t->cur || t->ring[q] != '-') break;
+        p = q + 1;
+    }
+    if (n < 2) return 0;
+
+    /* One group of four followed by one of one, two or four is a year and a
+       fraction of one, and is read rather than spelled. */
+    int spell = longest > 3;
+    if (n == 2) {
+        int a = ends[0] - t->start, b = ends[1] - ends[0] - 1;
+        if (a == 4 && (b == 1 || b == 2 || b == 4)) spell = 0;
+    }
+
+    int at = t->start;
+    for (int g = 0; g < n; g++) {
+        int len = ends[g] - at;
+        if (spell) bst_say_digits(t, t->ring + at, len);
+        else       bst_say_number(t, t->ring + at, len);
+        if (g + 1 < n) {
+            if (spell) emit(t, ',');
+            else       emit_ptr(t, GRPSEP);
+        }
+        at = ends[g] + 1;
+    }
+
+    /* The cursor goes back to the last digit consumed. */
+    unread(t, t->cur - (ends[n - 1] - 1));
     t->prevkind = t->kind;
     t->kind = 6;
     return 1;

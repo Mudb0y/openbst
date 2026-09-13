@@ -68,6 +68,8 @@ static void spell(bst_tok *t, const uint8_t *d, int n) {
     for (int i = 0; i < n; i++) one(t, d[i]);
 }
 
+void bst_say_digits(bst_tok *t, const uint8_t *d, int n) { spell(t, d, n); }
+
 void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
     if (n < 5 && n > 0 && d[0] != '0') {
         uint8_t pad[8];

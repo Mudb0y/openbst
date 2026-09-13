@@ -72,6 +72,9 @@ void bst_tok_say(bst_tok *t, unsigned ptrva);
 /* Says a run of digits. */
 void bst_say_number(bst_tok *t, const uint8_t *digits, int n);
 
+/* Says a run of digits one at a time. */
+void bst_say_digits(bst_tok *t, const uint8_t *digits, int n);
+
 /* Looks a word up in the exception table. Returns the number of phoneme
    codes written, or zero if the table does not hold it. */
 int  bst_except(bst_tok *t, const uint8_t *word, int wlen,
