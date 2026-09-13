@@ -84,6 +84,10 @@ typedef struct {
     uint32_t rules_before;
     uint32_t rules_after;
 
+    /* Entry of the routine that queues one intonation record: a type, a pitch
+       period target, and two timing words. */
+    uint32_t intonation_push;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -132,6 +136,7 @@ static const profile profiles[] = {
         .stream        = 0x1001e3c0,
         .rules_before  = 0x1001314e,
         .rules_after   = 0x10013153,
+        .intonation_push = 0x10002a20,
         .default_level = 6,
     },
 };

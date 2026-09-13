@@ -24,6 +24,7 @@ static void usage(void) {
         "  --snap PC:ADDR:N            dump N bytes at ADDR on reaching PC\n"
         "  --regmem PC:REG:OFF:N       dump N bytes at REG+OFF on reaching PC\n"
         "  --phrules TEXT              the phoneme stream before and after the rule stage\n"
+        "  --intonation TEXT           the intonation records: type, pitch period, timing\n"
         "  --interp TEXT               print the interpolator state at each frame\n"
         "  --gain TEXT                 print the gain smoother state at each frame\n"
         "  --pitch TEXT                print the pitch smoother state at each frame\n"
@@ -83,7 +84,7 @@ int main(int argc, char **argv) {
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
     const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL, *ltsmode = NULL;
-    const char *snapspec = NULL, *regmemspec = NULL, *phrules = NULL;
+    const char *snapspec = NULL, *regmemspec = NULL, *phrules = NULL, *intonation = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -108,6 +109,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--snap") && i + 1 < argc)      snapspec = argv[++i];
         else if (!strcmp(argv[i], "--regmem") && i + 1 < argc)    regmemspec = argv[++i];
         else if (!strcmp(argv[i], "--phrules") && i + 1 < argc)   phrules = argv[++i];
+        else if (!strcmp(argv[i], "--intonation") && i + 1 < argc) intonation = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
@@ -160,7 +162,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "DllMain ok\n");
 
     if (speak || phonemes || frames || records || interp || gainmode || pitchmode
-        || ltsmode || snapspec || regmemspec || phrules) {
+        || ltsmode || snapspec || regmemspec || phrules || intonation) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
@@ -179,7 +181,8 @@ int main(int argc, char **argv) {
                            (interp ? interp : (gainmode ? gainmode :
                            (pitchmode ? pitchmode :
                            (ltsmode ? ltsmode :
-                           (phrules ? phrules : (speak ? speak : "")))))))));
+                           (phrules ? phrules :
+                           (intonation ? intonation : (speak ? speak : ""))))))))));
         uint32_t gtext = emu_push_str(e, text);
         /* The engine holds this capacity in a signed 16-bit field and refuses
            to write when it is not greater than the index, so anything above
@@ -223,6 +226,8 @@ int main(int argc, char **argv) {
             int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
             emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
         }
+
+        if (intonation) emu_hook_call(e, pr->intonation_push, 4, stdout);
 
         if (phrules) {
             const uint32_t a[1] = { pr->stream };
