@@ -146,6 +146,23 @@ typedef struct {
 int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
               bst_pair_state *st, bst_emit *out, int max);
 
+/* ---- accent assignment --------------------------------------------------
+
+   Fills the empty slots after each group opener with pitch-target codes, which
+   is the input the contour generator reads. Returns the number of accents the
+   sentence has. */
+
+typedef struct {
+    int flags;      /* the stream's own mode bits */
+    int carried;    /* the level the previous phrase ended on, in and out */
+    int level;      /* the voice's pitch level index, in and out */
+    int tail;       /* offset of the slot that hands a level on, or -1 */
+    int emphasis;   /* set on return if an emphasis command was in force */
+} bst_accent_state;
+
+int bst_accents(const bst_image *img, uint8_t *stream, int len,
+                bst_accent_state *st);
+
 /* ---- diphone expansion --------------------------------------------------
 
    A segment's index names an entry in the diphone inventory, and the entry
