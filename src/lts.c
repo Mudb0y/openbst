@@ -12,52 +12,23 @@
  * within a chain the walk stops at the first rule whose priority is no better
  * than the best so far. */
 
-#define RDATA_VA  0x10020000u
-#define RDATA_OFF 0x17800u
-#define DATA_VA   0x10096000u
-#define DATA_OFF  0x8CC00u
+static int ru8(const bst_image *img, uint32_t va)  { return bst_u8(img, va, 0); }
+static int rs16(const bst_image *img, uint32_t va) { return bst_s16(img, va, 0); }
+static uint32_t ru32(const bst_image *img, uint32_t va) { return bst_u32(img, va, 0); }
 
-#define IS_LETTER   0x10021020u   /* bit 3 marks a letter */
-#define LETTER_ATTR 0x10021120u
-#define SUFFIX_PTRS 0x10020E90u
-#define INDEX       0x1002E818u
-#define DISPATCH    0x10022ED0u
-#define RULES       0x10093000u
-#define PATTERNS    0x1002EFB8u
-#define OUTPUTS     0x10021C80u
-#define PH_ATTR1    0x10021648u   /* bit 0x80 opens a record group */
-#define PH_ATTR2    0x100216C8u
-
-static size_t roff(uint32_t va) { return RDATA_OFF + (va - RDATA_VA); }
-
-static int ru8(const bst_image *img, uint32_t va) {
-    size_t o = roff(va);
-    return o < img->len ? img->image[o] : 0;
-}
-static int rs16(const bst_image *img, uint32_t va) {
-    size_t o = roff(va);
-    return o + 1 < img->len ? (int16_t)(img->image[o] | (img->image[o + 1] << 8)) : 0;
-}
-static uint32_t ru32(const bst_image *img, uint32_t va) {
-    size_t o = roff(va);
-    if (o + 3 >= img->len) return 0;
-    return (uint32_t)img->image[o] | ((uint32_t)img->image[o + 1] << 8) |
-           ((uint32_t)img->image[o + 2] << 16) | ((uint32_t)img->image[o + 3] << 24);
-}
-static const char *dstr(const bst_image *img, uint32_t va) {
-    size_t o = DATA_OFF + (va - DATA_VA);
-    return o < img->len ? (const char *)img->image + o : "";
-}
+/* The suffix strings live in the writable section and the rule patterns in the
+   read-only one, but both are just addresses to bst_at. */
 static const char *pat_at(const bst_image *img, uint32_t va) {
-    size_t o = roff(va);
-    return o < img->len ? (const char *)img->image + o : "";
+    const uint8_t *p = bst_at(img, va, 1);
+    return p ? (const char *)p : "";
 }
+#define dstr pat_at
 
 static int is_letter(const bst_image *img, int c) {
-    return c > 0 && c < 256 && (ru8(img, IS_LETTER + (unsigned)c) & 8);
+    return c > 0 && c < 256 && (ru8(img, img->t.chattr + (unsigned)c) & 8);
 }
 static int lattr(const bst_image *img, int c) {
-    return (c > 0 && c < 256) ? ru8(img, LETTER_ATTR + (unsigned)c) : 0;
+    return (c > 0 && c < 256) ? ru8(img, img->t.letterattr + (unsigned)c) : 0;
 }
 
 /* Walks one side of a pattern. step is +1 for the right context, -1 for the
@@ -104,7 +75,7 @@ static int match(const bst_image *img, const char *pat, int pi,
             got[g] = 0;
             int hit = 0;
             for (int s = 0; s < 3 && !hit; s++)
-                if (strcmp(got, dstr(img, ru32(img, SUFFIX_PTRS + (uint32_t)s * 4))) == 0) hit = 1;
+                if (strcmp(got, dstr(img, ru32(img, img->t.suffix_ptrs + (uint32_t)s * 4))) == 0) hit = 1;
             if (!hit) return 0;
             ti += g - 1;
             pi += step;
@@ -127,12 +98,12 @@ static int match(const bst_image *img, const char *pat, int pi,
 
 static int chain_head(const bst_image *img, int key) {
     int bucket = key % 0xED;
-    uint32_t o = INDEX + (uint32_t)bucket * 4;
+    uint32_t o = img->t.lts_index + (uint32_t)bucket * 4;
     int entry_off = rs16(img, o);
     int count = ru8(img, o + 2);
     if (entry_off < 0) return -1;
     for (int k = 0; k < count; k++) {
-        uint32_t p = DISPATCH + (uint32_t)entry_off * 4 + (uint32_t)k * 4;
+        uint32_t p = img->t.dispatch + (uint32_t)entry_off * 4 + (uint32_t)k * 4;
         int rkey = rs16(img, p);
         int ridx = rs16(img, p + 2);
         if (rkey == key) return ridx;
@@ -143,7 +114,7 @@ static int chain_head(const bst_image *img, int key) {
 
 static void rule_fields(const bst_image *img, int ridx,
                         int *prio, int *next, int *pat, int *out) {
-    uint32_t r = RULES + (uint32_t)ridx * 8;
+    uint32_t r = img->t.rules + (uint32_t)ridx * 8;
     *prio = rs16(img, r);
     *next = rs16(img, r + 2);
     *pat  = rs16(img, r + 4);
@@ -165,7 +136,7 @@ static int try_at(const bst_image *img, const unsigned char *t, int len, int pos
             rule_fields(img, ridx, &prio, &next, &patoff, &outoff);
             if ((prio & 0xFF) >= threshold) break;
 
-            const char *pat = pat_at(img, PATTERNS + (uint32_t)patoff);
+            const char *pat = pat_at(img, img->t.patterns + (uint32_t)patoff);
             const char *tp = strchr(pat, 'T');
             const char *cp = strchr(pat, ')');
             if (!tp || !cp) break;
@@ -200,7 +171,7 @@ void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp) {
 
         int prio, next, patoff, outoff;
         rule_fields(img, ridx, &prio, &next, &patoff, &outoff);
-        const char *o = pat_at(img, OUTPUTS + (uint32_t)outoff);
+        const char *o = pat_at(img, img->t.outputs + (uint32_t)outoff);
         for (; *o; o++) bst_build_emit(img, &b, (unsigned char)*o);
         pos += used > 0 ? used : 1;
     }

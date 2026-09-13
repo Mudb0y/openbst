@@ -13,21 +13,16 @@
  * Every name is a stored string of phoneme codes, and the tables are indexed
  * by the digit's character code rather than its value. */
 
-#define DIGITS 0x1002EDF8u    /* [character] one, two, three ... */
-#define TENS   0x1002EE20u    /* [character] twenty, thirty ... */
-#define TEENS  0x1002EE48u    /* [character] ten, eleven, twelve ... */
-#define SCALES 0x1002EF30u    /* [group] thousand, million ... */
-#define OH     0x1002E79Cu
-#define HUNDRD 0x1002E794u
-#define ZERO   0x1002EEB8u
+/* Each name is a stored string, named in the build's table directory. */
+#define STR(t, n) ((t)->img->t.s[n])
 
-static void one(bst_tok *t, int c)  { bst_tok_say(t, DIGITS + (unsigned)c * 4); }
-static void teen(bst_tok *t, int c) { bst_tok_say(t, TEENS  + (unsigned)c * 4); }
-static void ten(bst_tok *t, int c)  { bst_tok_say(t, TENS   + (unsigned)c * 4); }
+static void one(bst_tok *t, int c)  { bst_tok_say(t, STR(t, BST_S_DIGITS) + (unsigned)c * 4); }
+static void teen(bst_tok *t, int c) { bst_tok_say(t, STR(t, BST_S_TEENS)  + (unsigned)c * 4); }
+static void ten(bst_tok *t, int c)  { bst_tok_say(t, STR(t, BST_S_TENS)   + (unsigned)c * 4); }
 
 static void two(bst_tok *t, const uint8_t *d) {
     if (d[0] == '0') {
-        if (d[1] != '0') { bst_tok_say(t, OH); one(t, d[1]); }
+        if (d[1] != '0') { bst_tok_say(t, STR(t, BST_S_OH)); one(t, d[1]); }
     } else if (d[0] == '1') {
         teen(t, d[1]);
     } else {
@@ -44,7 +39,7 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
         n--;
         if (n < 0) return;
         if (d[0] == '0') empty = 1;
-        else { one(t, d[0]); bst_tok_say(t, HUNDRD); }
+        else { one(t, d[0]); bst_tok_say(t, STR(t, BST_S_HUNDRED)); }
         if (d[1] == '0') {
             if (d[2] != '0') { one(t, d[2]); empty = 0; }
         } else {
@@ -55,9 +50,9 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
         if (*d < '0' || *d > '9') d++;    /* step over a group separator */
         if (empty) {
             empty = 0;
-            if (n == 0 && !said_scale) bst_tok_say(t, ZERO);
+            if (n == 0 && !said_scale) bst_tok_say(t, STR(t, BST_S_ZERO));
         } else {
-            bst_tok_say(t, SCALES + (unsigned)n * 4);
+            bst_tok_say(t, STR(t, BST_S_SCALES) + (unsigned)n * 4);
             said_scale = 1;
         }
         (void)all_zero;
@@ -99,7 +94,7 @@ void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
                 return;
             }
             two(t, d);
-            if (d[2] == '0' && d[3] == '0') bst_tok_say(t, HUNDRD);
+            if (d[2] == '0' && d[3] == '0') bst_tok_say(t, STR(t, BST_S_HUNDRED));
             else two(t, d + 2);
             return;
         default: break;

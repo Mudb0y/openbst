@@ -14,22 +14,19 @@
  * be applied in any other order, and the index of syllable openers has to be
  * maintained as insertions shift everything after them. */
 
-#define MODMAP  0x10037638u   /* a record's operand to the sound it names */
-#define MODTAB  0x10037668u   /* per sound, the variants a modifier selects */
-
 #define OPENERS 96
 
 static int a1(const bst_image *img, int c) { return bst_ph_attr1(img, c); }
 
 static int modmap(const bst_image *img, int v) {
-    const uint8_t *p = bst_at(img, MODMAP + (unsigned)(v & 0xFF), 1);
+    const uint8_t *p = bst_at(img, img->t.modmap + (unsigned)(v & 0xFF), 1);
     return p ? *p : 0;
 }
 
 /* The variant of a sound a modifier selects, or -1 when there is none, which
    means the record deletes rather than rewrites. */
 static int variant(const bst_image *img, int sound, int mod) {
-    const uint8_t *e = bst_at(img, MODTAB + (unsigned)(sound & 0xFF) * 4, 4);
+    const uint8_t *e = bst_at(img, img->t.modtab + (unsigned)(sound & 0xFF) * 4, 4);
     if (!e) return -1;
     uint32_t va = (uint32_t)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
     if (!va) return -1;

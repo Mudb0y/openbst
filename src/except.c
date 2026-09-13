@@ -17,10 +17,6 @@
  * pronunciation; they never reach the dictionary or the letter-to-sound rules
  * at all. */
 
-#define DESC    0x10030898u   /* the table descriptor */
-#define SYMMAP  0x10021320u   /* character to trie symbol */
-#define CHATTR  0x10021020u
-
 #define COND_LO 0x5D
 #define COND_HI 0x72
 
@@ -31,7 +27,7 @@ typedef struct {
 } trie;
 
 static int load_trie(const bst_image *img, trie *w) {
-    const uint8_t *d = bst_at(img, DESC, 20);
+    const uint8_t *d = bst_at(img, img->t.trie_desc, 20);
     if (!d) return 0;
     uint32_t st = (uint32_t)(d[4] | (d[5] << 8) | (d[6] << 16) | (d[7] << 24));
     uint32_t li = (uint32_t)(d[8] | (d[9] << 8) | (d[10] << 16) | (d[11] << 24));
@@ -46,7 +42,7 @@ static int load_trie(const bst_image *img, trie *w) {
 }
 
 static int symbol(const bst_image *img, int c) {
-    const uint8_t *p = bst_at(img, SYMMAP + (unsigned)(c & 0xFF), 1);
+    const uint8_t *p = bst_at(img, img->t.symmap + (unsigned)(c & 0xFF), 1);
     return p ? *p : 0;
 }
 
@@ -125,7 +121,7 @@ static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
                                     c == '\r' || c == '\v' || c == '\f'; }
 
 static int chattr(const bst_tok *t, int c) {
-    const uint8_t *p = bst_at(t->img, CHATTR + (unsigned)(c & 0xFF), 1);
+    const uint8_t *p = bst_at(t->img, t->img->t.chattr + (unsigned)(c & 0xFF), 1);
     return p ? *p : 0;
 }
 

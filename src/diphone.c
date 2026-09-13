@@ -10,54 +10,42 @@
  * sub-sequence. The three-byte forms carry one nine-bit target index and the
  * five-byte form carries two, naming both ends of a glide. */
 
-#define RDATA_VA    0x10020000u
-#define RDATA_OFF   0x17800u
-#define RECORDS     0x100292A0u
-#define OFFSETS     0x1002D508u
-#define OFFSETS_END 0x1002E818u
-#define VOICES      0x10022284u
 #define VOICE_SPAN  0x19Au        /* targets per voice */
 
 static const int RECLEN[8] = { 1, 3, 1, 3, 3, 5, 1, 1 };
 
-static size_t off(unsigned va) { return RDATA_OFF + (va - RDATA_VA); }
-
 int bst_diphone_count(const bst_image *img) {
-    (void)img;
-    return (int)((off(OFFSETS_END) - off(OFFSETS)) / 2);
+    return (int)((img->t.diph_offsets_end - img->t.diph_offsets) / 2);
 }
 
 int bst_diphone(const bst_image *img, int index, int positions,
                 uint16_t *out, int max) {
     int n = bst_diphone_count(img);
     if (index < 0 || index >= n) return 0;
-    size_t t = off(OFFSETS) + (size_t)index * 2;
-    if (t + 1 >= img->len) return 0;
-    unsigned entry = (unsigned)(img->image[t] | (img->image[t + 1] << 8));
+    unsigned entry = (unsigned)bst_u16(img, img->t.diph_offsets, index);
     if (!entry) return 0;
 
-    size_t p = off(RECORDS) + entry;
+    uint32_t p = img->t.diph_records + entry;
     int k = 0;
     for (int g = 0; g < positions; g++) {
         /* A sub-sequence is at most a couple of dozen records; the bound is
            only there so a corrupt entry cannot run off the section. */
         for (int guard = 0; guard < 32; guard++) {
-            if (p >= img->len) return k;
-            int b = img->image[p];
+            const uint8_t *r = bst_at(img, p, 1);
+            if (!r) return k;
+            int b = r[0];
             int type = (b & 0x70) >> 4;
             int len = RECLEN[type];
-            if (p + (size_t)len > img->len) return k;
+            if (!bst_at(img, p, (size_t)len)) return k;
             if (type == 1 || type == 3 || type == 4 || type == 5) {
-                if (k < max) out[k] = (uint16_t)(((img->image[p + 2] << 8) |
-                                                  img->image[p + 1]) & 0x1FF);
+                if (k < max) out[k] = (uint16_t)(((r[2] << 8) | r[1]) & 0x1FF);
                 k++;
             }
             if (type == 5) {
-                if (k < max) out[k] = (uint16_t)(((img->image[p + 4] << 8) |
-                                                  img->image[p + 3]) & 0x1FF);
+                if (k < max) out[k] = (uint16_t)(((r[4] << 8) | r[3]) & 0x1FF);
                 k++;
             }
-            p += (size_t)len;
+            p += (uint32_t)len;
             if (b & 0x80) break;
         }
     }
@@ -67,8 +55,8 @@ int bst_diphone(const bst_image *img, int index, int positions,
 /* The ten reflection coefficients a target names, in the Q8 form the lattice
    wants. */
 void bst_target_coeffs(const bst_image *img, int voice, int target, int16_t k[10]) {
-    size_t base = off(VOICES) + (size_t)(voice * (int)VOICE_SPAN + target) * 10;
+    uint32_t base = img->t.voices +
+                    (uint32_t)(voice * (int)VOICE_SPAN + target) * 10;
     for (int i = 0; i < 10; i++)
-        k[i] = (base + (size_t)i < img->len)
-             ? (int16_t)((int8_t)img->image[base + i] * 2) : 0;
+        k[i] = (int16_t)((int8_t)bst_u8(img, base, i) * 2);
 }

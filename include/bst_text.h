@@ -10,6 +10,70 @@
 
 #define BST_SECTIONS 16
 
+/* ---- the table directory ------------------------------------------------
+
+   Every address the library reads out of an image is named here rather than
+   written into the code, because the same engine ships in three generations
+   and nineteen languages and only the addresses move. A build is described by
+   one bst_tabmap; the code never mentions a number.
+
+   Addresses are whatever the image's own addressing is: a virtual address in
+   a PE build, a segment and offset packed as (segment << 16) | offset in a
+   16-bit NE one. bst_at resolves either. */
+
+enum {
+    BST_H_LETTER, BST_H_DIGIT, BST_H_EAT1, BST_H_SPACE, BST_H_DOT,
+    BST_H_CURRENCY, BST_H_PUNCT, BST_H_DASH, BST_H_EXPONENT, BST_H_MODE1,
+    BST_H_MODE2, BST_H_DEL, BST_H_OPENER, BST_H_TILDE, BST_H_APOSDOT,
+    BST_H_APOS, BST_H_POSSESS, BST_H_EAT2, BST_H_EAT3, BST_H_WORD,
+    BST_H_NUMBER, BST_H_DOTTED, BST_H_SEP, BST_H_GROUPS, BST_H_SEPNUM,
+    BST_H_MONEY, BST_H_DASH2, BST_H_ORDINAL, BST_H_ORDEMIT, BST_H_PUNCTOUT,
+    BST_H_DOTOUT,
+    BST_H_COUNT
+};
+
+enum {
+    BST_S_POINT, BST_S_DOLLARS, BST_S_AND, BST_S_CENTS,
+    BST_S_ORD_ST, BST_S_ORD_ND, BST_S_ORD_RD, BST_S_ORD_TIETH,
+    BST_S_ORD_FIFTH, BST_S_ORD_FIRST, BST_S_ORD_TH, BST_S_GRPSEP,
+    BST_S_PLURAL, BST_S_DIGITS, BST_S_TENS, BST_S_TEENS, BST_S_SCALES,
+    BST_S_OH, BST_S_HUNDRED, BST_S_ZERO,
+    BST_S_COUNT
+};
+
+#define BST_BUCKETS 15
+
+typedef struct {
+    /* character classification */
+    uint32_t chattr, letterattr, casemap, symmap;
+    /* phoneme attributes and the duration tables the frame builder reads */
+    uint32_t phattr1, phattr2, classtab, exctab, basedur, coefgain;
+    /* the tokeniser. code_lo and code_hi bound the executable section, which
+       is how a transition row is told from the bytes after the last one: a row
+       names its handler by address. */
+    uint32_t tokstates, names, code_lo, code_hi;
+    /* the dictionary */
+    uint32_t code_medial, code_initial;
+    uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
+    uint32_t bucket_index[BST_BUCKETS], bucket_data[BST_BUCKETS];
+    /* letter to sound */
+    uint32_t suffix_ptrs, lts_index, dispatch, rules, patterns, outputs;
+    /* the exception trie */
+    uint32_t trie_desc;
+    /* the record-to-stream conversion */
+    uint32_t modmap, modtab;
+    /* the pair scan */
+    uint32_t trans_pitch, vowel_dur, stress_num, stress_add, sound_add;
+    /* diphones and voices */
+    uint32_t diph_records, diph_offsets, diph_offsets_end, voices;
+
+    uint32_t h[BST_H_COUNT];
+    uint32_t s[BST_S_COUNT];
+} bst_tabmap;
+
+extern const bst_tabmap BST_MAP_1995;
+
+
 typedef struct {
     const uint8_t *image;
     size_t         len;
@@ -19,10 +83,31 @@ typedef struct {
     uint32_t base;
     int      nsec;
     struct { uint32_t va, vsize, raw, rawsize; } sec[BST_SECTIONS];
+    bst_tabmap t;
 } bst_image;
 
 /* Returns a pointer to `need` bytes at a virtual address, or NULL. */
 const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need);
+
+/* The three accessors every table read goes through. An address outside the
+   image reads as zero, which is what the original does when a table index runs
+   off the end of its table into whatever follows. */
+static inline int bst_u8(const bst_image *img, uint32_t va, int i) {
+    const uint8_t *p = bst_at(img, va + (uint32_t)i, 1);
+    return p ? p[0] : 0;
+}
+static inline int bst_u16(const bst_image *img, uint32_t va, int i) {
+    const uint8_t *p = bst_at(img, va + (uint32_t)i * 2, 2);
+    return p ? (p[0] | (p[1] << 8)) : 0;
+}
+static inline int bst_s16(const bst_image *img, uint32_t va, int i) {
+    return (int16_t)bst_u16(img, va, i);
+}
+static inline uint32_t bst_u32(const bst_image *img, uint32_t va, int i) {
+    const uint8_t *p = bst_at(img, va + (uint32_t)i * 4, 4);
+    return p ? ((uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+                ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24)) : 0;
+}
 
 /* Suffixes the normaliser strips, recorded so a later stage can restore the
    sound. */
@@ -44,6 +129,9 @@ typedef struct {
 } bst_word;
 
 int  bst_image_init(bst_image *img, const void *data, size_t len);
+/* The same, with the table directory given rather than assumed. */
+int  bst_image_init_map(bst_image *img, const void *data, size_t len,
+                        const bst_tabmap *map);
 
 /* A phoneme record: a type letter and two operands, which is the form the
    rest of the engine consumes. */

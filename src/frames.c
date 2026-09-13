@@ -5,25 +5,13 @@
    engine's own control flow, because the three cursors feed each other and a
    tidier arrangement changes when the durations get filled in. */
 
-#define RDATA_VA   0x10020000u
-#define RDATA_OFF  0x17800u
-#define RECORDS    0x100292A0u
-#define OFFSETS    0x1002D508u
-#define CLASSTAB   0x10021440u    /* is this class voiced */
-#define EXCTAB     0x10021448u    /* its excitation mode */
-#define BASEDUR    0x10021420u    /* the unscaled duration table */
-#define GAINLOG    0x10020000u    /* the filter's own gain, per coefficient */
-
 static const int RECLEN[8] = { 1, 3, 1, 3, 3, 5, 1, 1 };
 
 static int u8at(const bst_image *img, unsigned va, unsigned i) {
-    size_t o = RDATA_OFF + (va - RDATA_VA) + i;
-    return o < img->len ? img->image[o] : 0;
+    return bst_u8(img, va, (int)i);
 }
 static int s16at(const bst_image *img, unsigned va, unsigned i) {
-    size_t o = RDATA_OFF + (va - RDATA_VA) + i * 2;
-    if (o + 1 >= img->len) return 0;
-    return (int16_t)(img->image[o] | (img->image[o + 1] << 8));
+    return bst_s16(img, va, (int)i);
 }
 
 static int lg(const bst_gen *g, int x) {
@@ -144,14 +132,14 @@ static int rec_class(bst_gen *g, const uint8_t *rec) {
     if (t == 0) { g->lastclass = 0; return 0; }
     if (t == 2) return g->lastclass;
     int v = (rec[2] << 8) | rec[1];
-    g->lastclass = u8at(g->img, CLASSTAB, (unsigned)(v >> 9));
+    g->lastclass = u8at(g->img, g->img->t.classtab, (unsigned)(v >> 9));
     if ((g->flags & 1) && (v & 0xFFFFFE00) == 0x400) g->lastclass = 1;
     return g->lastclass;
 }
 
 static void load_rate(bst_gen *g, int rate) {
     int16_t base[16];
-    for (int i = 0; i < 16; i++) base[i] = (int16_t)s16at(g->img, BASEDUR, (unsigned)i);
+    for (int i = 0; i < 16; i++) base[i] = (int16_t)s16at(g->img, g->img->t.basedur, (unsigned)i);
     if (rate == 0) { memcpy(g->durscale, base, sizeof base); return; }
     g->rate = rate;
     bst_duration_scale(base, rate, g->durscale);
@@ -159,10 +147,13 @@ static void load_rate(bst_gen *g, int rate) {
 
 static int expand(bst_gen *g, bst_seg_rec *r) {
     if (g->rate != g->rate_loaded) { g->rate_loaded = g->rate; load_rate(g, g->rate); }
-    size_t t = RDATA_OFF + (OFFSETS - RDATA_VA) + (size_t)r->index * 2;
-    if (t + 1 >= g->img->len) { fail(g); return -2; }
-    unsigned entry = (unsigned)(g->img->image[t] | (g->img->image[t + 1] << 8));
-    const uint8_t *pb = g->img->image + RDATA_OFF + (RECORDS - RDATA_VA) + entry;
+    if (!bst_at(g->img, g->img->t.diph_offsets + (uint32_t)r->index * 2, 2)) {
+        fail(g);
+        return -2;
+    }
+    unsigned entry = (unsigned)bst_u16(g->img, g->img->t.diph_offsets, r->index);
+    const uint8_t *pb = bst_at(g->img, g->img->t.diph_records + entry, 1);
+    if (!pb) { fail(g); return -2; }
 
     int16_t total = 0, voiced = 0;
     for (int k = 0; k < r->count; k++) {
@@ -337,10 +328,10 @@ static int interp_clock(bst_gen *g) {
 static void compensate(bst_gen *g) {
     if (g->frame[0] == 0xFF) return;
     if ((int16_t)(g->frame[2] * 2) == 0) return;
-    int t = s16at(g->img, GAINLOG, g->frame[4]);
+    int t = s16at(g->img, g->img->t.coefgain, g->frame[4]);
     if (g->frame[1] & 0x80)
-        t = (s16at(g->img, GAINLOG, g->frame[4] + 1) + t) >> 1;
-    for (int i = 5; i < 14; i++) t += s16at(g->img, GAINLOG, g->frame[i]);
+        t = (s16at(g->img, g->img->t.coefgain, g->frame[4] + 1) + t) >> 1;
+    for (int i = 5; i < 14; i++) t += s16at(g->img, g->img->t.coefgain, g->frame[i]);
     int v = (int16_t)(g->frame[2] * 2) - (int16_t)((int16_t)(t + 0x10) >> 5);
     v = (int16_t)v;
     if ((v >> 8) & 0xFF) {
@@ -401,7 +392,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
         g->tclass = (((rec[2] << 8) | rec[1]) >> 9);
         if (g->tclass == 0 || g->tclass == 4) g->exc = g->defexc;
         else {
-            g->exc = u8at(g->img, EXCTAB, (unsigned)g->tclass);
+            g->exc = u8at(g->img, g->img->t.exctab, (unsigned)g->tclass);
             if ((g->flags & 1) && g->tclass == 2) g->exc = 0x10;
         }
     } else if (t == 0) {
@@ -442,7 +433,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
         return;
     }
 
-    g->voiced = u8at(g->img, CLASSTAB, (unsigned)g->tclass);
+    g->voiced = u8at(g->img, g->img->t.classtab, (unsigned)g->tclass);
     if ((g->flags & 1) && g->tclass == 2) g->voiced = 1;
 
     if (g->voiced == 1) {

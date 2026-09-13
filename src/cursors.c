@@ -4,20 +4,14 @@
    starting position, skips empty slots, steps over the six-byte command
    records, and stops on the first byte carrying a given attribute bit. */
 
-#define RDATA_VA  0x10020000u
-#define RDATA_OFF 0x17800u
-#define PH_ATTR1  0x10021648u
-#define PH_ATTR2  0x100216C8u
-
 #define CMD 0x7C
 
-static int attr(const bst_image *img, unsigned base, int c) {
-    size_t o = RDATA_OFF + (base - RDATA_VA) + (unsigned)(c & 0xFF);
-    return o < img->len ? img->image[o] : 0;
+int bst_ph_attr1(const bst_image *img, int c) {
+    return bst_u8(img, img->t.phattr1, c & 0xFF);
 }
-
-int bst_ph_attr1(const bst_image *img, int c) { return attr(img, PH_ATTR1, c); }
-int bst_ph_attr2(const bst_image *img, int c) { return attr(img, PH_ATTR2, c); }
+int bst_ph_attr2(const bst_image *img, int c) {
+    return bst_u8(img, img->t.phattr2, c & 0xFF);
+}
 
 void bst_scan_seg(const bst_image *img, const uint8_t *s, int lim, int from, bst_cur *c) {
     int p = from;

@@ -52,14 +52,16 @@ static void write_wav(FILE *f, const int16_t *pcm, size_t n, uint32_t rate) {
 
 int main(int argc, char **argv) {
     const char *dll = NULL, *framefile = NULL, *out = NULL, *tables = NULL;
+    int raw = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--dll") && i + 1 < argc)         dll = argv[++i];
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc) framefile = argv[++i];
         else if (!strcmp(argv[i], "--out") && i + 1 < argc)    out = argv[++i];
         else if (!strcmp(argv[i], "--tables") && i + 1 < argc) tables = argv[++i];
+        else if (!strcmp(argv[i], "--raw")) raw = 1;
         else {
             fprintf(stderr, "usage: synth --dll DLL --frames FILE [--out WAV]"
-                            " [--tables pulse,noise,gain]\n");
+                            " [--tables pulse,noise,gain] [--raw]\n");
             return 2;
         }
     }
@@ -68,7 +70,7 @@ int main(int argc, char **argv) {
     bst_tables t;
     if (read_tables(&t, dll, tables) < 0) { fprintf(stderr, "table load failed\n"); return 1; }
 
-    FILE *ff = strcmp(framefile, "-") ? fopen(framefile, "r") : stdin;
+    FILE *ff = strcmp(framefile, "-") ? fopen(framefile, raw ? "rb" : "r") : stdin;
     if (!ff) { fprintf(stderr, "cannot open %s\n", framefile); return 1; }
 
     bst_synth s;
@@ -79,7 +81,16 @@ int main(int argc, char **argv) {
 
     char tok[64];
     int nframes = 0;
-    while (fscanf(ff, "%63s", tok) == 1) {
+    /* The 16-bit oracle writes frames as they reach putfr, sixteen raw bytes
+       each, rather than in the 32-bit oracle's traced text form. */
+    while (raw) {
+        uint8_t f[16];
+        if (fread(f, 1, 16, ff) != 16) break;
+        nframes++;
+        if (!bst_synth_frame(&s, f)) continue;
+        n += bst_synth_run(&s, pcm + n, cap - n);
+    }
+    while (!raw && fscanf(ff, "%63s", tok) == 1) {
         if (strcmp(tok, "F") != 0) continue;
         uint8_t f[16];
         int ok = 1;

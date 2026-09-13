@@ -5,57 +5,6 @@
    are read from the image, so the only thing here is the machine that walks
    them. */
 
-#define TABLE   0x10021748u   /* state, handler, next state; twelve bytes each */
-#define CHATTR  0x10021020u   /* per character: punctuation, digit, letter, ... */
-#define CASEMAP 0x10021220u
-#define NAMES   0x1002EBD0u   /* what each character is called, said aloud */
-
-/* The handlers, by the address the table names them at. */
-#define H_LETTER   0x10009800u
-#define H_DIGIT    0x10009810u
-#define H_EAT1     0x10009840u
-#define H_SPACE    0x10009850u
-#define H_DOT      0x10009870u
-#define H_CURRENCY 0x10009890u
-#define H_PUNCT    0x100098b0u
-#define H_DASH     0x100098d0u
-#define H_EXPONENT 0x10009AA0u
-#define H_MODE1    0x10009AD0u
-#define H_MODE2    0x10009AE0u
-#define H_DEL      0x10009AF0u
-#define H_OPENER   0x10009B10u
-#define H_TILDE    0x10009B70u
-#define H_APOSDOT  0x10009BD0u
-#define H_APOS     0x10009BF0u
-#define H_POSSESS  0x10009C10u
-#define H_EAT2     0x10007030u
-#define H_EAT3     0x10007040u
-#define H_WORD     0x10007AC0u
-#define H_NUMBER   0x10005E40u
-#define H_DOTTED   0x10007BA0u
-#define H_SEP      0x10009DE0u
-#define H_GROUPS   0x10005460u
-#define H_SEPNUM   0x10005FA0u
-#define POINT      0x1002E7A0u
-#define DOLLARS    0x1002E780u
-#define AND        0x1002E784u
-#define CENTS      0x1002E790u
-#define H_MONEY    0x100046D0u
-#define H_DASH2    0x10007650u
-#define H_ORDINAL  0x10009930u
-#define H_ORDEMIT  0x10001B00u
-#define ORD_ST     0x1002E7CCu
-#define ORD_ND     0x1002E7D0u
-#define ORD_RD     0x1002E7D4u
-#define ORD_TIETH  0x1002E7E0u
-#define ORD_FIFTH  0x1002E7D8u
-#define ORD_FIRST  0x1002E7DCu
-#define ORD_TH     0x1002E7E4u
-#define GRPSEP     0x1002E7ECu
-#define PLURAL     0x1002E7DCu
-#define H_PUNCTOUT 0x100070A0u
-#define H_DOTOUT   0x100074F0u
-
 /* The tail the reader adds after the text, which is what closes the last
    sentence whether or not the text ends in a full stop. */
 static const uint8_t TAIL[4] = { ' ', '\n', '}', ' ' };
@@ -65,12 +14,12 @@ static int u8at(const bst_image *img, unsigned va, unsigned i) {
     return p ? *p : 0;
 }
 
-static int chattr(const bst_tok *t, int c) { return u8at(t->img, CHATTR, c & 0xFF); }
+static int chattr(const bst_tok *t, int c) { return u8at(t->img, t->img->t.chattr, c & 0xFF); }
 static int is_letter(const bst_tok *t, int c) { return (chattr(t, c) & 8) != 0; }
 static int is_digit(const bst_tok *t, int c)  { return (chattr(t, c) & 4) != 0; }
 static int is_punct(const bst_tok *t, int c)  { return (chattr(t, c) & 2) != 0; }
 static int is_upper(const bst_tok *t, int c)  { return (chattr(t, c) & 0x20) != 0; }
-static int lower(const bst_tok *t, int c) { return u8at(t->img, CASEMAP, c & 0xFF); }
+static int lower(const bst_tok *t, int c) { return u8at(t->img, t->img->t.casemap, c & 0xFF); }
 static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
                                     c == '\r' || c == '\v' || c == '\f'; }
 
@@ -170,10 +119,10 @@ void bst_tok_say(bst_tok *t, unsigned ptrva) { emit_ptr(t, ptrva); }
 /* ---- the transition table ---------------------------------------------- */
 
 static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next) {
-    const uint8_t *p = bst_at(t->img, TABLE + (unsigned)i * 12, 12);
+    const uint8_t *p = bst_at(t->img, t->img->t.tokstates + (unsigned)i * 12, 12);
     if (!p) return 0;
     uint32_t h = (uint32_t)(p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24));
-    if (h < 0x10001000u || h >= 0x10019000u) return 0;
+    if (h < t->img->t.code_lo || h >= t->img->t.code_hi) return 0;
     *state = p[0];
     *handler = h;
     *next = p[8];
@@ -239,42 +188,51 @@ static void dot_out(bst_tok *t, int c) {
     emit(t, '.');
 }
 
+/* The table names its handlers by address, and every build puts them
+   somewhere different, so the address is turned back into the directory's
+   index before anything is decided on it. */
+static int handler_index(const bst_image *img, unsigned h) {
+    for (int i = 0; i < BST_H_COUNT; i++)
+        if (img->t.h[i] == h) return i;
+    return -1;
+}
+
 static int handler(bst_tok *t, unsigned h, int c) {
-    switch (h) {
-    case H_LETTER:   return is_letter(t, c);
-    case H_DIGIT:    return is_digit(t, c);
-    case H_SPACE:    return is_space(c);
-    case H_DOT:      return c == 0x2E;
-    case H_DASH:     return c == 0x2D;
-    case H_TILDE:    return c == 0x7E;
-    case H_APOS:     return c == 0x27;
-    case H_APOSDOT:  return c == 0x27 || c == 0x2E || c == 0x7E;
-    case H_CURRENCY: return c == 0x24 || c == 0x9C || c == 0xBE;
-    case H_PUNCT:    return is_punct(t, c);
-    case H_MODE1:    return 0;
-    case H_MODE2:    return 0;
-    case H_EXPONENT: return 0;
-    case H_OPENER:   return 0;
-    case H_POSSESS:  return 0;
-    case H_DEL:      if (c == 0x7F) { unread(t, 1); return 1; } return 0;
-    case H_EAT1:     unread(t, 1); return 1;
-    case H_EAT2:     unread(t, 2); return 1;
-    case H_EAT3:     unread(t, 3); return 1;
-    case H_PUNCTOUT: punct_out(t, c); return 1;
-    case H_DOTOUT:   dot_out(t, c); return 1;
-    case H_WORD:     unread(t, 1); word_out(t); return 1;
-    case H_NUMBER:   return number_out(t);
-    case H_DOTTED:   return dotted_out(t);
-    case H_GROUPS:   return groups_out(t);
-    case H_SEPNUM:   return sepnum_out(t);
-    case H_DASH2:    return dash_out(t, c);
-    case H_ORDINAL:  return ordinal_seen(t, c);
-    case H_ORDEMIT:  ordinal_emit(t); unread(t, 1); return 1;
-    case H_MONEY:    /* a currency sign: the number after it is an amount */
+    switch (handler_index(t->img, h)) {
+    case BST_H_LETTER:   return is_letter(t, c);
+    case BST_H_DIGIT:    return is_digit(t, c);
+    case BST_H_SPACE:    return is_space(c);
+    case BST_H_DOT:      return c == 0x2E;
+    case BST_H_DASH:     return c == 0x2D;
+    case BST_H_TILDE:    return c == 0x7E;
+    case BST_H_APOS:     return c == 0x27;
+    case BST_H_APOSDOT:  return c == 0x27 || c == 0x2E || c == 0x7E;
+    case BST_H_CURRENCY: return c == 0x24 || c == 0x9C || c == 0xBE;
+    case BST_H_PUNCT:    return is_punct(t, c);
+    case BST_H_MODE1:    return 0;
+    case BST_H_MODE2:    return 0;
+    case BST_H_EXPONENT: return 0;
+    case BST_H_OPENER:   return 0;
+    case BST_H_POSSESS:  return 0;
+    case BST_H_DEL:      if (c == 0x7F) { unread(t, 1); return 1; } return 0;
+    case BST_H_EAT1:     unread(t, 1); return 1;
+    case BST_H_EAT2:     unread(t, 2); return 1;
+    case BST_H_EAT3:     unread(t, 3); return 1;
+    case BST_H_PUNCTOUT: punct_out(t, c); return 1;
+    case BST_H_DOTOUT:   dot_out(t, c); return 1;
+    case BST_H_WORD:     unread(t, 1); word_out(t); return 1;
+    case BST_H_NUMBER:   return number_out(t);
+    case BST_H_DOTTED:   return dotted_out(t);
+    case BST_H_GROUPS:   return groups_out(t);
+    case BST_H_SEPNUM:   return sepnum_out(t);
+    case BST_H_DASH2:    return dash_out(t, c);
+    case BST_H_ORDINAL:  return ordinal_seen(t, c);
+    case BST_H_ORDEMIT:  ordinal_emit(t); unread(t, 1); return 1;
+    case BST_H_MONEY:    /* a currency sign: the number after it is an amount */
         t->money = 1;
         unread(t, 1);
         return 1;
-    case H_SEP:      /* what may sit between two runs of digits */
+    case BST_H_SEP:      /* what may sit between two runs of digits */
         return c == ':' || c == '.' || c == ',' || c == '/' || c == '-' || c == ' ';
     default:         return 0;
     }
@@ -288,7 +246,7 @@ static void say_char(bst_tok *t, int c) {
     if (c < 0x30)      idx = c - 0x21;
     else if (c < 0x41) idx = c - 0x2B;
     else               idx = (is_upper(t, c) ? lower(t, c) : c) - 0x45;
-    emit_ptr(t, NAMES + (unsigned)idx * 4);
+    emit_ptr(t, t->img->t.names + (unsigned)idx * 4);
 }
 
 /* The word the machine has just delimited. The exception table gets first
@@ -340,7 +298,7 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
     if (caps < 5 && n > 1 &&
         (caps == n || (caps == n - 1 && t->ring[to] == 's'))) {
         for (int i = 0; i < caps; i++) say_char(t, lower(t, t->ring[from + i]));
-        if (caps != n) emit_ptr(t, PLURAL);
+        if (caps != n) emit_ptr(t, t->img->t.s[BST_S_PLURAL]);
         t->prevkind = t->kind;
         t->kind = 5;
         return;
@@ -423,7 +381,7 @@ static int dash_out(bst_tok *t, int c) {
     t->kind = ((t->kind == 4 || t->kind == 5) && n == 1) ? 0x0F : 3;
     unread(t, 1);
     if (n >= 2) { emit(t, '-'); return 1; }
-    if (is_digit(t, t->prevch) && is_digit(t, c)) { emit_ptr(t, GRPSEP); return 1; }
+    if (is_digit(t, t->prevch) && is_digit(t, c)) { emit_ptr(t, t->img->t.s[BST_S_GRPSEP]); return 1; }
     return 1;
 }
 
@@ -480,19 +438,19 @@ static void ordinal_emit(bst_tok *t) {
     int stop;
     unsigned str;
     switch (t->ord) {
-    case 4: stop = 8;    str = ORD_ST; break;
-    case 2: stop = 0x18; str = ORD_ND; break;
-    case 3: stop = 0x12; str = ORD_RD; break;
+    case 4: stop = 8;    str = t->img->t.s[BST_S_ORD_ST]; break;
+    case 2: stop = 0x18; str = t->img->t.s[BST_S_ORD_ND]; break;
+    case 3: stop = 0x12; str = t->img->t.s[BST_S_ORD_RD]; break;
     case 1:
         if (t->ordlast == '0' && (t->ordprev > '1' ||
                                   (t->ordprev != '1' && t->ordprev != '0'))) {
-            stop = 0; str = ORD_TIETH;
+            stop = 0; str = t->img->t.s[BST_S_ORD_TIETH];
         } else if (t->ordlast == '5' && t->ordprev != '1') {
-            stop = 0x1F; str = ORD_FIFTH;
+            stop = 0x1F; str = t->img->t.s[BST_S_ORD_FIFTH];
         } else if (t->ordlast == '2' && t->ordprev == '1') {
-            stop = 4; str = ORD_FIRST;
+            stop = 4; str = t->img->t.s[BST_S_ORD_FIRST];
         } else {
-            stop = 0; str = ORD_TH;
+            stop = 0; str = t->img->t.s[BST_S_ORD_TH];
         }
         break;
     default:
@@ -541,15 +499,15 @@ static int sepnum_out(bst_tok *t) {
 
     bst_say_grouped(t, digits, nd);
     if (t->money) {
-        emit_ptr(t, DOLLARS);
+        emit_ptr(t, t->img->t.s[BST_S_DOLLARS]);
         if (frac >= 0) {
-            emit_ptr(t, AND);
+            emit_ptr(t, t->img->t.s[BST_S_AND]);
             bst_say_number(t, t->ring + frac, fn);
-            emit_ptr(t, CENTS);
+            emit_ptr(t, t->img->t.s[BST_S_CENTS]);
         }
         t->money = 0;
     } else if (frac >= 0) {
-        emit_ptr(t, POINT);
+        emit_ptr(t, t->img->t.s[BST_S_POINT]);
         bst_say_digits(t, t->ring + frac, fn);
     }
     unread(t, t->cur - (p - 1));
@@ -592,7 +550,7 @@ static int groups_out(bst_tok *t) {
         else       bst_say_number(t, t->ring + at, len);
         if (g + 1 < n) {
             if (spell) emit(t, ',');
-            else       emit_ptr(t, GRPSEP);
+            else       emit_ptr(t, t->img->t.s[BST_S_GRPSEP]);
         }
         at = ends[g] + 1;
     }

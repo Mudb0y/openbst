@@ -16,13 +16,6 @@
  * tests read the same cursors the rule pass uses, one of which this scan
  * mutates as it goes, so they cannot be lifted out and applied afterwards. */
 
-#define RDATA_VA  0x10020000u
-#define RDATA_OFF 0x17800u
-#define TRANS_PITCH 0x10022B58u   /* six bytes per sound and following class */
-#define VOWEL_DUR   0x10022DA8u   /* three 16-bit entries per sound */
-#define STRESS_NUM  0x10092FD8u   /* numerator and denominator, four apart */
-#define STRESS_ADD  0x10092FC0u   /* one 16-bit offset per stress level */
-#define SOUND_ADD   0x10092F58u   /* one 16-bit offset per sound */
 
 #define CMD 0x7C
 
@@ -48,17 +41,14 @@ typedef struct {
     int       overflow;
 } scan;
 
-static int u8at(const bst_image *img, unsigned va, unsigned i) {
-    size_t o = RDATA_OFF + (va - RDATA_VA) + i;
-    return o < img->len ? img->image[o] : 0;
-}
+/* Both take a byte offset from the table's address, not an index: several of
+   these tables are read at a stride that is not their element size. */
 static int s8at(const bst_image *img, unsigned va, unsigned i) {
-    return (int8_t)u8at(img, va, i);
+    return (int8_t)bst_u8(img, va, (int)i);
 }
 static int s16at(const bst_image *img, unsigned va, unsigned i) {
-    size_t o = RDATA_OFF + (va - RDATA_VA) + i;
-    if (o + 1 >= img->len) return 0;
-    return (int16_t)(img->image[o] | (img->image[o + 1] << 8));
+    const uint8_t *p = bst_at(img, va + i, 2);
+    return p ? (int16_t)(p[0] | (p[1] << 8)) : 0;
 }
 
 static int a1(scan *z, int c) { return bst_ph_attr1(z->img, c); }
@@ -195,7 +185,7 @@ static int div4(int v) { return (int16_t)((v + ((v >> 31) & 3)) >> 2); }
 static int vowel_duration(scan *z, int pos, int which) {
     int nv = z->next.val;
     int ph = z->s[pos];
-    int base = (uint16_t)s16at(z->img, VOWEL_DUR, (unsigned)(ph * 3 + which) * 2);
+    int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur, (unsigned)(ph * 3 + which) * 2);
     int mode = rate_mode(z);
     int d;
     int scaled = 0;
@@ -204,8 +194,8 @@ static int vowel_duration(scan *z, int pos, int which) {
         if (!vowel_context(z)) {
             d = div4((int16_t)(base * 5));
             if (mode == 2) d = (int16_t)(d * 7) / 5;
-            int num = s16at(z->img, STRESS_NUM, (unsigned)z->stress.val * 4);
-            int den = s16at(z->img, STRESS_NUM + 2, (unsigned)z->stress.val * 4);
+            int num = s16at(z->img, z->img->t.stress_num, (unsigned)z->stress.val * 4);
+            int den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)z->stress.val * 4);
             int e = den ? (int16_t)(num * d) / den : 0;
             if (!z->edge) {
                 d = e;
@@ -222,12 +212,12 @@ static int vowel_duration(scan *z, int pos, int which) {
     }
     if (!scaled) {
         if (a1(z, nv) & 0x40) base += 0x19;
-        d = base + s16at(z->img, STRESS_ADD, (unsigned)z->stress.val * 2);
+        d = base + s16at(z->img, z->img->t.stress_add, (unsigned)z->stress.val * 2);
     }
 
     if (mode == 2)      d += 0x41;
     else if (mode == 0) d += 0x14;
-    d += s16at(z->img, SOUND_ADD, (unsigned)z->s[pos] * 2) - 0x3C;
+    d += s16at(z->img, z->img->t.sound_add, (unsigned)z->s[pos] * 2) - 0x3C;
 
     if ((ph == 0x1F || ph == 0x20 || ph == 0x21) && d < 0x37) d = 0x37;
     else if (ph == 0x24 && d < 5) d = 5;
@@ -269,8 +259,8 @@ static void trans(scan *z, int dur, int pos, int which) {
     }
 
     unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + ph * 2);
-    int c8 = s8at(z->img, TRANS_PITCH, k * 6 + (unsigned)which);
-    int c7 = s8at(z->img, TRANS_PITCH + 3, k * 6 + (unsigned)which);
+    int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
+    int c7 = s8at(z->img, z->img->t.trans_pitch + 3, k * 6 + (unsigned)which);
     if (c8 != 0x7F) c8 = (int8_t)(c8 + (nudge - 100) / 5);
 
     /* A sound with no spectral target of its own leaves the contour to its

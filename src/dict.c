@@ -7,41 +7,9 @@
    the rest; the first nibble picks the bucket. Entries store how many nibbles
    they share with the entry before them, so only the differing tail is kept. */
 
-#define RDATA_VA    0x10020000u
-#define RDATA_OFF   0x17800u
-
-#define CHARMAP      0x10021320u
-#define CODE_MEDIAL  0x10020EA0u
-#define CODE_INITIAL 0x10020F10u
-#define PH_SINGLE      0x10092D68u
-#define PH_SINGLE_MAX  0x10092E14u
-#define PH_PAIR        0x10092E18u
-#define PH_PAIR_MAX    0x10092F50u
-
-static const uint32_t BUCKET_INDEX[15] = {
-    0x100432D0, 0x10047AE0, 0x1004C970, 0x10050090, 0x10055BA0,
-    0x1005D4A0, 0x100612A8, 0x10065AC8, 0x100697D0, 0x1006E008,
-    0x10074500, 0x1007C9C0, 0x100857F0, 0x10088A80, 0x10092B20,
-};
-static const uint32_t BUCKET_DATA[15] = {
-    0x10037728, 0x10043570, 0x10047BE8, 0x1004CA90, 0x10050160,
-    0x10055CF8, 0x1005D668, 0x10061398, 0x10065BD8, 0x100698B0,
-    0x1006E108, 0x10074678, 0x1007CBC0, 0x10085A08, 0x10088B40,
-};
-
-static size_t off_of(uint32_t va) { return RDATA_OFF + (va - RDATA_VA); }
-
-static int u8at(const bst_image *img, uint32_t va) {
-    size_t o = off_of(va);
-    return o < img->len ? img->image[o] : 0;
-}
-static int u16at(const bst_image *img, uint32_t va) {
-    size_t o = off_of(va);
-    return o + 1 < img->len ? img->image[o] | (img->image[o + 1] << 8) : 0;
-}
-static int s16at(const bst_image *img, uint32_t va) {
-    return (int16_t)u16at(img, va);
-}
+static int u8at(const bst_image *img, uint32_t va)  { return bst_u8(img, va, 0); }
+static int u16at(const bst_image *img, uint32_t va) { return bst_u16(img, va, 0); }
+static int s16at(const bst_image *img, uint32_t va) { return bst_s16(img, va, 0); }
 
 /* Nibble i of the entry at va. */
 static int nib(const bst_image *img, uint32_t va, int i) {
@@ -62,10 +30,10 @@ static int encode(const bst_image *img, const char *stem, uint8_t *out, int max)
     uint8_t nb[BST_WORD_MAX * 3];
     int k = 0;
     for (int i = n - 1; i >= 0 && k + 3 < (int)sizeof nb; i--) {
-        int idx = u8at(img, CHARMAP + (unsigned char)w[i]) - 1;
+        int idx = u8at(img, img->t.symmap + (unsigned char)w[i]) - 1;
         if (idx > 0x34) idx = 0x34;
         if (idx < 0) idx = 0;
-        int v = u16at(img, (i == 0 ? CODE_INITIAL : CODE_MEDIAL) + idx * 2);
+        int v = u16at(img, (i == 0 ? img->t.code_initial : img->t.code_medial) + idx * 2);
         nb[k++] = (uint8_t)(v & 0xF);
         if (v > 0xF) {
             nb[k++] = (uint8_t)((v >> 4) & 0xF);
@@ -160,11 +128,11 @@ static void emit_byte(int b, bst_recs *out) {
 /* Codes are bytes: low ones name a single record, middle ones a common pair,
    and the top range takes a second byte. */
 static int decode_one(const bst_image *img, int b, int next, bst_recs *out) {
-    int smax = s16at(img, PH_SINGLE_MAX);
-    int pmax = s16at(img, PH_PAIR_MAX);
-    if (b <= smax) { emit_code(u16at(img, PH_SINGLE + b * 2), out); return 1; }
+    int smax = s16at(img, img->t.ph_single_max);
+    int pmax = s16at(img, img->t.ph_pair_max);
+    if (b <= smax) { emit_code(u16at(img, img->t.ph_single + b * 2), out); return 1; }
     if (b - (smax + 1) <= pmax) {
-        int pair = u16at(img, PH_PAIR + (b - (smax + 1)) * 2);
+        int pair = u16at(img, img->t.ph_pair + (b - (smax + 1)) * 2);
         emit_byte(pair & 0xFF, out);
         emit_byte(pair >> 8, out);
         return 1;
@@ -187,7 +155,7 @@ int bst_dict_lookup(const bst_image *img, const bst_word *w, bst_recs *out) {
     int bucket = enc[1] - 1;
     if (bucket < 0 || bucket >= 15) return 0;
 
-    uint32_t idx_va = BUCKET_INDEX[bucket], data_va = BUCKET_DATA[bucket];
+    uint32_t idx_va = img->t.bucket_index[bucket], data_va = img->t.bucket_data[bucket];
     int count = u16at(img, idx_va);
     if (count < 2) return 0;
 
