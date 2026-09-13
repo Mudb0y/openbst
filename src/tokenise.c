@@ -31,6 +31,7 @@
 #define H_EAT2     0x10007030u
 #define H_EAT3     0x10007040u
 #define H_WORD     0x10007AC0u
+#define H_NUMBER   0x10005E40u
 #define H_PUNCTOUT 0x100070A0u
 #define H_DOTOUT   0x100074F0u
 
@@ -127,6 +128,8 @@ static void emit_ptr(bst_tok *t, unsigned ptrva) {
     if (va) emit_codes(t, va);
 }
 
+void bst_tok_say(bst_tok *t, unsigned ptrva) { emit_ptr(t, ptrva); }
+
 /* ---- the transition table ---------------------------------------------- */
 
 static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next) {
@@ -143,6 +146,7 @@ static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next
 /* ---- the handlers ------------------------------------------------------ */
 
 static void word_out(bst_tok *t);
+static int number_out(bst_tok *t);
 
 /* Punctuation that closes a phrase versus punctuation that only groups. */
 static int closes(int b) {
@@ -212,6 +216,7 @@ static int handler(bst_tok *t, unsigned h, int c) {
     case H_PUNCTOUT: punct_out(t, c); return 1;
     case H_DOTOUT:   dot_out(t, c); return 1;
     case H_WORD:     unread(t, 1); word_out(t); return 1;
+    case H_NUMBER:   return number_out(t);
     default:         return 0;
     }
 }
@@ -260,6 +265,21 @@ static void word_out(bst_tok *t) {
     emit(t, ' ');
     t->prevkind = t->kind;
     t->kind = 5 - ((chattr(t, t->ring[t->start]) & 0x20) == 0);
+}
+
+/* A run of digits. The machine has read one character past it, and the run
+   itself is whatever lies between the token's start and here. */
+static int number_out(bst_tok *t) {
+    unread(t, 1);
+    while (t->cur >= t->start && !is_digit(t, t->ring[t->cur])) unread(t, 1);
+    int n = t->cur - t->start + 1;
+    if (n <= 0) return 0;
+    for (int i = 0; i < n; i++)
+        if (!is_digit(t, t->ring[t->start + i])) return 0;
+    bst_say_number(t, t->ring + t->start, n);
+    t->prevkind = t->kind;
+    t->kind = 6;
+    return 1;
 }
 
 /* ---- the machine ------------------------------------------------------- */

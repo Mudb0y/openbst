@@ -1,0 +1,94 @@
+#include <string.h>
+#include "bst_token.h"
+
+/* Saying a number.
+ *
+ * Up to four digits a number is read as speech rather than spelled: one digit
+ * is its own name, two are a tens name and a units name with the teens as a
+ * special case, three are a hundreds group, and four are either two pairs --
+ * which is how a year comes out -- or a single group of thousands when the
+ * last three digits are zeros. Anything longer, or anything with a leading
+ * zero, is spelled digit by digit.
+ *
+ * Every name is a stored string of phoneme codes, and the tables are indexed
+ * by the digit's character code rather than its value. */
+
+#define DIGITS 0x1002EDF8u    /* [character] one, two, three ... */
+#define TENS   0x1002EE20u    /* [character] twenty, thirty ... */
+#define TEENS  0x1002EE48u    /* [character] ten, eleven, twelve ... */
+#define SCALES 0x1002EF30u    /* [group] thousand, million ... */
+#define OH     0x1002E79Cu
+#define HUNDRD 0x1002E794u
+#define ZERO   0x1002EEB8u
+
+static void one(bst_tok *t, int c)  { bst_tok_say(t, DIGITS + (unsigned)c * 4); }
+static void teen(bst_tok *t, int c) { bst_tok_say(t, TEENS  + (unsigned)c * 4); }
+static void ten(bst_tok *t, int c)  { bst_tok_say(t, TENS   + (unsigned)c * 4); }
+
+static void two(bst_tok *t, const uint8_t *d) {
+    if (d[0] == '0') {
+        if (d[1] != '0') { bst_tok_say(t, OH); one(t, d[1]); }
+    } else if (d[0] == '1') {
+        teen(t, d[1]);
+    } else {
+        ten(t, d[0]);
+        if (d[1] != '0') one(t, d[1]);
+    }
+}
+
+/* Groups of three, most significant first, each followed by its scale. */
+static void groups(bst_tok *t, const uint8_t *d, int n) {
+    int all_zero = (n == 2 && d[0] == '0' && d[1] == '0');
+    int empty = 0, said_scale = 0;
+    for (;;) {
+        n--;
+        if (n < 0) return;
+        if (d[0] == '0') empty = 1;
+        else { one(t, d[0]); bst_tok_say(t, HUNDRD); }
+        if (d[1] == '0') {
+            if (d[2] != '0') { one(t, d[2]); empty = 0; }
+        } else {
+            two(t, d + 1);
+            empty = 0;
+        }
+        d += 3;
+        if (*d < '0' || *d > '9') d++;    /* step over a group separator */
+        if (empty) {
+            empty = 0;
+            if (n == 0 && !said_scale) bst_tok_say(t, ZERO);
+        } else {
+            bst_tok_say(t, SCALES + (unsigned)n * 4);
+            said_scale = 1;
+        }
+        (void)all_zero;
+    }
+}
+
+static void spell(bst_tok *t, const uint8_t *d, int n) {
+    for (int i = 0; i < n; i++) one(t, d[i]);
+}
+
+void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
+    if (n < 5 && n > 0 && d[0] != '0') {
+        uint8_t pad[8];
+        switch (n) {
+        case 1: one(t, d[0]); return;
+        case 2: two(t, d); return;
+        case 3: groups(t, d, 1); return;
+        case 4:
+            if (d[1] == '0' && d[2] == '0' && d[3] == '0') {
+                pad[0] = '0'; pad[1] = '0'; pad[2] = d[0]; pad[3] = ',';
+                memcpy(pad + 4, d + 1, 3);
+                pad[7] = 0;
+                groups(t, pad, 2);
+                return;
+            }
+            two(t, d);
+            if (d[2] == '0' && d[3] == '0') bst_tok_say(t, HUNDRD);
+            else two(t, d + 2);
+            return;
+        default: break;
+        }
+    }
+    spell(t, d, n);
+}

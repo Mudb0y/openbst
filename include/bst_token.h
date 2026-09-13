@@ -63,6 +63,12 @@ typedef struct {
 int  bst_tok_read(bst_tok *t);
 void bst_tok_unread(bst_tok *t, int n);
 
+/* Says a stored string of phoneme codes named by a pointer in the image. */
+void bst_tok_say(bst_tok *t, unsigned ptrva);
+
+/* Says a run of digits. */
+void bst_say_number(bst_tok *t, const uint8_t *digits, int n);
+
 /* Looks a word up in the exception table. Returns the number of phoneme
    codes written, or zero if the table does not hold it. */
 int  bst_except(bst_tok *t, const uint8_t *word, int wlen,
