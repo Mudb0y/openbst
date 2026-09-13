@@ -23,7 +23,9 @@ static uint8_t frames[80000 * 16];
 static uint8_t stream[0x200];
 
 int main(int argc, char **argv) {
-    if (argc < 3) { fprintf(stderr, "usage: saytest DLL TEXT > pcm\n"); return 2; }
+    int want_frames = 0;
+    if (argc > 1 && strcmp(argv[1], "--frames") == 0) { want_frames = 1; argv++; argc--; }
+    if (argc < 3) { fprintf(stderr, "usage: saytest [--frames] DLL TEXT > pcm\n"); return 2; }
     FILE *f = fopen(argv[1], "rb");
     if (!f) return 1;
     fseek(f, 0, SEEK_END);
@@ -136,6 +138,12 @@ int main(int argc, char **argv) {
         memset(stream, 0, sizeof stream);
         bst_assemble_start(&z);
         if (kind == 6) break;
+    }
+
+    if (want_frames) {
+        fwrite(frames, 16, nframes, stdout);
+        free(d);
+        return 0;
     }
 
     bst_synth s;

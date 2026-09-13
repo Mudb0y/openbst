@@ -93,6 +93,14 @@ uint32_t ne_argd(nemu *e, uint32_t sp, int nwords, int i) {
     return lo | (hi << 16);
 }
 
+uint16_t ne_argc(nemu *e, uint32_t sp, int i) {
+    return ne_rd16(e, sp + (uint32_t)i * 2);
+}
+uint32_t ne_argcd(nemu *e, uint32_t sp, int i) {
+    return ne_rd16(e, sp + (uint32_t)i * 2) |
+           ((uint32_t)ne_rd16(e, sp + (uint32_t)i * 2 + 2) << 16);
+}
+
 uint16_t ne_global_alloc(nemu *e, uint32_t bytes) {
     if (e->ngmem >= (int)(sizeof e->gmem / sizeof e->gmem[0])) return 0;
     uint16_t sel = ne_alloc_sel(e, bytes, 0);
@@ -116,8 +124,10 @@ static void hook_thunk(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     (void)uc; (void)size;
     nemu *e = ud;
     int idx = (int)((addr - e->thunk_base) / 4);
-    if (idx < 0 || idx >= e->nthunk || !e->thunk[idx]) return;
-    const ne_import *imp = e->thunk[idx];
+    if (idx < 0 || idx >= e->nthunk) return;
+    const ne_import *imp = e->thunk[idx].imp;
+    ne_cb_fn cb = e->thunk[idx].cb;
+    if (!imp && !cb) return;
     e->ncalled[idx]++;
 
     uint32_t ss = 0, sp = 0;
@@ -127,11 +137,12 @@ static void hook_thunk(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
 
     e->ax = e->dx = 0;
     if (e->verbose > 1)
-        fprintf(stderr, "  [ne] %s.%s\n", imp->mod, imp->name);
-    if (imp->fn) imp->fn(e, frame);
+        fprintf(stderr, "  [ne] %s\n", e->thunk[idx].name);
+    if (cb) cb(e, frame);
+    else if (imp->fn) imp->fn(e, frame);
     else if (e->verbose)
-        fprintf(stderr, "  [ne] %s.%s unimplemented, returning zero\n",
-                imp->mod, imp->name);
+        fprintf(stderr, "  [ne] %s unimplemented, returning zero\n",
+                e->thunk[idx].name);
 
     uint32_t ax = e->ax, dx = e->dx;
     uc_reg_write(e->uc, UC_X86_REG_AX, &ax);
@@ -144,6 +155,62 @@ static void hook_trap(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     nemu *e = ud;
     e->stopped = 1;
     uc_emu_stop(e->uc);
+}
+
+static void hook_probe(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)size;
+    nemu *e = ud;
+    for (int k = 0; k < e->nprobe; k++) {
+        if (e->probe[k].lin != (uint32_t)addr) continue;
+        static const int ids[] = { UC_X86_REG_AX, UC_X86_REG_BX, UC_X86_REG_CX,
+                                   UC_X86_REG_DX, UC_X86_REG_SI, UC_X86_REG_DI,
+                                   UC_X86_REG_BP, UC_X86_REG_SP, UC_X86_REG_DS,
+                                   UC_X86_REG_ES };
+        static const char *nm[] = { "ax","bx","cx","dx","si","di","bp","sp","ds","es" };
+        fprintf(stderr, "probe %08x", (uint32_t)addr);
+        for (int i = 0; i < 10; i++) {
+            uint32_t v = 0;
+            uc_reg_read(e->uc, ids[i], &v);
+            fprintf(stderr, " %s=%04x", nm[i], v & 0xffff);
+        }
+        uint32_t ss = 0, sp = 0;
+        uc_reg_read(e->uc, UC_X86_REG_SS, &ss);
+        uc_reg_read(e->uc, UC_X86_REG_SP, &sp);
+        fprintf(stderr, " stack");
+        for (int i = 0; i < e->probe[k].nstack; i++)
+            fprintf(stderr, " %04x", ne_rd16(e, ne_lin(e, (uint16_t)ss, (uint16_t)(sp + i * 2))));
+        fprintf(stderr, "\n");
+    }
+}
+
+void ne_hook_regs(nemu *e, uint16_t sel, uint16_t off, int nstack) {
+    if (e->nprobe >= (int)(sizeof e->probe / sizeof e->probe[0])) return;
+    uint32_t lin = ne_lin(e, sel, off);
+    int k = e->nprobe++;
+    e->probe[k].lin = lin;
+    e->probe[k].nstack = nstack;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_probe, e, lin, lin);
+}
+
+static void hook_ring(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)addr; (void)size;
+    nemu *e = ud;
+    int n = (int)(sizeof e->ring / sizeof e->ring[0]);
+    uint32_t cs = 0, ip = 0, sp = 0;
+    uc_reg_read(e->uc, UC_X86_REG_CS, &cs);
+    uc_reg_read(e->uc, UC_X86_REG_IP, &ip);
+    uc_reg_read(e->uc, UC_X86_REG_SP, &sp);
+    e->ring[e->ring_at].cs = (uint16_t)cs;
+    e->ring[e->ring_at].ip = (uint16_t)ip;
+    e->ring[e->ring_at].sp = (uint16_t)sp;
+    e->ring_at = (e->ring_at + 1) % n;
+}
+
+void ne_backtrace(nemu *e) {
+    e->ring_on = 1;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_ring, e, 1, 0);
 }
 
 static bool hook_invalid(uc_engine *uc, uc_mem_type t, uint64_t addr,
@@ -159,6 +226,27 @@ static bool hook_invalid(uc_engine *uc, uc_mem_type t, uint64_t addr,
             t == UC_MEM_READ_UNMAPPED ? "read" :
             t == UC_MEM_WRITE_UNMAPPED ? "write" : "fetch",
             (unsigned long long)addr, cs, ip, ss, sp);
+    static const int ids[] = { UC_X86_REG_AX, UC_X86_REG_BX, UC_X86_REG_CX,
+                               UC_X86_REG_DX, UC_X86_REG_SI, UC_X86_REG_DI,
+                               UC_X86_REG_BP, UC_X86_REG_DS, UC_X86_REG_ES };
+    static const char *nm[] = { "ax","bx","cx","dx","si","di","bp","ds","es" };
+    fprintf(stderr, " ");
+    for (int i = 0; i < 9; i++) {
+        uint32_t v = 0;
+        uc_reg_read(e->uc, ids[i], &v);
+        fprintf(stderr, " %s=%04x", nm[i], v & 0xffff);
+    }
+    fprintf(stderr, "\n");
+    if (e->ring_on) {
+        int n = (int)(sizeof e->ring / sizeof e->ring[0]);
+        fprintf(stderr, "  last instructions, oldest first:\n");
+        for (int i = 0; i < n; i++) {
+            int k = (e->ring_at + i) % n;
+            if (!e->ring[k].cs) continue;
+            fprintf(stderr, "    %04x:%04x sp %04x\n",
+                    e->ring[k].cs, e->ring[k].ip, e->ring[k].sp);
+        }
+    }
     e->faulted = 1;
     return false;
 }
@@ -181,6 +269,7 @@ nemu *ne_new(void) {
 
     e->stack_sel = ne_alloc_sel(e, NE_WINDOW, 0);
     e->stack_base = ne_lin(e, e->stack_sel, 0);
+    e->stack_sp = 0xf000;
     e->trap_sel = ne_alloc_sel(e, 0x100, 1);
     e->trap_base = ne_lin(e, e->trap_sel, 0);
     e->thunk_sel = ne_alloc_sel(e, NE_MAX_THUNK * 4, 1);
@@ -209,6 +298,12 @@ void ne_free(nemu *e) {
 
 void ne_frames_reset(nemu *e) { e->frames_len = 0; }
 
+void ne_set_stack(nemu *e, uint16_t sel, uint16_t sp) {
+    e->stack_sel = sel;
+    e->stack_base = ne_lin(e, sel, 0);
+    e->stack_sp = sp;
+}
+
 /* ---- NE loading --------------------------------------------------------- */
 
 static uint16_t g16(const uint8_t *p) { return (uint16_t)(p[0] | (p[1] << 8)); }
@@ -217,12 +312,24 @@ static uint32_t g32(const uint8_t *p) {
            ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
+uint32_t ne_callback(nemu *e, ne_cb_fn fn, const char *name) {
+    if (e->nthunk >= NE_MAX_THUNK) return 0;
+    int i = e->nthunk++;
+    e->thunk[i].cb = fn;
+    e->thunk[i].name = name;
+    /* Far cdecl: the guest cleans its own arguments. */
+    uint8_t slot[4] = { 0xcb, 0x90, 0x90, 0x90 };
+    uc_mem_write(e->uc, e->thunk_base + i * 4, slot, 4);
+    return ((uint32_t)e->thunk_sel << 16) | (uint16_t)(i * 4);
+}
+
 static int thunk_for(nemu *e, const ne_import *imp, uint16_t *sel, uint16_t *off) {
     for (int i = 0; i < e->nthunk; i++)
-        if (e->thunk[i] == imp) { *sel = e->thunk_sel; *off = (uint16_t)(i * 4); return 0; }
+        if (e->thunk[i].imp == imp) { *sel = e->thunk_sel; *off = (uint16_t)(i * 4); return 0; }
     if (e->nthunk >= NE_MAX_THUNK) return -1;
     int i = e->nthunk++;
-    e->thunk[i] = imp;
+    e->thunk[i].imp = imp;
+    e->thunk[i].name = imp->name;
     uint8_t slot[4] = { 0xca, 0, 0, 0x90 };   /* retf imm16 */
     uint16_t pop = (uint16_t)(imp->words * 2);
     slot[1] = pop & 0xff;
@@ -350,6 +457,9 @@ nemod *ne_load(nemu *e, const char *path) {
         if (!len) len = 0x10000;
         if (!alloc) alloc = 0x10000;
         if (alloc < len) alloc = len;
+        /* The automatic data segment carries the stack as well as the data, so
+           it gets a whole window whatever the header asked for. */
+        if (i + 1 == (int)m->ds_seg) alloc = 0x10000;
         uint16_t sel = ne_alloc_sel(e, alloc, (sflags & 1) ? 0 : 1);
         if (!sel) { fprintf(stderr, "ne: out of selectors\n"); return NULL; }
         m->seg[i].sel = sel;
@@ -532,7 +642,7 @@ static int run(nemu *e) {
 
 int ne_call(nemu *e, uint16_t seg, uint16_t off,
             const uint16_t *args, int nwords, uint32_t *dxax) {
-    uint32_t sp = 0xf000;
+    uint32_t sp = e->stack_sp;
     uint32_t ss = e->stack_sel;
     /* The engine's own exports are far cdecl, so the first argument has to end
        up lowest: push the list backwards. */
@@ -562,7 +672,7 @@ int ne_call(nemu *e, uint16_t seg, uint16_t off,
 
 int ne_init_module(nemu *e, nemod *m, uint16_t *axout) {
     if (m->entry_cs < 1 || m->entry_cs > m->nseg) return -1;
-    uint32_t sp = 0xf000;
+    uint32_t sp = e->stack_sp;
     sp -= 2; ne_wr16(e, e->stack_base + sp, e->trap_sel);
     sp -= 2; ne_wr16(e, e->stack_base + sp, 0);
 
@@ -597,6 +707,6 @@ void ne_report(nemu *e) {
     fprintf(stderr, "host call counts:\n");
     for (int i = 0; i < e->nthunk; i++)
         if (e->ncalled[i])
-            fprintf(stderr, "  %-10s %-24s %llu\n", e->thunk[i]->mod,
-                    e->thunk[i]->name, (unsigned long long)e->ncalled[i]);
+            fprintf(stderr, "  %-30s %llu\n", e->thunk[i].name,
+                    (unsigned long long)e->ncalled[i]);
 }

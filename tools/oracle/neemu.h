@@ -31,6 +31,10 @@ typedef struct nemu nemu;
    thunk slot, so shims never touch SP. */
 typedef void (*ne_shim_fn)(nemu *e, uint32_t sp);
 
+/* A host callback the guest calls through a far pointer we hand it. Far cdecl,
+   so the guest cleans the stack and arguments read left to right from sp. */
+typedef void (*ne_cb_fn)(nemu *e, uint32_t sp);
+
 typedef struct {
     const char *mod;
     int         ordinal;
@@ -75,11 +79,16 @@ struct nemu {
     uint16_t thunk_sel;
     uint32_t thunk_base;
     int      nthunk;
-    const ne_import *thunk[NE_MAX_THUNK];
+    struct {
+        const ne_import *imp;
+        ne_cb_fn         cb;
+        const char      *name;
+    } thunk[NE_MAX_THUNK];
     uint64_t ncalled[NE_MAX_THUNK];
 
     uint16_t stack_sel;
     uint32_t stack_base;
+    uint16_t stack_sp;
     uint16_t trap_sel;
     uint32_t trap_base;
 
@@ -90,9 +99,19 @@ struct nemu {
     int ngmem;
 
     uint16_t ax, dx;
+    void    *user;
     int      stopped, faulted;
     int      verbose;
     uint64_t insn_limit;
+
+    /* A ring of recently executed instructions, printed when a fault stops the
+       run. A fault names where control ended up; the ring names how it got
+       there. */
+    struct { uint16_t cs, ip, sp; } ring[8192];
+    int ring_at, ring_on;
+
+    struct { uint32_t lin; int nstack; } probe[8];
+    int nprobe;
 
     /* Captured PUTFR frames, which is what the synthesiser hands its caller
        in place of audio. */
@@ -111,6 +130,12 @@ nemod   *ne_load(nemu *e, const char *path);
    DLL. Returns the AX the module leaves. */
 int      ne_init_module(nemu *e, nemod *m, uint16_t *ax);
 
+/* Runs subsequent calls on a different stack. The engine builds far pointers
+   to its locals out of SS and compares them against pointers built out of DS,
+   so it only works when the two are the same selector -- which means its
+   stack has to live in its own data group, as an application's does. */
+void     ne_set_stack(nemu *e, uint16_t sel, uint16_t sp);
+
 /* Looks an export up by name and returns its selector and offset. */
 int      ne_export(nemu *e, nemod *m, const char *name, uint16_t *seg, uint16_t *off);
 
@@ -121,6 +146,13 @@ int      ne_call(nemu *e, uint16_t seg, uint16_t off,
 
 uint32_t ne_lin(nemu *e, uint16_t sel, uint16_t off);
 uint16_t ne_argw(nemu *e, uint32_t sp, int nwords, int i);
+/* Argument i of a far cdecl call, counting from the left. */
+uint16_t ne_argc(nemu *e, uint32_t sp, int i);
+uint32_t ne_argcd(nemu *e, uint32_t sp, int i);
+
+/* Plants a far-callable thunk for a host function and returns it as
+   selector:offset packed into one word pair. */
+uint32_t ne_callback(nemu *e, ne_cb_fn fn, const char *name);
 uint32_t ne_argd(nemu *e, uint32_t sp, int nwords, int i);
 int      ne_read(nemu *e, uint32_t lin, void *dst, uint32_t n);
 int      ne_write(nemu *e, uint32_t lin, const void *src, uint32_t n);
@@ -133,6 +165,11 @@ uint16_t ne_alloc_sel(nemu *e, uint32_t bytes, int code);
 uint16_t ne_global_alloc(nemu *e, uint32_t bytes);
 
 void     ne_report(nemu *e);
+void     ne_backtrace(nemu *e);
+
+/* Prints the registers and a few stack words each time control reaches an
+   address, which is how an argument list gets read without guessing. */
+void     ne_hook_regs(nemu *e, uint16_t sel, uint16_t off, int nstack);
 void     ne_frames_reset(nemu *e);
 
 /* neshims.c */
