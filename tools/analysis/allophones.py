@@ -9,8 +9,14 @@ every sound is a table entry.
 
 Records are variable length, chosen by bits 4 to 6 of the first byte: types 0
 and 2 take one byte, types 1, 3 and 4 take three, type 5 takes five. Bit 7 ends
-the sequence. Types 1, 3 and 5 carry a nine-bit target index packed across the
-following two bytes.
+the sequence. Types 1, 3 and 4 carry one nine-bit target index packed across
+the two bytes that follow; type 5 carries two, naming both ends of a
+transition.
+
+The index of an entry is the previous phoneme times forty-eight plus the
+current one, so the table is a diphone inventory: every sound is stored in the
+context of the sound before it, which is where the engine's coarticulation
+comes from.
 """
 
 import struct
@@ -53,8 +59,11 @@ def main():
             n = LENGTHS.get(t, 1)
             rec = d[p:p + n]
             note = ""
-            if t in (1, 3, 5) and n >= 3:
+            if t in (1, 3, 4, 5) and n >= 3:
                 note = " target %d" % (((rec[2] << 8) | rec[1]) & 0x1FF)
+            if t == 5 and n >= 5:
+                # A five-byte record names both ends of a transition.
+                note += " target %d" % (((rec[4] << 8) | rec[3]) & 0x1FF)
             parts.append("%s(t%d%s)" % (rec.hex(" "), t, note))
             p += n
             if b & 0x80:
