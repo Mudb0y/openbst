@@ -78,6 +78,12 @@ typedef struct {
     uint32_t lts_pos;
     uint32_t lts_word;
 
+    /* The sentence phoneme stream, and the two points around the phonological
+       rule stage that rewrites it before pairs are formed. */
+    uint32_t stream;
+    uint32_t rules_before;
+    uint32_t rules_after;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -123,6 +129,9 @@ static const profile profiles[] = {
         .lts_after     = 0x1000d5f0,
         .lts_pos       = 0x1001b6ec,
         .lts_word      = 0x1001a920,
+        .stream        = 0x1001e3c0,
+        .rules_before  = 0x1001314e,
+        .rules_after   = 0x10013153,
         .default_level = 6,
     },
 };
