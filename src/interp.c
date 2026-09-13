@@ -64,3 +64,28 @@ void bst_gain_step(bst_gain *g, int target, int dur, int clock) {
     int step = lut(g->t->alog, lut(g->t->log, mag) - lut(g->t->log, idx) + lut(g->t->log, dur));
     g->acc = (int16_t)(g->acc + (diff > 0 ? step * 16 : -step * 16));
 }
+
+void bst_pitch_init(bst_pitch *p, const bst_tables *t) {
+    p->t = t;
+    p->acc = 0;
+}
+
+void bst_pitch_step(bst_pitch *p, uint16_t target, int dur, int clock) {
+    unsigned t16 = (unsigned)(dur + clock) & 0xffff;
+    unsigned u = t16 >> 4;
+    int small = u < 0x100;
+    if (!small) u = t16 >> 8;
+
+    int rate = lut(p->t->log, dur) - lut(p->t->log, (int)u + 1);
+    int diff = (int)(target >> 5) - (int)(p->acc >> 5);
+    if (diff == 0) return;
+
+    int mag = diff < 0 ? -diff : diff;
+    int step = lut(p->t->alog, lut(p->t->log, mag) + rate - 0x80);
+    int scale = small ? 0x20 : 2;
+    p->acc = (uint16_t)(p->acc + (diff > 0 ? step * scale : -step * scale));
+}
+
+int bst_pitch_period(const bst_pitch *p) {
+    return p->acc >> 8;
+}

@@ -2,10 +2,11 @@ CFLAGS ?= -O2 -g -Wall -Wextra -std=gnu11 -I../../include
 BUILD  := ../../build
 BIN    := $(BUILD)/synth
 BIN2   := $(BUILD)/interptest
+BIN3   := $(BUILD)/prosodytest
 OBJ    := $(BUILD)/synth_core.o $(BUILD)/synth_main.o
 CORE   := $(BUILD)/synth_core.o $(BUILD)/interp_core.o
 
-all: $(BIN) $(BIN2)
+all: $(BIN) $(BIN2) $(BIN3)
 
 $(BUILD)/synth_core.o: ../../src/synth.c ../../include/bst_synth.h
 	@mkdir -p $(BUILD)
@@ -28,6 +29,13 @@ $(BIN): $(OBJ) $(BUILD)/interp_core.o
 
 $(BIN2): $(CORE) $(BUILD)/interptest.o
 	$(CC) $(CORE) $(BUILD)/interptest.o -o $@
+
+$(BUILD)/prosodytest.o: prosodytest.c ../../include/bst_synth.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN3): $(CORE) $(BUILD)/prosodytest.o
+	$(CC) $(CORE) $(BUILD)/prosodytest.o -o $@
 
 clean:
 	rm -f $(OBJ) $(CORE) $(BIN) $(BIN2) $(BUILD)/interptest.o

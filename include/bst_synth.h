@@ -56,6 +56,20 @@ void bst_gain_init(bst_gain *g, const bst_tables *t);
 int  bst_gain_value(const bst_gain *g, int base, int adj, int exc_class);
 void bst_gain_step(bst_gain *g, int target, int dur, int clock);
 
+/* Pitch, the third smoother of the same family. The accumulator is unsigned
+   and its high byte is the period in samples that reaches frame byte 3, so a
+   voiced frame lasts exactly one pitch period. The step is scaled by 32 while
+   the clock is short and by 2 once it is long, which slows the glide as a
+   phrase runs on. */
+typedef struct {
+    const bst_tables *t;
+    uint16_t acc;
+} bst_pitch;
+
+void bst_pitch_init(bst_pitch *p, const bst_tables *t);
+void bst_pitch_step(bst_pitch *p, uint16_t target, int dur, int clock);
+int  bst_pitch_period(const bst_pitch *p);
+
 typedef struct {
     const bst_tables *t;
 

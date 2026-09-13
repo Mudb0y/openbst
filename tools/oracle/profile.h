@@ -62,6 +62,15 @@ typedef struct {
     uint32_t exc_class;      /* excitation class, selects the mode adjustment */
     uint32_t frame_gain;     /* frame byte 2 */
 
+    /* Pitch: an accumulator smoothed toward a target on its own clock, whose
+       high byte is the period in samples that frame byte 3 carries. */
+    uint32_t pitch_before;
+    uint32_t pitch_after;
+    uint32_t pitch_acc;
+    uint32_t pitch_target;
+    uint32_t pitch_clock;
+    uint32_t pitch_period;
+
     /* Verbosity passed to GetPhBuf. Output is gated on the magnitude of a
        counter derived from it exceeding five, so anything at or below five
        yields nothing at all. */
@@ -97,6 +106,12 @@ static const profile profiles[] = {
         .gain_clock    = 0x1001c446,
         .exc_class     = 0x1001e644,
         .frame_gain    = 0x10019a32,
+        .pitch_before  = 0x10008d5e,
+        .pitch_after   = 0x10008d63,
+        .pitch_acc     = 0x100192e0,
+        .pitch_target  = 0x1001c014,
+        .pitch_clock   = 0x1001e3ac,
+        .pitch_period  = 0x1001b46a,
         .default_level = 6,
     },
 };
