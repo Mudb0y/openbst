@@ -20,6 +20,7 @@ static void usage(void) {
         "  --phonemes TEXT             print the engine's phoneme transcription\n"
         "  --frames TEXT               print the 16-byte synthesizer parameter frames\n"
         "  --records TEXT              print the segment records driving frame generation\n"
+        "  --recat PC:ARG:N            dump N bytes at pointer argument ARG on reaching PC\n"
         "  --interp TEXT               print the interpolator state at each frame\n"
         "  --gain TEXT                 print the gain smoother state at each frame\n"
         "  --pitch TEXT                print the pitch smoother state at each frame\n"
@@ -78,7 +79,7 @@ int main(int argc, char **argv) {
     const char *calls[32], *pokes[16], *dumps[8];
     const char *speak = NULL, *phonemes = NULL, *frames = NULL, *watchspec = NULL;
     const char *hookspec = NULL, *records = NULL, *interp = NULL, *regspec = NULL;
-    const char *gainmode = NULL, *pitchmode = NULL;
+    const char *gainmode = NULL, *pitchmode = NULL, *recatspec = NULL;
     int level = -1;
     int ncalls = 0, npokes = 0, ndumps = 0, raw = 0, list = 0, verbose = 0;
     unsigned long long limit = 2000000000ULL;
@@ -98,6 +99,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--interp") && i + 1 < argc)   interp = argv[++i];
         else if (!strcmp(argv[i], "--gain") && i + 1 < argc)     gainmode = argv[++i];
         else if (!strcmp(argv[i], "--pitch") && i + 1 < argc)    pitchmode = argv[++i];
+        else if (!strcmp(argv[i], "--recat") && i + 1 < argc)     recatspec = argv[++i];
         else if (!strcmp(argv[i], "--level") && i + 1 < argc)    level = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch") && i + 1 < argc)    watchspec = argv[++i];
         else if (!strcmp(argv[i], "--hook") && i + 1 < argc)     hookspec = argv[++i];
@@ -199,6 +201,16 @@ int main(int argc, char **argv) {
 
         if (records)
             emu_hook_record(e, pr->seg_entry, 0, 8, stdout);
+
+        if (recatspec) {
+            char rs[128];
+            snprintf(rs, sizeof rs, "%s", recatspec);
+            char *q = NULL;
+            unsigned long pc = strtoul(rs, &q, 0);
+            int argno = (q && *q == ':') ? (int)strtoul(q + 1, &q, 0) : 0;
+            int nb = (q && *q == ':') ? (int)strtoul(q + 1, NULL, 0) : 16;
+            emu_hook_record(e, (uint32_t)pc, argno, nb, stdout);
+        }
 
         if (pitchmode) {
             const uint32_t a[4] = { pr->pitch_acc, pr->pitch_target,
