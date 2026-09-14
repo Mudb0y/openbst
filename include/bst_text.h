@@ -122,6 +122,12 @@ typedef struct {
     void *own;
 } bst_image;
 
+/* Set to print each stage's working as it runs -- the stream as assembled,
+   after the rule pass and at the pair scan, the transition records, the vowel
+   durations and the gain smoother's inputs. What a build is compared against
+   the engine on when its frames stop agreeing. */
+extern int bst_trace;
+
 /* Returns a pointer to `need` bytes at a virtual address, or NULL. */
 const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need);
 

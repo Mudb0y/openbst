@@ -2,7 +2,6 @@
 #include <string.h>
 #include "bst_frames.h"
 
-int bst_trace = 0;
 
 /* Frame generation. See bst_frames.h for the shape; this file follows the
    engine's own control flow, because the three cursors feed each other and a

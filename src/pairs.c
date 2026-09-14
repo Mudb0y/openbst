@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_text.h"
 
@@ -222,6 +223,11 @@ static int vowel_duration(scan *z, int pos, int which) {
     if ((ph == 0x1F || ph == 0x20 || ph == 0x21) && d < 0x37) d = 0x37;
     else if (ph == 0x24 && d < 5) d = 5;
     else if (d < 0x1E) d = 0x1E;
+    if (bst_trace)
+        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                        " edge=%d nv=%02x -> %02x\n",
+                ph, which, base, z->stress.val, mode, z->edge, nv,
+                (unsigned)((int16_t)d >> z->img->t.vowel_dur_shift) & 0xff);
     return (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
 }
 
