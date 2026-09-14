@@ -176,6 +176,18 @@ typedef struct {
        builds share, which scales the table entry by the stress alone. */
     uint8_t  vdur_kind;
 
+    /* The floor the vowel duration takes, and the range of sounds a longer
+       floor of 0x37 applies to instead. */
+    uint8_t  vdur_lo, vdur_hi;
+
+    /* What a vowel's duration gains while the phrase is winding down. Zero
+       means the Romance routine's 0x23. */
+    uint8_t  vdur_slow;
+
+    /* Whether a vowel at a phrase edge gains nothing. The Romance routine
+       adds 0x32 there; Portuguese does not. */
+    uint8_t  vdur_flat;
+
     /* Which of the transition routines the build compiles. Zero is the
        English one in pairs.c; one is the shorter one the 2006 language builds
        share, which drops the weak and paired cases and the pitch nudge. */

@@ -2257,6 +2257,14 @@ const bst_tabmap BST_MAP_2006_POL = {
 };
 /* POR: 188 functions matched, 2863 addresses carried */
 const bst_tabmap BST_MAP_2006_POR = {
+    .vdur_flat     = 1,
+    .vdur_slow     = 0x41,
+    .vdur_kind     = 1,
+    .vdur_lo       = 0x20,
+    .vdur_hi       = 0x35,
+    .trn_kind      = 2,
+    .ph_kind       = 3,
+    .stress_rule   = 2,
     .trn_whole     = 1,
     .pair_class = {
         0, 2, 2, 2, 2, 2, 2, 7, 7, 1, 1, 1, 7, 7, 7, 7,

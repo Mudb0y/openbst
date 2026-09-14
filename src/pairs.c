@@ -198,20 +198,25 @@ static int vowel_simple(scan *z, int pos, int which) {
     int d = (int16_t)((int16_t)(scale * base) >> 5);
 
     if (z->edge) {
-        d += 0x32;
+        if (!z->img->t.vdur_flat) d += 0x32;
     } else {
         int at = a1(z, z->next.val);
         if (at & 4)    d += 0x14;
         if (at & 0x40) d += 0x19;
     }
     d += s16at(z->img, z->img->t.stress_add, (unsigned)z->stress.val * 2);
-    if (mode == 2)      d += 0x23;
+    if (mode == 2)      d += z->img->t.vdur_slow ? z->img->t.vdur_slow : 0x23;
     else if (mode == 0) d += 0x14;
     d = (int16_t)d;
     int tail = (int16_t)(s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2)
                          - (int16_t)((scale * 60) >> 5));
     d = (int16_t)(d + tail);
-    if ((int16_t)d < 10) d = 10;
+    if (z->img->t.vdur_hi && mc >= z->img->t.vdur_lo &&
+        mc <= z->img->t.vdur_hi) {
+        if ((int16_t)d < 0x37) d = 0x37;
+    } else if ((int16_t)d < 10) {
+        d = 10;
+    }
     if (bst_trace)
         fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
                         " edge=%d -> %02x\n",

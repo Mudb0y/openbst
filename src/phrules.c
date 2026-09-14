@@ -194,6 +194,26 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 3) {
+            /* Portuguese has one rule: an unstressed vowel of one kind
+               reduces, or closes when it ends the word before a nasal. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x30 + img->t.code_shift) continue;
+            if (mc == 0x1B) {
+                int nv = bst_code(img, next.val);
+                int seg = (a2(img, next.val) & 1) != 0;
+                if ((nv == 0x0A || nv == 9) && !seg && stress.val == 6) {
+                    s[i] = 0x22;
+                } else if (stress.val < 6) {
+                    int n2 = bst_code(img, next2.val);
+                    if (nv == 0x37 || seg || (nv == 0x0F && n2 == 0x37))
+                        s[i] = (uint8_t)bst_uncode(img, 0x36);
+                }
+            }
+            pend.val = s[i];
+            continue;
+        }
+
         if (c == 0x4F && stress.val < 5 && eight.val < 0x4E)      latch_o = 1;
         else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E) latch_p = 1;
         else if (a2(img, c) & 8)                                  latch_o = latch_p = 0;

@@ -62,9 +62,10 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
         if (img->t.stress_keep[k] && fin == img->t.stress_keep[k]) keep = 1;
 
     int at = keep && n > 1 ? n - 1 : n;
+    int hi = (emph & 1) ? (img->t.stress_rule == 2 ? 0x35 : 0x33) : 0x36;
+    int lo = (emph & 1) ? (img->t.stress_rule == 2 ? 0x33 : 0x31) : 0x32;
     for (int k = 1; k <= n; k++)
-        s[slot[k]] = (uint8_t)(k == at ? ((emph & 1) ? 0x33 : 0x36)
-                                       : ((emph & 1) ? 0x31 : 0x32));
+        s[slot[k]] = (uint8_t)(k == at ? hi : lo);
 }
 
 void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mode) {
@@ -77,7 +78,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     memset(slot, 0, sizeof slot);
     flags[1] = 0;
 
-    if (img->t.stress_rule == 1) {
+    if (img->t.stress_rule) {
         for (int i = 0; i < len; i++) {
             int c = s[i];
             if (!(a2(img, c) & 0x10)) continue;
