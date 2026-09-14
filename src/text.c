@@ -2652,6 +2652,8 @@ const bst_tabmap BST_MAP_2006_RUS = {
         [0x5E] = 0x20,
     },
     .pat_ext           = 1,
+    .lts_lit_char      = 0xEB,
+    .lts_lit_code      = 0x2E,
     .stress_kind       = 3,
     .code_shift        = 4,
     .cmd_code          = 0x80,

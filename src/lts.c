@@ -215,6 +215,11 @@ void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp) {
 
     int pos = 1;
     while (pos < len && t[pos] != '_' && t[pos]) {
+        if (img->t.lts_lit_char && t[pos] == img->t.lts_lit_char) {
+            bst_build_emit(img, &b, bst_uncode(img, img->t.lts_lit_code));
+            pos++;
+            continue;
+        }
         int used = 1;
         int ridx = try_at(img, t, len, pos, &used);
         if (ridx < 0) { pos++; continue; }
