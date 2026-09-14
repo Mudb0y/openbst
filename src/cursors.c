@@ -7,10 +7,10 @@
 #define CMD 0x7C
 
 int bst_ph_attr1(const bst_image *img, int c) {
-    return bst_u8(img, img->t.phattr1, c & 0xFF);
+    return bst_u8(img, img->t.phattr1, bst_code(img, c & 0xFF));
 }
 int bst_ph_attr2(const bst_image *img, int c) {
-    return bst_u8(img, img->t.phattr2, c & 0xFF);
+    return bst_u8(img, img->t.phattr2, bst_code(img, c & 0xFF));
 }
 
 void bst_scan_seg(const bst_image *img, const uint8_t *s, int lim, int from, bst_cur *c) {

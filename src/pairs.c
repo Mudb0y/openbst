@@ -294,7 +294,12 @@ static void trans(scan *z, int dur, int pos, int which) {
 
 /* One diphone segment, carrying the events accumulated since the last. */
 static void pair(scan *z, int prev, int cur) {
-    emit(z, BST_EMIT_SEG, (unsigned)(prev * 0x30 + cur), (unsigned)z->pending, 0, 0);
+    /* The inventory's size is the stride, and it is the size of this
+       language's inventory rather than English's. */
+    int stride = 0x30 + z->img->t.code_shift;
+    emit(z, BST_EMIT_SEG,
+         (unsigned)(bst_code(z->img, prev) * stride + bst_code(z->img, cur)),
+         (unsigned)z->pending, 0, 0);
     z->pending = 0;
 }
 

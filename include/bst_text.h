@@ -80,6 +80,15 @@ typedef struct {
        scan, after the floors rather than before them, and rounds the
        transition's own halving down where the 1995 build rounds it up. */
     uint8_t  vowel_dur_shift, trn_round;
+
+    /* How far this language's marks sit above English's. The six 1998 modules
+       are one body of code compiled once each with a different number of
+       sounds, so a sound code means the same thing in all of them and every
+       code above the inventory -- the stress marks, the phrase markers, the
+       command byte -- is shifted by the difference. The library keeps its
+       streams in English numbering and shifts only where it indexes one of the
+       engine's own tables by a code. */
+    int8_t   code_shift;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
@@ -304,6 +313,14 @@ void bst_normalise(const bst_image *img, const char *word, bst_word *out);
    rather than inside any one of them. */
 
 typedef struct { int val, pos; } bst_cur;
+
+/* A stream code as this build's tables index it. Sounds are numbered the same
+   everywhere; marks are not. */
+static inline int bst_code(const bst_image *img, int c) {
+    /* The pause is the last sound of the inventory, so it moves with the
+       marks above it rather than staying with the sounds below. */
+    return c >= 0x30 ? (c + img->t.code_shift) & 0xFF : c;
+}
 
 /* The two phoneme attribute bytes. The first classifies the sound; the second
    says which of the scans below stop on it. */
