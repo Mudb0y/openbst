@@ -170,6 +170,12 @@ typedef struct {
        accent table; the other five 1998 modules reach a hundred and
        fifty-three, which is what a top of a hundred and forty-six gives.
        Zero leaves the host's. */
+    /* The sentence mode a build starts in, which decides the two percentages
+       the pitch range is built from. The 1998 modules do not write it into
+       the stream, so it has to be said here: the English one starts at four
+       and the other five at three. Zero takes the stream's. */
+    uint8_t  inton_mode;
+
     uint16_t voice_top;
 
     uint8_t  trn_between_wide;

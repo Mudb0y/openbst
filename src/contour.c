@@ -56,7 +56,11 @@ static void set_range(bst_voice *p, int a, int b) {
                          : s1 + (s1 * a) / 100;
     if (mid < p->base) mid = p->base;
     if (mid > 600) mid = 600;
-    short s2 = (short)((p->top * a) / 100 + p->top);
+    /* The builds that round the middle by a shift add the percentage to the
+       top; the others multiply by a hundred plus it and divide once, so a
+       negative percentage truncates the other way. */
+    short s2 = p->round10 ? (short)((p->top * a) / 100 + p->top)
+                          : (short)((p->top * (100 + a)) / 100);
     int top = s2 + (s2 * b) / 100;
     if (top < mid) top = mid;
     if (top > 600) top = 600;
@@ -187,7 +191,8 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
     memset(e, 0, sizeof e);
     p->emphasis = 0;
 
-    int mode = (s[6] == 'I') ? s[10] : 3;
+    int mode = img->t.inton_mode ? img->t.inton_mode
+                                 : ((s[6] == 'I') ? s[10] : 3);
     int a, b;
     switch (mode) {
     case 1: b = 4;  a = 0;   break;

@@ -192,9 +192,9 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .inton_mode     = 3,
     .slope_mult     = 167,
     .inton_dur_mult = 887,
-    .voice_top      = 147,
     .min_period     = 62,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
@@ -316,7 +316,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
-    .voice_top      = 146,
+    .inton_mode     = 3,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
     .vdur_kind      = 4,
@@ -439,7 +439,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
-    .voice_top      = 146,
+    .inton_mode     = 3,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
     .ph_kind        = 5,
@@ -560,7 +560,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
-    .voice_top      = 146,
+    .inton_mode     = 3,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
     .trn_kind       = 2,
@@ -679,7 +679,7 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
-    .voice_top      = 146,
+    .inton_mode     = 3,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
     .fall_on_next   = 1,
