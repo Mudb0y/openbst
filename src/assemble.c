@@ -185,7 +185,7 @@ void bst_assemble_start(bst_assembler *z) {
     static const uint8_t iv[6] = { 'I', 2, 0, 0, 0, 0 };
     command(z, iv);
     z->emph = 0;
-    z->s[9] = 0x4C;
+    z->s[9] = z->img->t.hdr_shape ? z->img->t.hdr_shape : 0x4C;
 }
 
 int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {

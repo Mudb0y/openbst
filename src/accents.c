@@ -71,7 +71,7 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
         type  = s[8] + 0x0E;
         shape = s[9] & 0x7F;
     } else {
-        shape = 0x4C;
+        shape = img->t.hdr_shape ? img->t.hdr_shape : 0x4C;
         type  = 0x12;
     }
 

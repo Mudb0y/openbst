@@ -130,6 +130,11 @@ typedef struct {
        seven. Zero means one. */
     uint8_t  close_pause;
 
+    /* The contour shape the phrase header carries in its tenth byte, which
+       the accent pass reads back. Most builds put 0x4C there; a few do not.
+       Zero means 0x4C. */
+    uint8_t  hdr_shape;
+
     /* A comma ends the text outright in the 2006 builds: what follows it is
        never spoken, and the comma itself is said with a full stop's pause and
        a full stop's sentence type. */
@@ -472,10 +477,10 @@ static inline int bst_code(const bst_image *img, int c) {
    turned into the numbering the library keeps its streams in. */
 static inline int bst_uncode(const bst_image *img, int c) {
     if (img->t.cmd_code && c == img->t.cmd_code) return 0x7C;
-    if (img->t.code_shift <= 0) return c;
+    if (img->t.code_shift == 0) return c;
     int pause = (0x2F + img->t.code_shift) & 0xFF;
     if (c >= pause) return (c - img->t.code_shift) & 0xFF;
-    if (c >= 0x2F) return 0x80 + (c - 0x2F);
+    if (img->t.code_shift > 0 && c >= 0x2F) return 0x80 + (c - 0x2F);
     return c;
 }
 

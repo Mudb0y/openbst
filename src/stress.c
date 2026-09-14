@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_text.h"
 
@@ -177,6 +178,15 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 }
             }
         }
+    }
+
+    if (bst_trace) {
+        fprintf(stderr, "stress n=%d chosen=%d emph=%d unstressed=%d tail=%d flags",
+                n, chosen, emph, unstressed, tail);
+        for (int k = 1; k <= tail; k++) fprintf(stderr, " %02x", flags[k]);
+        fprintf(stderr, " marks");
+        for (int k = 1; k <= tail; k++) fprintf(stderr, " %02x", s[slot[k]]);
+        fprintf(stderr, "\n");
     }
 
     /* Everything else reduces, and an empty slot becomes the reduced mark. */

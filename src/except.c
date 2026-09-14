@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_token.h"
 
@@ -246,6 +247,9 @@ int bst_except(bst_tok *t, const uint8_t *word, int wlen,
         if (r != 0) { best = r; bestlen = i + 1; }
         if (!more) break;
     }
+    if (bst_trace)
+        fprintf(stderr, "except '%.*s' best=%d bestlen=%d/%d\n",
+                wlen, (const char *)word, best, bestlen, wlen);
     if (!best || bestlen != wlen) return 0;
 
     uint8_t rec[256];
@@ -257,5 +261,10 @@ int bst_except(bst_tok *t, const uint8_t *word, int wlen,
     if (t->eat) { bst_tok_read(t); t->eat = 0; }
     int m = 0;
     for (int i = from; i <= to && m < max; i++) out[m++] = rec[i];
+    if (bst_trace) {
+        fprintf(stderr, "  rec n=%d from=%d to=%d:", n, from, to);
+        for (int i = 0; i < n; i++) fprintf(stderr, " %02x", rec[i]);
+        fprintf(stderr, "\n");
+    }
     return m;
 }

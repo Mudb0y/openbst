@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
         int kind = bst_tok_next(&tk, buf);
         if (bst_trace) {
             fprintf(stderr, "tok kind=%d len=%d:", kind, buf[0]);
-            for (int i = 0; i < 8; i++) fprintf(stderr, " %02x", buf[i]);
+            for (int i = 0; i < buf[0] + 2 && i < 128; i++) fprintf(stderr, " %02x", buf[i]);
             fprintf(stderr, "\n");
         }
         z.emph = 0;
