@@ -15,10 +15,25 @@
 #
 # The other five have a table map written by tools/analysis/mkmap.py, which
 # reproduces the English one address for address but has not been checked
-# against its own engine. Their agreement is reported, not required. German
-# "hund." shows what is still wrong: the engine's first sound is the unvoiced
-# one and ours is not, so it is the word front end -- the dictionary, the rules
-# or the exception trie -- and not the tables the frames are built from.
+# against its own engine. Their agreement is reported, not required.
+#
+# What is still wrong is not the maps. Read out of the German engine, its
+# stream for "hund." starts with the same sound ours does, and then diverges
+# because its control codes sit eight higher than English's: the phrase marker
+# is 0x56 where ours is 0x4E and the command marker 0x84 where ours is 0x7C.
+# Each language numbers its marks from the end of its own sound inventory, and
+# the six inventories are different sizes. Measured from each engine's own
+# stream, the first byte is
+#
+#   English 0x4E, Dutch 0x57, French 0x46, German 0x56, Italian 0x42,
+#   Spanish 0x41
+#
+# so the shifts from English are 0, +9, -8, +8, -12, -13 and the inventories
+# are 49, 58, 41, 57, 37 and 36 sounds. The library has three hundred and
+# forty-odd literals across ten files written for forty-nine, mixed in with
+# bit masks and ASCII, and each has to be told apart from the others before
+# the boundary can become a build fact the way the record shapes and the frame
+# constants already have.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
