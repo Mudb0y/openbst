@@ -660,6 +660,8 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .fall_on_next   = 1,
+    .hdr_shape      = 0x52,
     .trn_kind       = 1,
     .vdur_kind      = 1,
     .stress_rule    = 1,
