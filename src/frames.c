@@ -578,6 +578,10 @@ static void build(bst_gen *g, const uint8_t *rec) {
         fprintf(stderr, "P acc=%04x tgt=%04x pclk=%04x dur=%d\n",
                 (unsigned)(uint16_t)g->pitch_acc, (unsigned)(uint16_t)g->pitch_target,
                 (unsigned)(uint16_t)g->pclock, (int)g->dur);
+    if (0)
+        fprintf(stderr, "Q acc=%04x tgt=%04x pclk=%04x dur=%d\n",
+                (unsigned)(uint16_t)g->pitch_acc, (unsigned)(uint16_t)g->pitch_target,
+                (unsigned)(uint16_t)g->pclock, (int)g->dur);
     for (int i = 0; i < BST_ORDER; i++) {
         int v = g->state[i];
         if (g->img->t.coef_round_mask & (1u << i))

@@ -167,6 +167,11 @@ typedef struct {
        not quite the same numbers. */
     uint8_t  dur_frac_shift;
 
+    /* The pitch table spreads the range between the middle and the top over
+       ten steps. The 2006 builds round each step to nearest where the earlier
+       ones truncate. */
+    uint8_t  contour_round;
+
     /* The 1998 build halves a vowel's duration on the way out of the pair
        scan, after the floors rather than before them, and rounds the
        transition's own halving down where the 1995 build rounds it up. */
@@ -534,6 +539,7 @@ typedef struct {
     int   voice;
     int   strong;      /* the group cursor's value, carried between calls */
     int   mid, hi;     /* the current middle and ceiling */
+    int   round10;     /* half a step, added before the table's division */
     short table[14];
 } bst_voice;
 

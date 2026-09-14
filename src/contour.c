@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_text.h"
 
@@ -40,14 +41,19 @@ static void build(bst_voice *p, int base, int mid, int top) {
     p->table[2] = (short)(mid - d);
     p->table[3] = (short)mid;
     for (int u = 4; u < 14; u++)
-        p->table[u] = (short)(p->table[3] + ((u - 3) * (short)(top - mid)) / 10);
+        p->table[u] = (short)(p->table[3] +
+                              ((u - 3) * (short)(top - mid) + p->round10) / 10);
 }
 
 /* The proportional form: a percentage above the base for the middle and above
    the stored top for the top. */
 static void set_range(bst_voice *p, int a, int b) {
     short s1 = (short)(p->base + (p->base >> 2));
-    int mid = s1 + (s1 * a) / 100;
+    /* The 2006 builds reach the percentage by a shift, and take it of the
+       base rather than the middle, so it is five over five hundred and twelve
+       of the base and not one hundredth of the middle. */
+    int mid = p->round10 ? s1 + ((p->base * a * 5) >> 9)
+                         : s1 + (s1 * a) / 100;
     if (mid < p->base) mid = p->base;
     if (mid > 600) mid = 600;
     short s2 = (short)((p->top * a) / 100 + p->top);
@@ -99,7 +105,7 @@ static void compress(bst_voice *p) {
     short span = (short)(p->hi - p->mid);
     p->table[3] = (short)p->mid;
     for (int u = 4; u < 14; u++)
-        p->table[u] = (short)(p->table[3] + ((u - 3) * span) / 10);
+        p->table[u] = (short)(p->table[3] + ((u - 3) * span + p->round10) / 10);
     int idx = 3 + clampi(p->level, -3, 10);
     p->table[idx] = (save <= p->table[8]) ? save : p->table[8];
 }
@@ -175,6 +181,8 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
     acc e[ACC_MAX];
     int n = -1, carry = 0, seen = 0, nrec = 0;
     bst_cur eight, strong, prev8, prevstrong;
+
+    p->round10 = img->t.contour_round ? 5 : 0;
 
     memset(e, 0, sizeof e);
     p->emphasis = 0;
