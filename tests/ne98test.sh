@@ -17,23 +17,19 @@
 # reproduces the English one address for address but has not been checked
 # against its own engine. Their agreement is reported, not required.
 #
-# What is still wrong is not the maps. Read out of the German engine, its
-# stream for "hund." starts with the same sound ours does, and then diverges
-# because its control codes sit eight higher than English's: the phrase marker
-# is 0x56 where ours is 0x4E and the command marker 0x84 where ours is 0x7C.
-# Each language numbers its marks from the end of its own sound inventory, and
-# the six inventories are different sizes. Measured from each engine's own
-# stream, the first byte is
+# The mark shift is handled: each language numbers its marks from the end of
+# its own inventory, by 0, +9, -8, +8, -12 and -13 for English, Dutch, French,
+# German, Italian and Spanish, and the library keeps its streams in English
+# numbering and shifts only where it indexes one of the engine's tables.
 #
-#   English 0x4E, Dutch 0x57, French 0x46, German 0x56, Italian 0x42,
-#   Spanish 0x41
-#
-# so the shifts from English are 0, +9, -8, +8, -12, -13 and the inventories
-# are 49, 58, 41, 57, 37 and 36 sounds. The library has three hundred and
-# forty-odd literals across ten files written for forty-nine, mixed in with
-# bit masks and ASCII, and each has to be told apart from the others before
-# the boundary can become a build fact the way the record shapes and the frame
-# constants already have.
+# German is the furthest along and says what is left. Its stream is two bytes
+# from the engine's -- the sentence type the assembler writes, 4 against 3, and
+# the last sound of the word, 0x04 against 0x08 -- and its frames run identical
+# for thirteen before ours snaps to a target the engine glides towards. So what
+# remains is the tables the transition durations and the contour are built
+# from, and those are the ones no method here has been able to place with
+# confidence: translating them through the matched code gives single-vote
+# answers that make every language worse when applied.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
