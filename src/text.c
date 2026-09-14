@@ -104,6 +104,7 @@ const bst_tabmap BST_MAP_1995 = {
 
    A zero means not yet settled, not absent. bst_map_gaps reports them. */
 const bst_tabmap BST_MAP_1998_ENG = {
+    .unvoiced_no_frac = 1,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
     .chattr        = 0x00101476, .letterattr = 0x00101576,
@@ -192,6 +193,7 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .unvoiced_no_frac = 1,
     .dur_mult       = 53,
     .pitch_rate     = 10400,
     .inton_mode     = 3,
@@ -318,6 +320,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .unvoiced_no_frac = 1,
     .level_max      = 4,
     .inton_mode     = 3,
     .long_silence_chunk = 1,
@@ -442,6 +445,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .unvoiced_no_frac = 1,
     .inton_mode     = 3,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
@@ -563,6 +567,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .unvoiced_no_frac = 1,
     .ph_kind        = 2,
     .vdur_kind      = 2,
     .inton_mode     = 3,
@@ -684,6 +689,7 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .unvoiced_no_frac = 1,
     .trn_whole      = 1,
     .inton_mode     = 3,
     .long_silence_chunk = 1,

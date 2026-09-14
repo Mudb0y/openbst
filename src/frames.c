@@ -558,6 +558,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
     } else g->frame[0] = (uint8_t)(0xD0 | reps);
 
     uint8_t f0 = g->frame[0];
+    int nofrac = 0;
     if (g->img->t.unvoiced_chunk) {
         /* Composed the same way whether voiced or not; the split happens on
            the way out. */
@@ -565,6 +566,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
         g->frame[0] = f0;
         g->frame[1] = (uint8_t)((g->pitch_acc >> 4) & 0x0F);
     } else if (g->exc < 0x30) {
+        nofrac = 1;
         g->frame[1] = 0; g->frame[2] = 0; g->frame[3] = 0;
         /* The frame lasts as long either way; a build that chunks it says so
            in the count, and the period it holds is the chunk. */
@@ -618,7 +620,8 @@ static void build(bst_gen *g, const uint8_t *rec) {
             v = v >> 1;
         g->frame[4 + i] = (uint8_t)v;
     }
-    if (g->state[0] & 1) g->frame[1] |= 0x80;
+    if ((g->state[0] & 1) && !(nofrac && g->img->t.unvoiced_no_frac))
+        g->frame[1] |= 0x80;
     g->frame[2] = (uint8_t)gain_value(g);
     pitch_step(g);
     g->fresh = 0;

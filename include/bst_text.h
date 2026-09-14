@@ -98,6 +98,9 @@ typedef struct {
        way: they are the shape of a frame, not a table. */
     uint8_t  class_shift;
     uint8_t  long_silence_chunk; /* a long silence is held in whole periods */
+    /* An unvoiced frame carries no pitch fraction at all, not even the
+       coefficient parity the others fold into that byte. */
+    uint8_t  unvoiced_no_frac;
     /* The highest pitch level a build's accent codes reach. French tops
        out four above the middle where the others climb ten. */
     uint8_t  level_max;
