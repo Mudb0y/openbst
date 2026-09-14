@@ -28,6 +28,76 @@ static int a2(const bst_image *img, int c) { return bst_ph_attr2(img, c); }
 
 /* Whether a marker that opens an emphasis group comes before the next phrase
    boundary. */
+/* The French build's two lookaheads. The first asks whether an emphasis
+   command or the marker that raises a word comes before the next boundary;
+   the second asks the same of one tilde mode, and steps seven bytes at a time
+   over ordinary sounds because its command test is the wrong way round. */
+static int fr_raise_ahead(const bst_image *img, const uint8_t *s, int len, int from) {
+    int p = from + 1;
+    int c = (p >= 0 && p < len) ? s[p] : 0;
+    if (a2(img, c) & 8) return 0;
+    for (;;) {
+        if (p >= len) return 0;
+        if (c == CMD) {
+            if (s[p + 1] == 'd') return 1;
+            p += 6;
+        } else if (bst_code(img, c) == 0x52) {
+            return 1;
+        }
+        p++;
+        c = (p >= 0 && p < len) ? s[p] : 0;
+        if (a2(img, c) & 8) return 0;
+    }
+}
+
+static int fr_mode_ahead(const bst_image *img, const uint8_t *s, int len, int from) {
+    int p = from + 1;
+    int c = (p >= 0 && p < len) ? s[p] : 0;
+    if (a2(img, c) & 8) return 0;
+    for (;;) {
+        if (p >= len) return 0;
+        if (c == CMD) {
+            if (s[p + 1] == '~' && s[p + 3] == 0x18) return 1;
+        } else {
+            p += 6;
+        }
+        p++;
+        c = (p >= 0 && p < len) ? s[p] : 0;
+        if (a2(img, c) & 8) return 0;
+    }
+}
+
+/* Whether the marker that mutes a function word comes before the next
+   boundary. */
+/* Forward to the next segment that opens a syllable, which the French rules
+   track a generation behind to decide whether a word opener still has a
+   syllable in front of it. */
+static void fr_scan_vowel(const bst_image *img, const uint8_t *s, int lim,
+                          int from, cur *out) {
+    cur t;
+    int p = from;
+    for (;;) {
+        bst_scan_seg(img, s, lim, p, &t);
+        if (a1(img, t.val) & 0x80) { *out = t; return; }
+        if (t.val == 0) { out->val = 0; out->pos = t.pos; return; }
+        p = t.pos;
+    }
+}
+
+static int fr_weak_ahead(const bst_image *img, const uint8_t *s, int len, int from) {
+    int p = from + 1;
+    int c = (p >= 0 && p < len) ? s[p] : 0;
+    if (a2(img, c) & 8) return 0;
+    for (;;) {
+        if (p >= len) return 0;
+        if (c == CMD) p += 6;
+        else if (bst_code(img, c) == 0x49) return 1;
+        p++;
+        c = (p >= 0 && p < len) ? s[p] : 0;
+        if (a2(img, c) & 8) return 0;
+    }
+}
+
 static int marker_ahead(const bst_image *img, const uint8_t *s, int len, int from) {
     int p = from + 1;
     for (;;) {
@@ -47,6 +117,8 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
     cur next = {0, 0}, next2 = {0, 0}, eight = {0, 0}, stress = {0, 0};
     cur prev = {0, 0}, prev8 = {0, 0};
     cur pend = {0, 0}, pend8 = {0, 0}, older8 = {0, 0};
+    cur older = {0, 0}, pendx = {0, 0}, prevx = {0, 0}, vowel = {0, 0};
+    int fr_q = 0, fr_s = 0;
     int changed = 0, inserted = 0, rescan = 1;
     int latch_o = 0, latch_p = 0;
     int lim = len;
@@ -82,7 +154,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
         }
 
         if (i == stress.pos) bst_scan_stress(img, s, lim, i, &stress);
-        if (pend.pos - i == -1) prev = pend;
+        if (pend.pos - i == -1) { older = prev; prev = pend; }
         if (i == next.pos) {
             pend = next;
             next = next2;
@@ -92,6 +164,13 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
         if (i == eight.pos) {
             pend8 = eight;
             bst_scan_eight(img, s, lim, i, &eight);
+        }
+        if (img->t.ph_kind == 6) {
+            if (pendx.pos - i == -1) prevx = pendx;
+            if (i == vowel.pos) {
+                pendx = vowel;
+                fr_scan_vowel(img, s, lim, i, &vowel);
+            }
         }
 
         int c = s[i];
@@ -106,6 +185,102 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 if (level < -10) level = -10;
             }
             i += 6;
+            continue;
+        }
+
+        if (img->t.ph_kind == 6) {
+            /* The French rules. Two markers latch state for the rest of the
+               word; a word opener is dropped when nothing has moved past it;
+               the tap becomes the trill away from a vowel; a liaison consonant
+               is dropped before a word that does not want it; and the schwa
+               drops with its mark, under one set of conditions when the rate
+               command is slow and another when it is not. */
+            int mc = bst_code(img, c);
+            if (mc == 0x51) { fr_q = 1; continue; }
+            if (mc == 0x53) { fr_s = 1; continue; }
+            if (a2(img, c) & 8) {
+                if (mc == 0x44 && !(prevx.pos > prev8.pos)) {
+                    s[i] = 0;
+                    pend8 = eight;
+                    continue;
+                }
+                fr_s = fr_q = 0;
+            }
+            if (mc < 1 || mc > 0x28) continue;
+
+            int nv = bst_code(img, next.val);
+            int ev = bst_code(img, eight.val);
+
+            if (mc == 0x12) {
+                int rw = prev.val != 0 && !(a1(img, prev.val) & 4);
+                if (!rw)
+                    rw = !(next.val == 0 || (a1(img, next.val) & 4) || nv == 0x27);
+                if (rw) { c = bst_uncode(img, 0x13); s[i] = (uint8_t)c; mc = 0x13; }
+            }
+
+            int handled = 0;
+            if (fr_q && (a1(img, c) & 1) &&
+                (at_edge || nv == 0x27 || next.val == 0)) {
+                handled = 1;
+                if (fr_s && ev > 0x44) {
+                    if (mc == 0x0F) { c = bst_uncode(img, 0x0C); s[i] = (uint8_t)c; }
+                } else {
+                    int del = 1;
+                    if ((a1(img, next.val) & 0x80) || nv == 0x16 || nv == 0x14 ||
+                        nv == 0x15) {
+                        if (!fr_raise_ahead(img, s, lim, eight.pos) ||
+                            (fr_s && mc == 3))
+                            del = fr_mode_ahead(img, s, lim, prev8.pos) &&
+                                  !fr_mode_ahead(img, s, lim, eight.pos);
+                    }
+                    if (del) { s[i] = 0; pend = next; }
+                }
+            }
+
+            if (!handled && mc == 0x26) {
+                int drop = 0;
+                if (level > 0) {
+                    int step = 0;
+                    if (!fr_weak_ahead(img, s, lim, prev8.pos) &&
+                        !(fr_raise_ahead(img, s, lim, eight.pos) && at_edge)) {
+                        if (!(a1(img, prev.val) & 1))            step = 1;
+                        else if (!(a1(img, older.val) & 1))      step = 2;
+                        else if (!at_edge && !(ev > 0x44))       step = 0;
+                        else if (a1(img, next.val) & 1)          step = 0;
+                        else                                     step = 2;
+                        if (step == 2) {
+                            if (prevx.val == 0) step = 0;
+                            else if ((nv == 0x11 || nv == 0x12) &&
+                                     bst_code(img, next2.val) == 0x14) step = 0;
+                            else step = 1;
+                        }
+                    }
+                    if (step == 1) {
+                        int cbit = (a1(img, next.val) & 1) != 0;
+                        drop = 1;
+                        if (cbit && (a1(img, next2.val) & 1)) drop = 0;
+                        if (drop && (a1(img, older.val) & 1)) {
+                            int pv = bst_code(img, prev.val);
+                            if ((pv == 0x11 || pv == 0x12 || pv == 0x13) &&
+                                cbit && at_edge) drop = 0;
+                        }
+                    }
+                } else {
+                    int reach = (ev > 0x44 && nv == 0x27) || next.val == 0;
+                    if (!reach && (a1(img, next.val) & 0x80) &&
+                        !fr_raise_ahead(img, s, lim, eight.pos))
+                        reach = 1;
+                    if (reach && prevx.pos > prev8.pos) drop = 1;
+                }
+                if (drop) {
+                    s[i] = 0;
+                    if (i + 1 < lim) s[i + 1] = 0;
+                    pend = next;
+                    pendx = next2;
+                }
+            }
+
+            pend.val = (uint8_t)c;
             continue;
         }
 
