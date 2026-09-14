@@ -258,14 +258,14 @@ def main():
         # 0x30, so the table is 2353 entries and ends with the segment. That
         # is tried first, and the search is only a fallback for a build whose
         # inventory is a different size.
-        best = (None, None, -1)
+        best = (None, None, -1, None, 0)
         for cand in range(max(7, n - 6), n):
             db = body[cand]
             if len(db) < 0x3000:
                 continue
-            for count in [2353] + list(range(2300, 2460)):
+            for count in [2353] + list(range(2200, 2500)):
                 off_base = (len(db) - count * 2) & ~1
-                if off_base < 0x1004 or struct.unpack_from("<H", db, off_base)[0] != 0:
+                if off_base < 0x1004:
                     continue
                 entries = [struct.unpack_from("<H", db, off_base + k * 2)[0]
                            for k in range(count)]
@@ -277,9 +277,12 @@ def main():
                     if recs + max(live) >= off_base:
                         continue
                     ok = sum(1 for e in live[:200] if decodes(db, recs, e))
-                    if ok > best[2]:
-                        best = (off_base, recs, ok, cand)
-                if best[2] > 190 and count == 2353 and best[3] == cand:
+                    # Among bases that all decode, the one with the most live
+                    # entries is the whole table rather than a tail of it.
+                    key = (ok, len(live))
+                    if key > (best[2], best[4]):
+                        best = (off_base, recs, ok, cand, len(live))
+                if best[2] >= 200 and count == 2353 and best[3] == cand:
                     break
         if best[0] is not None and best[2] > 100:
             diph = best[3]
