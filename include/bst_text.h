@@ -76,6 +76,57 @@ typedef struct {
        so the interpolation clock does not change; only the bytes do. */
     uint8_t  silence_f0, unvoiced_dur, unvoiced_reps;
 
+    /* The shortest period a frame may carry, which is also the period a
+       silent frame is given. Sixty-six everywhere but the 2006 builds. */
+    uint8_t  min_period;
+
+    /* Which coefficients round the interpolation's log index up rather than
+       down, so a step over an odd distance is one larger. The 2006 builds do
+       it for the first three; the earlier ones for none. */
+    uint16_t interp_round_mask;
+
+    /* Which coefficients the frame rounds away from zero on its way from the
+       smoothed state to the byte a frame carries. The 2006 builds do it for
+       the second and third; every other build truncates all ten. */
+    uint16_t coef_round_mask;
+
+    /* Where a segment record keeps its excitation class. The 1995 and 1998
+       builds put the target index in the low nine bits and the class above
+       it; the 2006 builds leave four bits between them and shift by thirteen.
+       The first byte of a long silent stretch, and whether the excitation
+       nibble has the two extra cases the earlier builds carry, go the same
+       way: they are the shape of a frame, not a table. */
+    uint8_t  class_shift;
+    uint8_t  long_silence_f0;
+    uint8_t  exc_two_way;
+
+    /* The 2006 builds compose an unvoiced frame as one long period and split
+       it as it leaves: the repeat count goes in the first byte's low nibble,
+       the period is divided by it, and the fractional part the second byte
+       carries is dropped. */
+    uint8_t  unvoiced_chunk;
+
+    /* What a transition's stored duration is multiplied by on its way to a
+       sample count. Fifty-six in the earlier builds, fifty-three in the 2006
+       ones. */
+    uint8_t  dur_mult;
+
+    /* The 2006 builds add half a step before every shift in the gain and
+       pitch smoothers, so those round to nearest where the earlier builds
+       truncate. */
+    uint8_t  nearest_round;
+
+    /* The numerator a pitch frequency is divided into to get a period in
+       samples: the build's nominal sample rate. Eleven thousand and
+       twenty-five in the earlier builds, ten thousand four hundred in the
+       2006 ones, which is also why their transition multiplier is smaller. */
+    uint16_t pitch_rate;
+
+    /* The two constants that turn an intonation record's slope and duration
+       into a sample count. They scale with the sample rate: 177 and 940 in
+       the earlier builds, 167 and 887 in the 2006 ones. */
+    uint16_t slope_mult, inton_dur_mult;
+
     /* The 1998 build halves a vowel's duration on the way out of the pair
        scan, after the floors rather than before them, and rounds the
        transition's own halving down where the 1995 build rounds it up. */
@@ -94,9 +145,21 @@ typedef struct {
        before the records, so this says where the records start as well as how
        to reach a voice above the first. */
     uint16_t voice_span;
-    /* the dictionary */
+    /* Bytes per stored coefficient. The 2006 builds widen each to four and
+       read the low byte, and they carry one voice, so their span is zero. */
+    uint8_t  voice_stride;
+    /* The 2006 build's duration scaling is the same arithmetic reached by
+       shifts: a byte table over a power of two where the earlier builds hold
+       a numerator and a denominator, and the divisions around it open-coded
+       as arithmetic shifts, which floor where a divide truncates. Zero means
+       the pair table and the divides. */
+    uint8_t  stress_shift;
+
+    /* the dictionary. A build that holds the two counts as immediates rather
+       than in memory leaves the address zero and gives the count instead. */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
+    int16_t  ph_single_n, ph_pair_n;
     uint32_t bucket_index[BST_BUCKETS], bucket_data[BST_BUCKETS];
     /* letter to sound */
     uint32_t suffix_ptrs, lts_index, dispatch, rules, patterns, outputs;
@@ -120,6 +183,7 @@ extern const bst_tabmap BST_MAP_1998_FRN;
 extern const bst_tabmap BST_MAP_1998_GRM;
 extern const bst_tabmap BST_MAP_1998_ITL;
 extern const bst_tabmap BST_MAP_1998_SPN;
+extern const bst_tabmap BST_MAP_2006_ENG;
 
 /* Fills names with the entries the map has not been given and returns how
    many there were, so an incomplete build can say so rather than misbehave. */

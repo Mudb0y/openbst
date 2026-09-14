@@ -723,6 +723,105 @@ const bst_tabmap BST_MAP_1998_SPN = {
     },
 };
 
+/* The 2006 English build's table directory.
+
+   The 2006 family is the 1995 engine recompiled: the same structures, the
+   same record shapes, and for English the same sound numbering, which is what
+   lets the phoneme strings in it be found by searching for the 1995 build's.
+   Three things moved. The two dictionary code limits became immediates, so
+   the counts are given here instead of an address. The stress scaling became
+   a byte table over thirty-two where the earlier builds hold a numerator and
+   a denominator. And the variant tables the record pass reads were reordered,
+   which is why they are this build's own and not the 1995 ones. */
+const bst_tabmap BST_MAP_2006_ENG = {
+    .chattr        = 0x10082014, .letterattr = 0x10081D14,
+    .casemap       = 0x10081F14, .symmap     = 0x10081E14,
+
+    .phattr1       = 0x1008182C, .phattr2    = 0x100818AC,
+    .classtab      = 0x1001EC4C, .exctab     = 0x1001EC54,
+    .basedur       = 0x1001EC2C, .coefgain   = 0x1001E828,
+
+    .tokstates     = 0x100810F8, .names      = 0x1008192C,
+    .code_lo       = 0x10001000, .code_hi    = 0x10015000,
+    .tok_stride = 12,
+    .tok_state_off = 0, .tok_state_w = 4,
+    .tok_handler_off = 4, .tok_handler_w = 4,
+    .tok_next_off = 8, .tok_next_w = 4,
+    .lts_index_stride = 4,
+    .rule_stride = 8, .rule_prio_w = 2,
+    .trie_st_off = 4, .trie_li_off = 8, .trie_base_off = 12,
+    .trie_max_off = 14, .trie_po_off = 16,
+    .silence_f0 = 0xD1, .unvoiced_dur = 0x68, .unvoiced_reps = 1,
+    .min_period = 0x3E, .interp_round_mask = 0x007, .coef_round_mask = 0x006,
+    .class_shift = 13, .long_silence_f0 = 0xD8, .exc_two_way = 1,
+    .unvoiced_chunk = 1,
+    .dur_mult = 0x35, .nearest_round = 1, .pitch_rate = 0x28A0,
+    .slope_mult = 0xA7, .inton_dur_mult = 0x377,
+    .voice_span = 0, .voice_stride = 4,
+    .vowel_dur_shift = 0, .trn_round = 1,
+    .stress_shift = 5,
+
+    .code_medial   = 0x10082124, .code_initial  = 0x10082190,
+    .ph_single     = 0x1001E644, .ph_single_max = 0,
+    .ph_pair       = 0x1001E6F0, .ph_pair_max   = 0,
+    .ph_single_n   = 0x54,       .ph_pair_n     = 0x9A,
+    .bucket_index  = {
+        0x10029A7C, 0x1002E578, 0x10033660, 0x10037120, 0x1003CFA4,
+        0x10044E6C, 0x10048F58, 0x1004D98C, 0x1005192C, 0x10056410,
+        0x1005D33C, 0x10065CD8, 0x1006EDFC, 0x100723A0, 0x10078C5C,
+    },
+    .bucket_data   = {
+        0x1001ED40, 0x10029CE8, 0x1002E684, 0x10033788, 0x10037200,
+        0x1003D104, 0x10045044, 0x1004904C, 0x1004DAA0, 0x10051A10,
+        0x10056518, 0x1005D4D8, 0x10065EE8, 0x1006F018, 0x10072464,
+    },
+
+    .suffix_ptrs   = 0x10082118, .lts_index = 0x10086EFC,
+    .dispatch      = 0x10086B48, .rules     = 0x10083AD8,
+    .patterns      = 0x100821FC, .outputs   = 0x10085C70,
+
+    .trie_desc     = 0x10079AF0,
+    .modmap        = 0x1001EC5C, .modtab    = 0x1001EC84,
+
+    .trans_pitch   = 0x10079650, .vowel_dur  = 0x1007989C,
+    .stress_num    = 0x10079AE0, .stress_add = 0x10079ACC,
+    .sound_add     = 0x10079A68,
+
+    .diph_records  = 0x100190F8, .diph_offsets = 0x1001D360,
+    .diph_offsets_end = 0x1001E5C4, .voices    = 0x100150E8,
+
+    .h = {
+        [BST_H_LETTER]   = 0x1000EBE0, [BST_H_DIGIT]    = 0x1000EC00,
+        [BST_H_EAT1]     = 0x1000EC40, [BST_H_SPACE]    = 0x1000EC50,
+        [BST_H_DOT]      = 0x1000EC60, [BST_H_CURRENCY] = 0x1000EC70,
+        [BST_H_PUNCT]    = 0x1000EC90, [BST_H_DASH]     = 0x1000ECB0,
+        [BST_H_EXPONENT] = 0x1000EE50, [BST_H_MODE1]    = 0x1000EE80,
+        [BST_H_MODE2]    = 0x1000EE90, [BST_H_DEL]      = 0x1000EEA0,
+        [BST_H_OPENER]   = 0x1000EED0, [BST_H_TILDE]    = 0x1000EF30,
+        [BST_H_APOSDOT]  = 0x1000EF80, [BST_H_APOS]     = 0x1000EFA0,
+        [BST_H_POSSESS]  = 0x1000EFB0, [BST_H_EAT2]     = 0x1000F2B0,
+        [BST_H_EAT3]     = 0x1000F2C0, [BST_H_WORD]     = 0x10001FF0,
+        [BST_H_NUMBER]   = 0x10009440, [BST_H_DOTTED]   = 0x100020A0,
+        [BST_H_SEP]      = 0x1000F140, [BST_H_GROUPS]   = 0x10009CC0,
+        [BST_H_SEPNUM]   = 0x100095D0, [BST_H_MONEY]    = 0x10003410,
+        [BST_H_DASH2]    = 0x1000BF80, [BST_H_ORDINAL]  = 0x1000ED10,
+        [BST_H_ORDEMIT]  = 0x1000A830, [BST_H_PUNCTOUT] = 0x1000B9F0,
+        [BST_H_DOTOUT]   = 0x1000BE30,
+    },
+    .s = {
+        [BST_S_POINT]     = 0x100799F4, [BST_S_DOLLARS]  = 0x100799D4,
+        [BST_S_AND]       = 0x100799D8, [BST_S_CENTS]    = 0x100799E4,
+        [BST_S_ORD_ST]    = 0x10079A20, [BST_S_ORD_ND]   = 0x10079A24,
+        [BST_S_ORD_RD]    = 0x10079A28, [BST_S_ORD_TIETH]= 0x10079A34,
+        [BST_S_ORD_FIFTH] = 0x10079A2C, [BST_S_ORD_FIRST]= 0x10079A30,
+        [BST_S_ORD_TH]    = 0x10079A38, [BST_S_GRPSEP]   = 0x10079A40,
+        [BST_S_PLURAL]    = 0x10079A30, [BST_S_DIGITS]   = 0x10081B54,
+        [BST_S_TENS]      = 0x10081B7C, [BST_S_TEENS]    = 0x10081BA4,
+        [BST_S_SCALES]    = 0x10081C8C, [BST_S_OH]       = 0x100799F0,
+        [BST_S_HUNDRED]   = 0x100799E8, [BST_S_ZERO]     = 0x10081C14,
+    },
+};
+
 /* Names every entry the directory has not been given, so a build's map can be
    read for what is missing rather than tried and puzzled over. */
 int bst_map_gaps(const bst_tabmap *m, const char **names, int max) {

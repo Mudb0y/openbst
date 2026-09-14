@@ -30,20 +30,29 @@ int bst_synth_frame(bst_synth *s, const uint8_t f[16]) {
     return 1;
 }
 
+/* One step of the excitation noise generator, returning an index into the
+   noise table. The 2006 builds carry the seed through a thirty-two bit
+   multiply-add and take the low five bits; the earlier ones keep it in
+   sixteen and take bits eight to twelve. */
+static inline int noise_step(bst_synth *s) {
+    if (s->t->noise_kind) {
+        s->rand = (int32_t)(s->rand * 3 + 5) >> 1;
+        return s->rand & 0x1f;
+    }
+    s->rand = (uint16_t)(s->rand * 5 + 3);
+    return ((int)(s->rand & 0x1f00) >> 8);
+}
+
 static inline int32_t excitation(bst_synth *s) {
     int32_t x;
 
     if (s->mode == BST_NOISE) {
-        s->rand = (uint16_t)(s->rand * 5 + 3);
-        int idx = (s->rand & 0x1f00) >> 7;          /* byte offset, always even */
-        x = s->t->noise[idx / 2];
+        x = s->t->noise[noise_step(s)];
         return (x * s->gain) >> 8;
     }
 
     if (s->mode == BST_MIXED && s->phase >= BST_PULSE_LEN) {
-        s->rand = (uint16_t)(s->rand * 5 + 3);
-        int idx = (s->rand & 0x1f00) >> 7;
-        x = s->t->noise[idx / 2];
+        x = s->t->noise[noise_step(s)];
         /* The noise half of a mixed frame runs at half amplitude. */
         return ((x * s->gain) >> 1) >> 8;
     }
@@ -74,7 +83,7 @@ static inline int16_t lattice(bst_synth *s, int32_t x) {
     }
     s->b[0] = x;
 
-    x >>= 3;
+    x >>= s->t->out_shift ? s->t->out_shift : 3;
     if (x < -32767) x = -32767;
     if (x > 32767) x = 32767;
     return (int16_t)x;
@@ -102,7 +111,7 @@ size_t bst_synth_run(bst_synth *s, int16_t *out, size_t max) {
 /* Where each table sits in the 1995 build. Other builds carry the same tables
    at their own offsets, and the ones with no log pair leave those zero. */
 const bst_offsets BST_OFFSETS_1995 = {
-    0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20
+    0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20, 0, 0, 0
 };
 
 int bst_tables_load_at(bst_tables *t, const void *image, size_t len,
@@ -115,10 +124,19 @@ int bst_tables_load_at(bst_tables *t, const void *image, size_t len,
     memcpy(t->pulse, p + o->pulse, sizeof t->pulse);
     memcpy(t->noise, p + o->noise, sizeof t->noise);
     memcpy(t->gain,  p + o->gain,  sizeof t->gain);
+    t->out_shift = o->out_shift;
+    t->noise_kind = o->noise_kind;
     /* The 2006 builds have no log pair: their interpolation is not in the
        log domain, and the lattice never reads them. */
-    if (o->log  && o->log  + sizeof t->log  <= len) memcpy(t->log,  p + o->log,  sizeof t->log);
-    if (o->alog && o->alog + sizeof t->alog <= len) memcpy(t->alog, p + o->alog, sizeof t->alog);
+    if (o->log_bytes) {
+        if (o->log  && o->log  + 256 <= len)
+            for (int i = 0; i < 256; i++) t->log[i]  = p[o->log  + i];
+        if (o->alog && o->alog + 256 <= len)
+            for (int i = 0; i < 256; i++) t->alog[i] = p[o->alog + i];
+    } else {
+        if (o->log  && o->log  + sizeof t->log  <= len) memcpy(t->log,  p + o->log,  sizeof t->log);
+        if (o->alog && o->alog + sizeof t->alog <= len) memcpy(t->alog, p + o->alog, sizeof t->alog);
+    }
     if (o->duration && o->duration + sizeof t->duration <= len)
         memcpy(t->duration, p + o->duration, sizeof t->duration);
     return 0;

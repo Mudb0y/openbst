@@ -53,8 +53,9 @@ int bst_diphone(const bst_image *img, int index, int positions,
 /* The ten reflection coefficients a target names, in the Q8 form the lattice
    wants. */
 void bst_target_coeffs(const bst_image *img, int voice, int target, int16_t k[10]) {
+    uint32_t w = img->t.voice_stride ? img->t.voice_stride : 1;
     uint32_t base = img->t.voices +
-                    (uint32_t)(voice * (int)img->t.voice_span + target) * 10;
+                    (uint32_t)(voice * (int)img->t.voice_span + target) * 10 * w;
     for (int i = 0; i < 10; i++)
-        k[i] = (int16_t)((int8_t)bst_u8(img, base, i) * 2);
+        k[i] = (int16_t)((int8_t)bst_u8(img, base, (unsigned)i * w) * 2);
 }

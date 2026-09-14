@@ -183,6 +183,8 @@ static int vowel_context(scan *z) {
    with a shift and a bias. */
 static int div4(int v) { return (int16_t)((v + ((v >> 31) & 3)) >> 2); }
 
+static int d16(int v) { return (int16_t)v; }
+
 static int vowel_duration(scan *z, int pos, int which) {
     int nv = z->next.val;
     int ph = z->s[pos];
@@ -193,15 +195,29 @@ static int vowel_duration(scan *z, int pos, int which) {
 
     if (nv == 0 || (a1(z, nv) & 4) || nv == 0x2F || z->edge) {
         if (!vowel_context(z)) {
-            d = div4((int16_t)(base * 5));
-            if (mode == 2) d = (int16_t)(d * 7) / 5;
-            int num = s16at(z->img, z->img->t.stress_num, (unsigned)z->stress.val * 4);
-            int den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)z->stress.val * 4);
-            int e = den ? (int16_t)(num * d) / den : 0;
+            int sh = z->img->t.stress_shift;
+            int e;
+            if (sh) {
+                /* The same scaling reached by shifts, which floor where the
+                   earlier builds' divides truncate. */
+                d = (int16_t)(d16(base) + (d16(base) >> 2));
+                if (mode == 2) d = (int16_t)(d + (((int16_t)d * 13) >> 5));
+                int scale = bst_u8(z->img, z->img->t.stress_num,
+                                   (unsigned)z->stress.val);
+                e = (int16_t)((int16_t)(scale * d) >> sh);
+            } else {
+                d = div4((int16_t)(base * 5));
+                if (mode == 2) d = (int16_t)(d * 7) / 5;
+                int num = s16at(z->img, z->img->t.stress_num, (unsigned)z->stress.val * 4);
+                int den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)z->stress.val * 4);
+                e = den ? (int16_t)(num * d) / den : 0;
+            }
             if (!z->edge) {
                 d = e;
                 if ((a1(z, nv) & 0x40) && z->stress.val > 5) {
-                    if (mode == 2) d = div4((int16_t)((e + 0x5F) * 3));
+                    if (mode == 2)
+                        d = sh ? (int16_t)((e + 0x5F) - (((int16_t)(e + 0x5F)) >> 2))
+                               : div4((int16_t)((e + 0x5F) * 3));
                     else          d = e + 0x19;
                 }
             } else {

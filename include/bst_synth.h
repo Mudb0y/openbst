@@ -24,6 +24,10 @@ typedef struct {
     int16_t log[256];
     int16_t alog[256];
     int16_t duration[16];   /* base segment durations, before rate scaling */
+    /* How far the lattice's accumulator is shifted down on the way out.
+       Three in the earlier builds, five in the 2006 ones. Zero means three. */
+    int     out_shift;
+    int     noise_kind;
 } bst_tables;
 
 /* Parameter interpolator. The engine never jumps to a target: each frame it
@@ -91,7 +95,7 @@ typedef struct {
     int16_t  gain;
     uint16_t period;              /* Q4: 16 phase units per output sample */
     uint16_t phase;
-    uint16_t rand;                /* excitation noise generator */
+    int32_t  rand;                /* excitation noise generator */
     uint8_t  mode;                /* 0x00 silence, 0x10 voiced,
                                      0x20 noise, 0x30 mixed */
     int      periods_left;
@@ -116,6 +120,14 @@ size_t bst_synth_run(bst_synth *s, int16_t *out, size_t max);
 /* Where each table sits in a build, as a file offset. */
 typedef struct {
     size_t pulse, noise, gain, log, alog, duration;
+    /* The 2006 builds store the log pair a byte to an entry where the earlier
+       ones store a word. Zero means a word. */
+    int    log_bytes;
+    /* The lattice's output shift; zero means three. */
+    int    out_shift;
+    /* Which noise generator: zero for the earlier builds' sixteen-bit
+       multiply-add, one for the 2006 builds' thirty-two-bit one. */
+    int    noise_kind;
 } bst_offsets;
 
 extern const bst_offsets BST_OFFSETS_1995;

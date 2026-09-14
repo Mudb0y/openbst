@@ -128,8 +128,10 @@ static void emit_byte(int b, bst_recs *out) {
 /* Codes are bytes: low ones name a single record, middle ones a common pair,
    and the top range takes a second byte. */
 static int decode_one(const bst_image *img, int b, int next, bst_recs *out) {
-    int smax = s16at(img, img->t.ph_single_max);
-    int pmax = s16at(img, img->t.ph_pair_max);
+    int smax = img->t.ph_single_max ? s16at(img, img->t.ph_single_max)
+                                    : img->t.ph_single_n;
+    int pmax = img->t.ph_pair_max ? s16at(img, img->t.ph_pair_max)
+                                  : img->t.ph_pair_n;
     if (b <= smax) { emit_code(u16at(img, img->t.ph_single + b * 2), out); return 1; }
     if (b - (smax + 1) <= pmax) {
         int pair = u16at(img, img->t.ph_pair + (b - (smax + 1)) * 2);

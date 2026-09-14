@@ -2,6 +2,10 @@
 # The 2006 language builds through our own lattice: their frames rendered by
 # our synthesizer against the audio their engine produced.
 #
+# Say_TTS takes a wide string in these builds. Handing it a narrow one leaves
+# the converted buffer holding one character, so the engine says nothing and
+# the comparison is silence against silence.
+#
 # The engine's last output buffer is not always flushed before Say_TTS
 # returns, so ours can be one frame longer; the comparison is over the samples
 # the engine actually delivered.
@@ -20,7 +24,7 @@ for dll in "$root"/dll/2006/*.dll; do
              0x10007180 0x40 "$dll" | awk '{print $2}')
     case "$at" in 0x*) ;; *) echo "  $name: renderer not found"; diff=$((diff+1)); continue;; esac
     "$root/build/oracle" --dll "$dll" --limit 800000000 --call Init_TTS \
-        --call "Say_TTS:str:$text" --recat "$at:0:16" \
+        --call "Say_TTS:wstr:$text" --recat "$at:0:16" \
         --raw --out "$work/ref.pcm" 2>/dev/null |
         sed -n 's/^R /F /p' > "$work/f.txt"
     [ -s "$work/f.txt" ] || { echo "  $name: no frames captured"; diff=$((diff+1)); continue; }

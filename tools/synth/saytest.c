@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
         { "ENG", &BST_MAP_1998_ENG }, { "DUT", &BST_MAP_1998_DUT },
         { "FRN", &BST_MAP_1998_FRN }, { "GRM", &BST_MAP_1998_GRM },
         { "ITL", &BST_MAP_1998_ITL }, { "SPN", &BST_MAP_1998_SPN },
+        { "2006ENG", &BST_MAP_2006_ENG },
     };
     const bst_tabmap *map = &BST_MAP_1998_ENG;
     if (mapname) {
@@ -70,19 +71,26 @@ int main(int argc, char **argv) {
             fprintf(stderr, "not a 16-bit module\n");
             return 1;
         }
+    } else if (mapname) {
+        bst_image_init_map(&img, d, n, map);
     } else {
         bst_image_init(&img, d, n);
     }
     bst_tables tab;
     if (tablespec) {
-        bst_offsets o = { 0, 0, 0, 0, 0, 0 };
-        size_t *fields[6] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog, &o.duration };
+        bst_offsets o = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        size_t lb = 0, os = 0, nk = 0;
+        size_t *fields[9] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog,
+                              &o.duration, &lb, &os, &nk };
         const char *q = tablespec;
-        for (int i = 0; i < 6 && q && *q; i++) {
+        for (int i = 0; i < 9 && q && *q; i++) {
             char *e = NULL;
             *fields[i] = (size_t)strtoul(q, &e, 16);
             q = (e && *e == ',') ? e + 1 : NULL;
         }
+        o.log_bytes = (int)lb;
+        o.out_shift = (int)os;
+        o.noise_kind = (int)nk;
         if (bst_tables_load_at(&tab, d, n, &o) < 0) return 1;
     } else if (bst_tables_load(&tab, d, n) < 0) {
         return 1;

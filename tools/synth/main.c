@@ -21,14 +21,19 @@ static int read_tables(bst_tables *t, const char *dll, const char *tables) {
     fclose(f);
     int rc;
     if (tables) {
-        bst_offsets o = { 0, 0, 0, 0, 0, 0 };
-        size_t *fields[6] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog, &o.duration };
+        bst_offsets o = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        size_t lb = 0, os = 0, nk = 0;
+        size_t *fields[9] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog,
+                              &o.duration, &lb, &os, &nk };
         const char *p = tables;
-        for (int i = 0; i < 6 && p && *p; i++) {
+        for (int i = 0; i < 9 && p && *p; i++) {
             char *e = NULL;
             *fields[i] = (size_t)strtoul(p, &e, 16);
             p = (e && *e == ',') ? e + 1 : NULL;
         }
+        o.log_bytes = (int)lb;
+        o.out_shift = (int)os;
+        o.noise_kind = (int)nk;
         rc = bst_tables_load_at(t, img, n, &o);
     } else {
         rc = bst_tables_load(t, img, n);

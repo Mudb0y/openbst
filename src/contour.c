@@ -19,6 +19,10 @@
 
 #define ACC_MAX 96
 #define RATE    0x2B11        /* the period numerator: 11025 */
+
+static int rate_of(const bst_image *img) {
+    return img->t.pitch_rate ? img->t.pitch_rate : RATE;
+}
 #define KEEP    (-0x6B)       /* "leave this one alone" */
 
 typedef struct { short pos; signed char code, flag; } acc;
@@ -278,7 +282,7 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
         }
 
         int f = freq(p, e[k].code);
-        int period = f ? RATE / f : 0;
+        int period = f ? rate_of(img) / f : 0;
         if (nrec < max) {
             out[nrec].kind = 2;
             out[nrec].period = (uint8_t)period;
@@ -295,7 +299,7 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
     }
 
     int f = freq(p, e[fin].code);
-    int period = f ? RATE / f : 0;
+    int period = f ? rate_of(img) / f : 0;
     if (carry != 0) {
         if (nrec < max) {
             out[nrec].kind = 2;

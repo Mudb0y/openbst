@@ -134,8 +134,9 @@ static int rec_class(bst_gen *g, const uint8_t *rec) {
     if (t == 0) { g->lastclass = 0; return 0; }
     if (t == 2) return g->lastclass;
     int v = (rec[2] << 8) | rec[1];
-    g->lastclass = u8at(g->img, g->img->t.classtab, (unsigned)(v >> 9));
-    if ((g->flags & 1) && (v & 0xFFFFFE00) == 0x400) g->lastclass = 1;
+    int cs = g->img->t.class_shift ? g->img->t.class_shift : 9;
+    g->lastclass = u8at(g->img, g->img->t.classtab, (unsigned)(v >> cs));
+    if ((g->flags & 1) && (v >> cs) == 2) g->lastclass = 1;
     return g->lastclass;
 }
 
@@ -177,7 +178,8 @@ static int expand(bst_gen *g, bst_seg_rec *r) {
                as a negative number. */
             uint16_t p16 = (uint16_t)(u * (uint16_t)(int16_t)(int8_t)tp->dur);
             p16 = (uint16_t)(p16 >> 6);
-            int32_t d = (int32_t)(uint16_t)((uint16_t)(p16 * 0x38) >> 2);
+            uint16_t mul = g->img->t.dur_mult ? g->img->t.dur_mult : 0x38;
+            int32_t d = (int32_t)(uint16_t)((uint16_t)(p16 * mul) >> 2);
             if (g->flags & 4) d = (int16_t)(d << 2);
             int16_t dd = (int16_t)d;
             if (bst_trace)
@@ -322,8 +324,12 @@ static int interp_clock(bst_gen *g) {
     } else {
         if (g->pend.dur < 0) return -2;
         if (g->pend.slope == 0 && g->pend.dur == 0 && g->mid > 0) v = g->mid;
-        else v = (int)((uint16_t)(g->pend.slope * 0xB1) >> 4)
-               + g->pend.dur * 0x3AC + g->segleft;
+        else {
+            int sm = g->img->t.slope_mult ? g->img->t.slope_mult : 0xB1;
+            int dm = g->img->t.inton_dur_mult ? g->img->t.inton_dur_mult : 0x3AC;
+            v = (int)((uint16_t)(g->pend.slope * sm) >> 4)
+              + g->pend.dur * dm + g->segleft;
+        }
     }
     g->pclock = (int16_t)v;
     if (g->pend.kind == 0) {
@@ -341,6 +347,25 @@ static int interp_clock(bst_gen *g) {
    compensated for the filter: doubled, less a thirty-second of the summed
    logs of the ten coefficients. Without this the lattice's own gain rides on
    top of the intended one. */
+/* An unvoiced frame's period, split into a repeat count and a shorter period
+   so the excitation restarts more often. The boundaries are the engine's. */
+static void chunk_unvoiced(bst_gen *g) {
+    if (!g->img->t.unvoiced_chunk) return;
+    if (!(g->frame[0] & 0x20)) return;
+    if (g->frame[0] & 0x10) {
+        g->frame[0] = (uint8_t)((g->frame[0] & 0x0F) | 0xE0);
+        return;
+    }
+    int p = g->frame[3];
+    if (p == 0x68)     { g->frame[0] = 0xE8; g->frame[3] = 0x0D; }
+    else if (p > 0xA0) { g->frame[0] = 0xEE; g->frame[3] = (uint8_t)(p >> 4); }
+    else if (p > 0x50) { g->frame[0] = 0xE8; g->frame[3] = (uint8_t)(p >> 3); }
+    else if (p > 0x28) { g->frame[0] = 0xE4; g->frame[3] = (uint8_t)(p >> 2); }
+    else if (p > 0x14) { g->frame[0] = 0xE2; g->frame[3] = (uint8_t)(p >> 1); }
+    else               { g->frame[0] = 0xE1; }
+    g->frame[1] = 0;
+}
+
 static void compensate(bst_gen *g) {
     if (g->frame[0] == 0xFF) return;
     if ((int16_t)(g->frame[2] * 2) == 0) return;
@@ -350,6 +375,7 @@ static void compensate(bst_gen *g) {
     for (int i = 5; i < 14; i++) t += s16at(g->img, g->img->t.coefgain, g->frame[i]);
     int v = (int16_t)(g->frame[2] * 2) - (int16_t)((int16_t)(t + 0x10) >> 5);
     v = (int16_t)v;
+    chunk_unvoiced(g);
     if ((v >> 8) & 0xFF) {
         if (v > 0xFF) { g->frame[2] = 0xFF; return; }
         if (v < 0) v = 0;
@@ -372,7 +398,9 @@ static int gain_value(bst_gen *g) {
        everywhere else, and an arithmetic shift here agrees with the original
        for as long as it stays positive, which is nearly always; the engine
        uses a logical one. */
-    int acc = (uint16_t)g->gain_acc >> 8;
+    int nr = g->img->t.nearest_round;
+    int acc = nr ? ((int)(int16_t)(g->gain_acc + 0x80) >> 8)
+                 : ((uint16_t)g->gain_acc >> 8);
     int v = g->gain_base + acc;
     if (g->exc == 0x20)      v += g->gain_adj;
     else if (g->exc == 0x10) v += g->gain_adj + 8;
@@ -380,20 +408,25 @@ static int gain_value(bst_gen *g) {
     int diff = g->gain_target - acc;
     if (diff != 0 && !g->fresh) {
         int mag = diff < 0 ? -diff : diff;
-        int step = alg(g, lg(g, mag) - lg(g, ((uint16_t)(g->gclock + g->dur) >> 4) + 1)
-                          + lg(g, g->dur));
+        int clk = nr ? (((int)(int16_t)(g->gclock + g->dur) + 8) >> 4)
+                     : (((uint16_t)(g->gclock + g->dur) >> 4) + 1);
+        int step = alg(g, lg(g, mag) - lg(g, clk) + lg(g, g->dur));
         g->gain_acc = (int16_t)(g->gain_acc + (diff < 0 ? -step * 16 : step * 16));
     }
     return v;
 }
 
 static void pitch_step(bst_gen *g) {
+    int nr = g->img->t.nearest_round;
     unsigned t = ((unsigned)(uint16_t)g->dur + (unsigned)(uint16_t)g->pclock);
-    unsigned u = (t & 0xFFFF) >> 4;
+    unsigned u = ((nr ? t + 8 : t) & 0xFFFF) >> 4;
     int small = u < 0x100;
-    if (!small) u = (t & 0xFFFF) >> 8;
+    if (!small) u = nr ? (u + 8) >> 4 : (t & 0xFFFF) >> 8;
     int rate = lg(g, g->dur) - lg(g, (int)(int16_t)u + 1);
-    int diff = (int)(int16_t)(g->pitch_target >> 5) - (int)(int16_t)(g->pitch_acc >> 5);
+    int diff = nr
+        ? (((int)(uint16_t)g->pitch_target + 0x10) >> 5)
+              - (((int)(uint16_t)g->pitch_acc + 0x10) >> 5)
+        : (int)(int16_t)(g->pitch_target >> 5) - (int)(int16_t)(g->pitch_acc >> 5);
     if (diff != 0) {
         int mag = diff < 0 ? -diff : diff;
         int step = alg(g, lg(g, mag) + rate - 0x80);
@@ -401,6 +434,12 @@ static void pitch_step(bst_gen *g) {
         g->pitch_acc = (uint16_t)(g->pitch_acc + (diff < 0 ? -step * scale : step * scale));
     }
     g->pitch_period = (int16_t)(g->pitch_acc >> 8);
+}
+
+/* Sixty-six in every build but the 2006 ones, which floor a period at
+   sixty-two. */
+static uint8_t mper(const bst_gen *g) {
+    return g->img->t.min_period ? g->img->t.min_period : 0x42;
 }
 
 static void silence_frame(bst_gen *g) {
@@ -414,7 +453,8 @@ static void build(bst_gen *g, const uint8_t *rec) {
     int t = (rec[0] & 0x70) >> 4;
 
     if (t == 1 || t == 5 || t == 3) {
-        g->tclass = (((rec[2] << 8) | rec[1]) >> 9);
+        g->tclass = (((rec[2] << 8) | rec[1]) >>
+                     (g->img->t.class_shift ? g->img->t.class_shift : 9));
         if (g->tclass == 0 || g->tclass == 4) g->exc = g->defexc;
         else {
             g->exc = u8at(g->img, g->img->t.exctab, (unsigned)g->tclass);
@@ -424,29 +464,30 @@ static void build(bst_gen *g, const uint8_t *rec) {
         g->exc = 0;
         g->dur = g->left;
         int16_t keep = g->dur;
-        if (g->left < 0x6E) {
+        if (g->left < g->img->t.unvoiced_dur) {
             silence_frame(g);
-            g->frame[3] = (g->left > 0x41) ? (uint8_t)g->left : 0x42;
+            g->frame[3] = (g->left >= mper(g)) ? (uint8_t)g->left : mper(g);
             g->dur = keep;
             return;
         }
         if (g->voiced == 1) {
             silence_frame(g);
             g->frame[1] = g->frame[1];
-            g->frame[3] = 0x42;
-            g->dur = (int16_t)(g->left - 0x42);
+            g->frame[3] = mper(g);
+            g->dur = (int16_t)(g->left - mper(g));
             emit(g);
         }
         memset(g->frame + 4, 0, 12);
-        g->frame[0] = 0xC8; g->frame[1] = 0; g->frame[2] = 0; g->frame[3] = 0;
+        g->frame[0] = g->img->t.long_silence_f0 ? g->img->t.long_silence_f0 : 0xC8;
+        g->frame[1] = 0; g->frame[2] = 0; g->frame[3] = 0;
         for (; g->dur > 0x7F8; g->dur = (int16_t)(g->dur - 0x7F8)) {
             g->frame[3] = 0xFF;
             emit(g);
         }
-        if (g->dur < 0x6E) {
+        if (g->dur < g->img->t.unvoiced_dur) {
             g->frame[0] = g->img->t.silence_f0;
-            if (g->dur < 0x42) {
-                g->frame[3] = 0x42;
+            if (g->dur < mper(g)) {
+                g->frame[3] = mper(g);
                 g->dur = g->left;
                 return;
             }
@@ -464,7 +505,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
     if (g->voiced == 1) {
         if (wasvoiced != 1) {
             silence_frame(g);
-            g->frame[3] = 0x42;
+            g->frame[3] = mper(g);
             emit(g);
         }
         g->dur = g->pitch_period;
@@ -473,7 +514,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
     } else {
         if (wasvoiced == 1) {
             silence_frame(g);
-            g->frame[3] = 0x42;
+            g->frame[3] = mper(g);
             emit(g);
         }
         g->dur = g->img->t.unvoiced_dur;
@@ -481,12 +522,19 @@ static void build(bst_gen *g, const uint8_t *rec) {
 
     int reps = g->voiced == 1 ? 1 : g->img->t.unvoiced_reps;
     if (g->exc < 0x30) {
-        if (g->exc == 0x20) g->frame[0] = (uint8_t)(0xE0 | reps);
-        else                g->frame[0] = (uint8_t)((g->exc == 0x10 ? 0xF0 : 0xC0) | reps);
+        if (g->exc == 0x20)      g->frame[0] = (uint8_t)(0xE0 | reps);
+        else if (g->img->t.exc_two_way) g->frame[0] = (uint8_t)(0xD0 | reps);
+        else                     g->frame[0] = (uint8_t)((g->exc == 0x10 ? 0xF0 : 0xC0) | reps);
     } else g->frame[0] = (uint8_t)(0xD0 | reps);
 
     uint8_t f0 = g->frame[0];
-    if (g->exc < 0x30) {
+    if (g->img->t.unvoiced_chunk) {
+        /* Composed the same way whether voiced or not; the split happens on
+           the way out. */
+        g->frame[3] = (uint8_t)g->dur;
+        g->frame[0] = f0;
+        g->frame[1] = (uint8_t)((g->pitch_acc >> 4) & 0x0F);
+    } else if (g->exc < 0x30) {
         g->frame[1] = 0; g->frame[2] = 0; g->frame[3] = 0;
         /* The frame lasts as long either way; a build that chunks it says so
            in the count, and the period it holds is the chunk. */
@@ -506,12 +554,15 @@ static void build(bst_gen *g, const uint8_t *rec) {
                 int rate = lg(g, g->dur)
                          - lg(g, (int)((uint16_t)((g->left - (g->left >> 2)) + g->dur) >> 5) + 1)
                          - 0x80;
+                unsigned m = g->img->t.interp_round_mask;
+
                 for (int i = 0; i < BST_ORDER; i++) {
+                    int r = (m >> i) & 1;
                     int d = (int16_t)(g->targets[i] - g->state[i]);
                     if (d < 0)
-                        g->state[i] = (int16_t)(g->state[i] - alg(g, lg(g, (-d) >> 1) + rate));
+                        g->state[i] = (int16_t)(g->state[i] - alg(g, lg(g, ((-d) + r) >> 1) + rate));
                     else
-                        g->state[i] = (int16_t)(g->state[i] + alg(g, lg(g, d >> 1) + rate));
+                        g->state[i] = (int16_t)(g->state[i] + alg(g, lg(g, (d + r) >> 1) + rate));
                 }
             }
         } else {
@@ -521,8 +572,14 @@ static void build(bst_gen *g, const uint8_t *rec) {
         memcpy(g->state, g->prev, sizeof g->state);
     }
 
-    for (int i = 0; i < BST_ORDER; i++)
-        g->frame[4 + i] = (uint8_t)(g->state[i] >> 1);
+    for (int i = 0; i < BST_ORDER; i++) {
+        int v = g->state[i];
+        if (g->img->t.coef_round_mask & (1u << i))
+            v = v < 0 ? ((v - 1) >> 1) : ((v + 1) >> 1);
+        else
+            v = v >> 1;
+        g->frame[4 + i] = (uint8_t)v;
+    }
     if (g->state[0] & 1) g->frame[1] |= 0x80;
     g->frame[2] = (uint8_t)gain_value(g);
     pitch_step(g);

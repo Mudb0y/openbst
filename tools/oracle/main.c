@@ -245,8 +245,10 @@ int main(int argc, char **argv) {
         fprintf(stderr, "DllMain ok\n");
     }
 
+    /* --snap and --regmem are set up above from their own arguments, so they
+       work with --call as well and do not by themselves ask for a profile. */
     if (speak || phonemes || frames || records || interp || gainmode || pitchmode
-        || ltsmode || nsnaps || regmemspec || phrules || intonation || cursors) {
+        || ltsmode || phrules || intonation || cursors) {
         const profile *pr = NULL;
         for (int i = 0; i < NPROFILES; i++)
             if (profiles[i].image_size == e->image_size) pr = &profiles[i];
