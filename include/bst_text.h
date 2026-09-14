@@ -162,6 +162,11 @@ typedef struct {
     /* Whether three sounds beyond the ones the attribute marks count as
        opening a group when the transition offsets are chosen. The 2006
        English build counts them; the other builds of that year do not. */
+    /* Whether the German transition between two vowels keeps nineteen
+       thirty-seconds of its duration rather than nine sixteenths. The 1998
+       module does; the 2006 one does not. */
+    uint8_t  trn_between_wide;
+
     uint8_t  open_plain;
 
     uint8_t  trn_dur_wide;

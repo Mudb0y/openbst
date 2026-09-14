@@ -446,6 +446,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
     },
     .vdur_kind      = 3,
     .trn_kind       = 3,
+    .trn_between_wide = 1,
     .fall_code      = 0x3C,
     .basedur        = 0x000a0d8e,
     .casemap        = 0x000a18ea,

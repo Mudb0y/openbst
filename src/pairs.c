@@ -624,7 +624,9 @@ static void trans_german(scan *z, int dur, int pos, int which) {
         } else if (flanked_german(z, pos)) {
             dur = (int16_t)(((int16_t)dur * 11) >> 4);
         } else if (between_vowels(z, pos)) {
-            dur = (int16_t)(((int16_t)dur * 9) >> 4);
+            dur = z->img->t.trn_between_wide
+                      ? (int16_t)(((int16_t)dur * 19) >> 5)
+                      : (int16_t)(((int16_t)dur * 9) >> 4);
         }
         if (mc == 3) {
             if (nc == 0x10) dur = (int16_t)dur >> 1;
