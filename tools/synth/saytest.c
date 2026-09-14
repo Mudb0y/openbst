@@ -240,6 +240,14 @@ int main(int argc, char **argv) {
             ito[i].slope = cr[i].slope;
         }
 
+        if (bst_trace) {
+            fprintf(stderr, "ito n=%d:", ni);
+            for (int i = 0; i < ni; i++)
+                fprintf(stderr, " %d/%d/%d/%d", ito[i].kind, ito[i].period,
+                        ito[i].dur, ito[i].slope);
+            fprintf(stderr, "\n");
+        }
+
         bst_gen g;
         memset(&g, 0, sizeof g);
         g.img = &img; g.tab = &tab;

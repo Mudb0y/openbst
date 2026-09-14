@@ -18,8 +18,10 @@
  * pronunciation; they never reach the dictionary or the letter-to-sound rules
  * at all. */
 
-#define COND_LO 0x5D
-#define COND_HI 0x72
+/* The condition opcodes sit just above the marks, so a module whose codes are
+   numbered differently moves them by the same amount as everything else. */
+static int cond_lo(const bst_image *img) { return (0x5D + img->t.code_shift) & 0xFF; }
+static int cond_hi(const bst_image *img) { return (0x72 + img->t.code_shift) & 0xFF; }
 
 typedef struct {
     const bst_image *img;
@@ -133,7 +135,7 @@ static int chattr(const bst_tok *t, int c) {
 static int condition(bst_tok *t, int op, const uint8_t *word, int wlen) {
     peek p;
     int r = 0, c;
-    switch (op - COND_LO) {
+    switch (op - cond_lo(t->img)) {
     case 0:                                   /* starts lower case */
         return (chattr(t, word[0]) & 0x20) == 0;
     case 1: {                                 /* the stop after an abbreviation */
@@ -211,19 +213,20 @@ static int condition(bst_tok *t, int op, const uint8_t *word, int wlen) {
 static void choose(bst_tok *t, uint8_t *rec, int n, const uint8_t *word,
                    int wlen, int *from, int *to) {
     int start = 0, i = 0;
+    int lo = cond_lo(t->img), hi = cond_hi(t->img);
     *from = 0;
     *to = n - 1;
     while (i < n) {
-        if (rec[i] < COND_LO || rec[i] > COND_HI) { i++; continue; }
+        if (rec[i] < lo || rec[i] > hi) { i++; continue; }
         int end = i - 1;
         int ok = 1;
-        while (i < n && rec[i] >= COND_LO && rec[i] <= COND_HI) {
+        while (i < n && rec[i] >= lo && rec[i] <= hi) {
             /* The engine stops at the first condition that fails, and some
                of them have side effects, so stopping matters. */
             if (!condition(t, rec[i], word, wlen)) { ok = 0; i++; break; }
             i++;
         }
-        while (i < n && rec[i] >= COND_LO && rec[i] <= COND_HI) i++;
+        while (i < n && rec[i] >= lo && rec[i] <= hi) i++;
         if (ok) { *from = start; *to = end; return; }
         start = i;
     }

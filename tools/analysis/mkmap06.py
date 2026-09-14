@@ -118,6 +118,8 @@ SCALARS = ("tok_stride tok_state_off tok_state_w tok_handler_off tok_handler_w "
            "nearest_round pitch_rate slope_mult inton_dur_mult "
            "inton_slope_shift stress_shift voice_span voice_stride "
            "vowel_dur_shift trn_round ph_single_n ph_pair_n "
+           "close_pause comma_ends_text contour_round dur_frac_shift "
+           "possessive_is sepnum_first_three "
            "code_lo code_hi").split()
 
 ADDRS = ("chattr letterattr casemap symmap phattr1 phattr2 classtab exctab "
@@ -342,6 +344,8 @@ def main():
         sep = carry_immediate(ta, ra, tb, rb, fa, fb, pairfn, 0x10002B36, 0x4C)
         shift = (sep - 0x4C) if sep is not None else None
         cmd = carry_immediate(ta, ra, tb, rb, fa, fb, pairfn, 0x1000302B, 0x7C)
+        # The tenth byte of the phrase header, written as a literal too.
+        shape = carry_immediate(ta, ra, tb, rb, fa, fb, pairfn, 0x10003BFD, 0x4C)
 
         print("const bst_tabmap BST_MAP_2006_%s = {" % name)
         if shift is not None:
@@ -352,6 +356,10 @@ def main():
             gaps.append("cmd_code")
         elif shift is None or cmd != ((0x7C + shift) & 0xFF):
             print("    .%-17s = 0x%02X," % ("cmd_code", cmd))
+        if shape is None:
+            gaps.append("hdr_shape")
+        elif shape != 0x4C:
+            print("    .%-17s = 0x%02X," % ("hdr_shape", shape))
         for k in ADDRS:
             if k in out:
                 print("    .%-17s = 0x%08X," % (k, out[k]))

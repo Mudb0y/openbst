@@ -38,6 +38,35 @@ static void mark(uint8_t *p, int emph) {
     else             *p = (emph & 4) ? 0x32 : 0x35;
 }
 
+/* The Romance rule: one syllable takes the accent and the rest are flat.
+   Which one is the last but one, unless the word ends in a consonant the
+   build does not except, in which case it is the last. */
+static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
+    int16_t slot[SYL_MAX + 4];
+    int n = 0;
+
+    for (int i = 0; i < len; i++) {
+        int c = s[i];
+        if (a2(img, c) & 0x10) continue;
+        if (!(a1(img, c) & 0x80) || n + 2 >= SYL_MAX) continue;
+        slot[++n] = (int16_t)(i + 1);
+        i += 3;
+    }
+    if (n == 0) return;
+
+    int fin = 0;
+    for (int i = len - 1; i >= 0; i--)
+        if (s[i] && s[i] < 0x2F) { fin = s[i]; break; }
+    int keep = (a1(img, fin) & 0x80) != 0;
+    for (int k = 0; !keep && k < (int)sizeof img->t.stress_keep; k++)
+        if (img->t.stress_keep[k] && fin == img->t.stress_keep[k]) keep = 1;
+
+    int at = keep && n > 1 ? n - 1 : n;
+    for (int k = 1; k <= n; k++)
+        s[slot[k]] = (uint8_t)(k == at ? ((emph & 1) ? 0x33 : 0x36)
+                                       : ((emph & 1) ? 0x31 : 0x32));
+}
+
 void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mode) {
     uint8_t flags[SYL_MAX + 4];
     int16_t slot[SYL_MAX + 4];
@@ -47,6 +76,18 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     memset(flags, 0, sizeof flags);
     memset(slot, 0, sizeof slot);
     flags[1] = 0;
+
+    if (img->t.stress_rule == 1) {
+        for (int i = 0; i < len; i++) {
+            int c = s[i];
+            if (!(a2(img, c) & 0x10)) continue;
+            if (c == 0x4F || c == 0x50) { if (!(emph & 2)) emph |= 5; }
+            else if (c == 0x51)         { if (!(emph & 2)) emph |= 1; }
+            else if (c == 0x52)         { if (!(emph & 1)) emph |= 6; }
+        }
+        romance(img, s, len, emph);
+        return;
+    }
 
     for (int i = 0; i < len; i++) {
         int c = s[i];

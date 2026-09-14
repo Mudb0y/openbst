@@ -286,7 +286,11 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
 
     int done = 0;
     if (type == 0x11 || type == 0x13 || type == 0x12) {
-        if (kind == 3) { s[e[cur].pos + 2] = 0x3D; done = 1; }
+        if (kind == 3) {
+            if (img->t.fall_on_next && n - cur > 0) s[e[cur + 1].pos + 1] = 0x3D;
+            else                                    s[e[cur].pos + 2] = 0x3D;
+            done = 1;
+        }
         else if (kind == 2) {
             if (n != cur && n - cur >= 0) s[e[cur + 1].pos + 1] = 0x3D;
             done = 1;

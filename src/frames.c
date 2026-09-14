@@ -605,7 +605,7 @@ int bst_generate(bst_gen *g) {
     memset(g->frame, 0, sizeof g->frame);
     load_rate(g, g->rate);
 
-    if (ito_take(g, &g->inton) != 2) return g->nout;
+    if (ito_take(g, &g->inton) != 2) { if (bst_trace) fprintf(stderr, "exit1\n"); return g->nout; }
 
     int qi = -1;
     int first = 1;
@@ -615,12 +615,12 @@ int bst_generate(bst_gen *g) {
         int consumed = 0;
         while (g->segleft < 1) {
             bst_seg_rec *r = seg_peek(g);
-            if (!r) return g->nout;
+            if (!r) { if (bst_trace) fprintf(stderr, "exit2\n"); return g->nout; }
             int16_t was = g->cur.count;
             if ((r->index & 0xF000) == 0) {
-                if (seg_take(g, &g->cur) != 2) return g->nout;
+                if (seg_take(g, &g->cur) != 2) { if (bst_trace) fprintf(stderr, "exit3\n"); return g->nout; }
                 if (g->inton.kind == 1 && g->pclock < 1 && g->segleft < 1 && g->left < 1)
-                    return g->nout;
+                    { if (bst_trace) fprintf(stderr, "exit4\n"); return g->nout; }
                 g->cur.count = (int16_t)(g->cur.count + was);
                 int v = g->cur.b + g->segleft;
                 if (v < 1) v = 0;
@@ -658,15 +658,18 @@ int bst_generate(bst_gen *g) {
                 g->pend.period = g->inton.period;
                 g->pend.dur = g->inton.dur;
                 g->pend.slope = g->inton.slope;
-                if (g->pend.kind != 1 && ito_take(g, &g->inton) != 2) return g->nout;
+                if (g->pend.kind != 1 && ito_take(g, &g->inton) != 2) { if (bst_trace) fprintf(stderr, "exit5\n"); return g->nout; }
             } while (was == 0 && g->pend.slope == 0 && g->pend.kind != 1);
             g->pitch_period = g->pend.period;
             g->pitch_acc = (uint16_t)(g->pend.period << 8);
         }
 
         if (consumed != 0) {
+            if (bst_trace)
+                fprintf(stderr, "step consumed=%d pend.dur=%d segleft=%d\n",
+                        consumed, (int)g->pend.dur, (int)g->segleft);
             g->pend.dur = (int16_t)(g->pend.dur - consumed);
-            if (g->pend.dur < -1) { fail(g); return g->nout; }
+            if (g->pend.dur < -1) { fail(g); { if (bst_trace) fprintf(stderr, "exit6\n"); return g->nout; } }
             interp_clock(g);
         }
         if (g->pclock < 1 && interp_clock(g) == -2) break;
@@ -674,8 +677,8 @@ int bst_generate(bst_gen *g) {
         while (g->left < 1) {
             qi = next_record(g, qi, first);
             first = 0;
-            if (qi < 0) return g->nout;
-            if (seg_entry(g, g->q[qi].rec) == -2) return g->nout;
+            if (qi < 0) { if (bst_trace) fprintf(stderr, "exit7\n"); return g->nout; }
+            if (seg_entry(g, g->q[qi].rec) == -2) { if (bst_trace) fprintf(stderr, "exit8\n"); return g->nout; }
         }
 
         build(g, g->q[qi].rec);
@@ -710,9 +713,9 @@ int bst_generate(bst_gen *g) {
         }
 
         if (g->pclock < 1 && g->mid == g->pclock && g->segleft > 0 &&
-            interp_clock(g) == -2) { fail(g); return g->nout; }
-        if (g->done) return g->nout;
+            interp_clock(g) == -2) { fail(g); { if (bst_trace) fprintf(stderr, "exit9\n"); return g->nout; } }
+        if (g->done) { if (bst_trace) fprintf(stderr, "exit10\n"); return g->nout; }
         emit(g);
     }
-    return g->nout;
+    { if (bst_trace) fprintf(stderr, "exit11\n"); return g->nout; }
 }

@@ -405,6 +405,46 @@ int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
            range, and the scan steps straight over them. */
         if (bst_is_sound(c)) {
             carry = c;
+            int mc = bst_code(z->img, c);
+            switch (mc < 0x40 ? z->img->t.pair_class[mc] : 0) {
+            case 1:
+                pair(z, z->prevph, c);
+                trans(z, 100, i, 0);
+                break;
+            case 2:
+                trans(z, 100, i, 0);
+                pair(z, z->prevph, c);
+                trans(z, 100, i, 1);
+                break;
+            case 3:
+                trans(z, 100, i, 0);
+                pair(z, z->prevph, c);
+                break;
+            case 4:
+                pair(z, z->prevph, c);
+                break;
+            case 5:
+                pair(z, z->prevph, c);
+                trans(z, 100, i, 1);
+                break;
+            case 6:
+                trans(z, 100, i, 0);
+                pair(z, z->prevph, c);
+                trans(z, vowel_duration(z, i, 1), i, 1);
+                trans(z, 100, i, 2);
+                break;
+            case 7:
+                trans(z, 100, i, 0);
+                pair(z, z->prevph, c);
+                trans(z, 100, i, 1);
+                trans(z, 100, i, 2);
+                break;
+            case 8:
+                pair(z, z->prevph, c);
+                trans(z, 100, i, 1);
+                trans(z, 100, i, 2);
+                break;
+            default:
             switch (c) {
             case 0x0E: case 0x0F: case 0x10:
                 pair(z, z->prevph, c);
@@ -441,6 +481,8 @@ int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
                     trans(z, 100, i, 2);
                 }
                 break;
+            }
+            break;
             }
         }
         z->prevph = carry;

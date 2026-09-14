@@ -135,6 +135,29 @@ typedef struct {
        Zero means 0x4C. */
     uint8_t  hdr_shape;
 
+    /* Which syllable of a word carries the accent. Zero is the English rule
+       in stress.c. One is the Romance rule: the last syllable but one, or the
+       last when the word ends in a consonant that is not in stress_keep, and
+       every other syllable flat rather than reduced. */
+    uint8_t  stress_rule;
+    uint8_t  stress_keep[4];
+
+    /* Whether the normaliser takes an English suffix off the word before it
+       is looked up. Only the English builds do. */
+    uint8_t  no_suffix;
+
+    /* Where the accent pass puts the closing fall when the last accent is a
+       strong one and others follow it: on the next accent rather than in the
+       last one's second slot. French, Japanese and Spanish do this. */
+    uint8_t  fall_on_next;
+
+    /* Which events the pair scan emits for each of the module's own sound
+       codes. Every build compiles a different switch here, because the same
+       sound is not the same number twice and a language without aspirated
+       stops has no case for them. Zero falls back to the English switch;
+       tools/analysis/pairclass.py reads the rest out of the build. */
+    uint8_t  pair_class[0x40];
+
     /* A comma ends the text outright in the 2006 builds: what follows it is
        never spoken, and the comma itself is said with a full stop's pause and
        a full stop's sentence type. */

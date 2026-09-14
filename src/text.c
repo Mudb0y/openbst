@@ -735,6 +735,12 @@ const bst_tabmap BST_MAP_1998_SPN = {
    a denominator. And the variant tables the record pass reads were reordered,
    which is why they are this build's own and not the 1995 ones. */
 const bst_tabmap BST_MAP_2006_ENG = {
+    .pair_class = {
+        0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 1, 1,
+        1, 7, 7, 2, 2, 2, 7, 2, 7, 3, 3, 2, 7, 2, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 5,
+        4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
     .chattr        = 0x10082014, .letterattr = 0x10081D14,
     .casemap       = 0x10081F14, .symmap     = 0x10081E14,
 
@@ -833,6 +839,19 @@ const bst_tabmap BST_MAP_2006_ENG = {
 
 /* ARA: 184 functions matched, 2824 addresses carried */
 const bst_tabmap BST_MAP_2006_ARA = {
+    .pair_class = {
+        0, 2, 1, 7, 7, 7, 7, 7, 2, 2, 2, 2, 7, 7, 7, 7,
+        1, 1, 7, 7, 7, 7, 2, 2, 7, 7, 7, 7, 2, 7, 7, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = 4,
     .chattr            = 0x100218D0,
     .letterattr        = 0x100215D0,
@@ -975,6 +994,19 @@ const bst_tabmap BST_MAP_2006_ARA = {
 };
 /* DUT: 191 functions matched, 2878 addresses carried */
 const bst_tabmap BST_MAP_2006_DUT = {
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 1, 7, 7, 7, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = 9,
     .chattr            = 0x100337D4,
     .letterattr        = 0x100334D4,
@@ -1117,6 +1149,20 @@ const bst_tabmap BST_MAP_2006_DUT = {
 };
 /* FRE: 187 functions matched, 2752 addresses carried */
 const bst_tabmap BST_MAP_2006_FRE = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .fall_on_next  = 1,
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .hdr_shape     = 0x48,
     .code_shift        = -8,
     .cmd_code          = 0x6E,
@@ -1261,6 +1307,19 @@ const bst_tabmap BST_MAP_2006_FRE = {
 };
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
+    .pair_class = {
+        0, 7, 2, 7, 2, 7, 2, 2, 2, 2, 1, 1, 1, 1, 1, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 2,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = 8,
     .chattr            = 0x1003E738,
     .letterattr        = 0x1003E438,
@@ -1403,6 +1462,19 @@ const bst_tabmap BST_MAP_2006_GER = {
 };
 /* GRE: 190 functions matched, 2861 addresses carried */
 const bst_tabmap BST_MAP_2006_GRE = {
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 8, 8, 8, 8,
+        8, 8, 8, 8, 8, 7, 7, 7, 7, 8, 1, 8, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = -7,
     .chattr            = 0x1001FE4C,
     .letterattr        = 0x1001FB4C,
@@ -1545,6 +1617,19 @@ const bst_tabmap BST_MAP_2006_GRE = {
 };
 /* HEB: 190 functions matched, 2842 addresses carried */
 const bst_tabmap BST_MAP_2006_HEB = {
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 2, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 1, 1, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = -13,
     .chattr            = 0x100207B4,
     .letterattr        = 0x100204B4,
@@ -1687,6 +1772,19 @@ const bst_tabmap BST_MAP_2006_HEB = {
 };
 /* ITA: 189 functions matched, 2859 addresses carried */
 const bst_tabmap BST_MAP_2006_ITA = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 2, 2, 7, 7, 7, 7, 1, 1, 1, 1, 1,
+        7, 7, 7, 7, 7, 1, 1, 1, 7, 7, 7, 7, 6, 6, 6, 6,
+        6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = -12,
     .chattr            = 0x10026B20,
     .letterattr        = 0x10026820,
@@ -1829,6 +1927,20 @@ const bst_tabmap BST_MAP_2006_ITA = {
 };
 /* JPN: 182 functions matched, 2642 addresses carried */
 const bst_tabmap BST_MAP_2006_JPN = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 2, 2, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        1, 1, 1, 1, 7, 3, 7, 6, 6, 1, 1, 1, 6, 6, 6, 6,
+        6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .fall_on_next  = 1,
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .hdr_shape     = 0x48,
     .code_shift        = -14,
     .chattr            = 0x1001B600,
@@ -1972,6 +2084,19 @@ const bst_tabmap BST_MAP_2006_JPN = {
 };
 /* POL: 183 functions matched, 2739 addresses carried */
 const bst_tabmap BST_MAP_2006_POL = {
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1,
+        1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 1, 1, 1, 1, 7, 6, 6, 6,
+        6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = 6,
     .chattr            = 0x10026954,
     .letterattr        = 0x10026654,
@@ -2114,6 +2239,19 @@ const bst_tabmap BST_MAP_2006_POL = {
 };
 /* POR: 188 functions matched, 2863 addresses carried */
 const bst_tabmap BST_MAP_2006_POR = {
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 7, 7, 1, 1, 1, 7, 7, 7, 7,
+        7, 7, 7, 7, 1, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .code_shift        = 8,
     .chattr            = 0x10023CB8,
     .letterattr        = 0x100239B8,
@@ -2256,6 +2394,13 @@ const bst_tabmap BST_MAP_2006_POR = {
 };
 /* RUS: 100 functions matched, 920 addresses carried */
 const bst_tabmap BST_MAP_2006_RUS = {
+    .no_suffix     = 1,
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .chattr            = 0x100262D0,
     .letterattr        = 0x10025FD0,
     .casemap           = 0x100261D0,
@@ -2339,6 +2484,22 @@ const bst_tabmap BST_MAP_2006_RUS = {
 /* not placed: lts_index dispatch rules outputs trie_desc trans_pitch vowel_dur stress_num stress_add sound_add diph_records diph_offsets voices h.BST_H_LETTER h.BST_H_DIGIT h.BST_H_EAT1 h.BST_H_SPACE h.BST_H_DOT h.BST_H_CURRENCY h.BST_H_PUNCT h.BST_H_DASH h.BST_H_EXPONENT h.BST_H_MODE1 h.BST_H_MODE2 h.BST_H_DEL h.BST_H_OPENER h.BST_H_TILDE h.BST_H_APOSDOT h.BST_H_APOS h.BST_H_POSSESS h.BST_H_EAT2 h.BST_H_EAT3 h.BST_H_WORD h.BST_H_NUMBER h.BST_H_DOTTED h.BST_H_SEP h.BST_H_GROUPS h.BST_H_SEPNUM h.BST_H_MONEY h.BST_H_DASH2 h.BST_H_ORDINAL h.BST_H_ORDEMIT h.BST_H_PUNCTOUT h.BST_H_DOTOUT s.BST_S_POINT s.BST_S_DOLLARS s.BST_S_AND s.BST_S_CENTS s.BST_S_ORD_ST s.BST_S_ORD_ND s.BST_S_ORD_RD s.BST_S_ORD_TIETH s.BST_S_ORD_FIFTH s.BST_S_ORD_FIRST s.BST_S_ORD_TH s.BST_S_GRPSEP s.BST_S_PLURAL s.BST_S_OH s.BST_S_HUNDRED bucket_index bucket_data code_shift cmd_code */
 /* SPA: 189 functions matched, 2873 addresses carried */
 const bst_tabmap BST_MAP_2006_SPA = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 7, 2, 7, 2, 7, 1, 1, 1, 1, 7, 7,
+        7, 7, 7, 7, 1, 1, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .fall_on_next  = 1,
+    .no_suffix     = 1,
+    .stress_rule   = 1,
+    .stress_keep   = { 0x0B, 0x0F },
+    .close_pause   = 7,
+    .comma_ends_text = 1,
+    .contour_round = 1,
+    .dur_frac_shift = 1,
+    .possessive_is = 1,
+    .sepnum_first_three = 1,
     .hdr_shape     = 0x52,
     .code_shift        = -13,
     .chattr            = 0x1001A88C,
@@ -2736,7 +2897,7 @@ void bst_normalise(const bst_image *img, const char *word, bst_word *out) {
 
     int end = n - 1, flags = 0;
 
-    for (;;) {
+    for (; !img->t.no_suffix;) {
         int again = 0;
         int c = end >= 0 ? (unsigned char)w[end] : 0;
 
