@@ -2655,6 +2655,7 @@ const bst_tabmap BST_MAP_2006_RUS = {
     .dict_lead_max     = 4,
     .lts_lit_char      = 0xEB,
     .lts_lit_code      = 0x2E,
+    .init_level        = 2,
     .ph_kind           = 10,
     .stress_kind       = 3,
     .code_shift        = 4,
