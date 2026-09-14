@@ -119,6 +119,17 @@ typedef struct {
        shutdown. */
     uint8_t  no_closing_phrase;
 
+    /* The 2006 builds want the first group of a number written with
+       separators to be three digits like the rest. Given fewer they say that
+       group and abandon the remainder of the text, which is what they do and
+       so what this does. */
+    uint8_t  sepnum_first_three;
+
+    /* How long a pause the closing brace appended to the text leaves. One in
+       the earlier builds; the 2006 ones treat it as a full stop and leave
+       seven. Zero means one. */
+    uint8_t  close_pause;
+
     /* What a transition's stored duration is multiplied by on its way to a
        sample count. Fifty-six in the earlier builds, fifty-three in the 2006
        ones. */

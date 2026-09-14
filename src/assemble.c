@@ -109,7 +109,9 @@ static void punctuation(bst_assembler *z, int c) {
     case 0x5D: pause = 1; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; break;
     case 0x7B: pause = 7; tmpl = 0x4E; z->punct = 5; z->s[8] = 4; z->s[9] = 0x48; break;
     case 0x7C: pause = 1; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; break;
-    case 0x7D: pause = 1; tmpl = 0x4E; z->punct = 2; z->s[8] = 4; break;
+    case 0x7D:
+        pause = z->img->t.close_pause ? z->img->t.close_pause : 1;
+        tmpl = 0x4E; z->punct = 2; z->s[8] = 4; break;
     default: return;
     }
     uint8_t rec[6] = { (uint8_t)tmpl, 0, 0, (uint8_t)c, 0, 0 };

@@ -489,6 +489,16 @@ static int sepnum_out(bst_tok *t) {
         int q = p;
         while (q <= t->cur && is_digit(t, t->ring[q])) q++;
         int len = q - p;
+        if (first && t->img->t.sepnum_first_three && len != 3 &&
+            q <= t->cur && t->ring[q] == ',') {
+            /* The build gives up here: the first group is said and the rest
+               of the text never reaches the machine. */
+            bst_say_number(t, t->ring + p, len);
+            t->tp = t->tn;
+            t->prevkind = t->kind;
+            t->kind = 6;
+            return 1;
+        }
         if (first ? (len < 1 || len > 3) : (len != 3)) return 0;
         first = 0;
         for (int i = 0; i < len && nd < 24; i++) digits[nd++] = t->ring[p + i];
