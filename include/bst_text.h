@@ -151,10 +151,20 @@ typedef struct {
        is looked up. Only the English builds do. */
     uint8_t  no_suffix;
 
+    /* Which suffixes the normaliser takes off and what it puts back. One is
+       the German set: a final e, or em, en, er or es, restored as the
+       build's own three codes and a tail chosen by which one came off. */
+    uint8_t  strip_kind;
+    uint8_t  suffix_tail[8];
+
     /* Where the accent pass puts the closing fall when the last accent is a
        strong one and others follow it: on the next accent rather than in the
        last one's second slot. French, Japanese and Spanish do this. */
     uint8_t  fall_on_next;
+
+    /* The code the accent pass writes for the closing fall. Zero means the
+       usual 0x3D; the German build writes 0x3C. */
+    uint8_t  fall_code;
 
     /* Which events the pair scan emits for each of the module's own sound
        codes. Every build compiles a different switch here, because the same

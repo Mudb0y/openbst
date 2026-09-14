@@ -240,6 +240,71 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 5) {
+            /* The German rules: a voiced sound hardens at the end of a word
+               and softens between two others, one fricative takes the place
+               of what precedes it, one vowel splits three ways, and a vowel
+               after another sound takes a stop in front. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x30 + img->t.code_shift) continue;
+            int at = a1(img, c);
+            int nv = next.val, pv = prev.val;
+            if (at & 0x46) {
+                if (nv == 0 || at_edge || nv == 0x2F || (a1(img, nv) & 0x42)) {
+                    static const uint8_t hard[] = { 7, 2, 8, 4, 9, 6,
+                                                    0x14, 0x0F, 0x15, 0x10 };
+                    for (int k = 0; k < (int)sizeof hard; k += 2)
+                        if (mc == hard[k]) { s[i] = hard[k + 1]; break; }
+                }
+            }
+            int m2 = bst_code(img, s[i]);
+            if ((a1(img, s[i]) & 6) == 2) {
+                int soft = nv == 0x10 || nv == 0x11 || nv == 0x0F;
+                if (!soft && !after_seg) {
+                    if (at_edge || nv == 0x2F || nv == 0 ||
+                        pv == 0x10 || pv == 0x11 ||
+                        stress.val < 3 || stress.pos >= eight.pos)
+                        soft = 1;
+                }
+                if (soft) {
+                    if (m2 == 1)      s[i] = 2;
+                    else if (m2 == 3) s[i] = 4;
+                    else if (m2 == 5) s[i] = 6;
+                }
+            }
+            m2 = bst_code(img, s[i]);
+            if (m2 == 0x2F && bst_code(img, nv) == 0x1B) {
+                int ok = ((a1(img, prev.val) & 1) && prev.pos >= eight.pos) ||
+                         (a2(img, prev.val) & 1) || bst_code(img, prev.val) == 0x37;
+                if (ok) {
+                    s[i] = (uint8_t)bst_uncode(img, 0x30);
+                    if (next.pos >= 0 && next.pos < lim) s[next.pos] = 0;
+                    rescan = 1;
+                }
+            }
+            m2 = bst_code(img, s[i]);
+            if (m2 == 0x13) {
+                int a = a1(img, pv);
+                if (!(a & 8) || (a & 1)) s[i] = 0x12;
+            } else if (m2 == 0x1B) {
+                int a = a1(img, pv);
+                if (!after_seg && (a & 0x80)) {
+                    if (!(a1(img, nv) & 0x80) || at_edge) s[i] = 0x1C;
+                    else if (!(a & 4))                    s[i] = 0x1A;
+                }
+            }
+            if ((a1(img, s[i]) & 0x80) && after_seg && len + 1 <= cap) {
+                for (int k = len; k > i; k--) s[k] = s[k - 1];
+                s[i] = 0x1F;
+                len++; lim++;
+                if (i <= last) last++;
+                inserted = 1;
+                inserted_total++;
+            }
+            pend.val = s[i];
+            continue;
+        }
+
         if (c == 0x4F && stress.val < 5 && eight.val < 0x4E)      latch_o = 1;
         else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E) latch_p = 1;
         else if (a2(img, c) & 8)                                  latch_o = latch_p = 0;

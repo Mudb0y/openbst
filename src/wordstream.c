@@ -95,6 +95,19 @@ void bst_build_emit(const bst_image *img, bst_builder *b, int code) {
    walked from the top bit down, and each suffix appends codes chosen by what
    the stem ended on: "churches" gets a different plural from "dogs". */
 void bst_build_suffix(const bst_image *img, bst_builder *b, int flags, int y_from_i) {
+    if (img->t.strip_kind == 1) {
+        /* The German set: three codes whatever came off, then one that says
+           which did. */
+        for (int slot = 0; flags; slot++, flags = (flags << 1) & 0xFF) {
+            if (!(flags & 0x80)) continue;
+            bst_build_emit(img, b, bst_uncode(img, 0x51));
+            bst_build_emit(img, b, bst_uncode(img, 0x2F));
+            bst_build_emit(img, b, bst_uncode(img, 0x7E));
+            if (img->t.suffix_tail[slot])
+                bst_build_emit(img, b, img->t.suffix_tail[slot]);
+        }
+        return;
+    }
     for (int slot = 0; flags; slot++, flags = (flags << 1) & 0xFF) {
         if (!(flags & 0x80)) continue;
         int last = (b->pos + 1 < (int)sizeof b->buf) ? b->buf[b->pos + 1] : 0;

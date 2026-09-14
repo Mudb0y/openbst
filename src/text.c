@@ -1334,6 +1334,10 @@ const bst_tabmap BST_MAP_2006_FRE = {
 };
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
+    .ph_kind       = 5,
+    .fall_code     = 0x3C,
+    .strip_kind    = 1,
+    .suffix_tail   = { [0] = 0x10, [1] = 0x1B, [2] = 0x0C, [3] = 0x0A },
     .in_map = {
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
         0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
@@ -1353,6 +1357,8 @@ const bst_tabmap BST_MAP_2006_GER = {
         0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0x94, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0x81, 0xFD, 0xFE, 0xFF,
     },
     .in_map2 = { [0x68] = 0x68, [0x48] = 0x68 },
+    .trn_kind      = 3,
+    .vdur_kind     = 3,
     .trn_whole     = 1,
     .pair_class = {
         0, 7, 2, 7, 2, 7, 2, 2, 2, 2, 1, 1, 1, 1, 1, 7,
@@ -1360,7 +1366,6 @@ const bst_tabmap BST_MAP_2006_GER = {
         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
         6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0,
     },
-    .no_suffix     = 1,
     .close_pause   = 7,
     .comma_ends_text = 1,
     .contour_round = 1,
@@ -3039,7 +3044,33 @@ void bst_normalise(const bst_image *img, const char *word, bst_word *out) {
 
     int end = n - 1, flags = 0;
 
-    for (; !img->t.no_suffix;) {
+    if (img->t.strip_kind == 1) {
+        /* The German set. The stem has to end in a consonant or one of four
+           diphthongs, and a few endings before it block the strip. */
+        int last = end >= 0 ? (unsigned char)w[end] : 0;
+        int take = last == 'e' ? 1
+                 : (last == 'm' || last == 'n' || last == 'r' || last == 's') &&
+                   end >= 1 && w[end - 1] == 'e' ? 2 : 0;
+        if (take && vowels > 1) {
+            int i = end - take + 1;          /* the first stripped character */
+            int c1 = i >= 1 ? (unsigned char)w[i - 1] : 0;
+            int c2 = i >= 2 ? (unsigned char)w[i - 2] : 0;
+            int ok = (attr(img, c1) & A_CONS) ||
+                     (c2 == 'e' && c1 == 'i') || (c2 == 'a' && c1 == 'u') ||
+                     (c2 == 'e' && c1 == 'u') || (c2 == 0x84 && c1 == 'u');
+            if (c1 == 'g' && c2 == 'i') ok = 0;
+            if (last == 'n' && c1 == 'h' && c2 == 'c') ok = 0;
+            if (c1 == 's' && ((attr(img, c2) & A_VOWEL) || c2 == 'r' ||
+                              c2 == 'l' || c2 == 'n' || c2 == 'm')) ok = 0;
+            if (ok) {
+                flags = last == 'e' ? 0x08 : last == 'm' ? 0x10
+                      : last == 'n' ? 0x20 : last == 'r' ? 0x40 : 0x80;
+                end = i - 1;
+            }
+        }
+    }
+
+    for (; !img->t.no_suffix && !img->t.strip_kind;) {
         int again = 0;
         int c = end >= 0 ? (unsigned char)w[end] : 0;
 

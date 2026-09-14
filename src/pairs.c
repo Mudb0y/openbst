@@ -256,9 +256,66 @@ static int vowel_italian(scan *z, int pos, int which) {
     return (int16_t)d;
 }
 
+/* German's, which substitutes a short row for a long vowel's when the sound
+   is unstressed, scales after the rate term rather than before, and has no
+   stress offset at all. A sound with no row of its own falls through to its
+   own code as the base, which is what the original's unused switch arm
+   leaves in the register. */
+static int vowel_german(scan *z, int pos, int which) {
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int nc = bst_code(z->img, z->next.val);
+    /* -1 marks a sound with no short row: the code itself becomes the base. */
+    static const signed char alt[0x0F] = {
+        0x22, 0x23,   -1,   -1, 0x26, 0x28,   -1, 0x26,
+          -1, 0x2A,   -1,   -1, 0x2B,   -1, 0x2D,
+    };
+    int row = mc, k = mc - 0x20;
+
+    if ((bst_u8(z->img, z->img->t.phattr1, mc) & 0x10) && z->stress.val <= 2) {
+        row = (unsigned)k <= 0x0E ? alt[k] : -1;
+        if (k == 9 && (nc == 0x18 || nc == 0x0A || nc == 0x0C || nc == 0x1B) &&
+            (z->next2.val == 0 || (a2(z, z->next2.val) & 1)))
+            row = mc;
+        if (k == 12 && nc == 0x1C) row = -1;
+    }
+
+    int base = row >= 0 ? (uint16_t)s16at(z->img, z->img->t.vowel_dur,
+                                          (unsigned)(row * 3 + which) * 2)
+                        : mc;
+    int mode = rate_mode(z);
+    if (mode == 2)      base += 0x41;
+    else if (mode == 0) base += 0x14;
+
+    int scale = mc == 0x29 ? bst_u8(z->img, z->img->t.stress_num, 6)
+                           : bst_u8(z->img, z->img->t.stress_num,
+                                    (unsigned)z->stress.val);
+    int d = (int16_t)((int16_t)(scale * base) >> 5);
+    if (z->edge) {
+        d += 0x32;
+        if ((a1(z, z->next.val) & 0x80) && z->stress.val > 3) d += 0x1E;
+    }
+    d = (int16_t)(d + s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2));
+    d = (int16_t)(d - (mc == 0x2F || mc == 0x30 ? 0x28 : 0x3C));
+    if (mc == 0x31 || mc == 0x32 || mc == 0x33) {
+        if ((int16_t)d < 0x37) return 0x37;
+    } else if (mc == 0x2F || mc == 0x30) {
+        if ((int16_t)d < 0x0A) return 0x0A;
+    } else if ((int16_t)d < 0x1E) {
+        d = 0x1E;
+    }
+    if (bst_trace)
+        fprintf(stderr, "vdur ph=%02x which=%d row=%d base=%02x stress=%d"
+                        " mode=%d edge=%d -> %02x\n",
+                ph, which, row, base, z->stress.val, mode, z->edge,
+                (unsigned)d & 0xFF);
+    return (int16_t)d;
+}
+
 static int vowel_duration(scan *z, int pos, int which) {
     if (z->img->t.vdur_kind == 1) return vowel_simple(z, pos, which);
     if (z->img->t.vdur_kind == 2) return vowel_italian(z, pos, which);
+    if (z->img->t.vdur_kind == 3) return vowel_german(z, pos, which);
     int nv = z->next.val;
     int ph = z->s[pos];
     int mc = bst_code(z->img, ph);
@@ -384,8 +441,131 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
     emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
 }
 
+/* German's four context predicates. The shape is the English build's; the
+   sounds each test names are its own, and the bound on a real sound follows
+   the larger inventory. */
+static int weak_german(scan *z, int pos) {
+    int c = bst_code(z->img, z->s[pos]);
+    int follows = a1(z, z->next.val) & 0x80;
+    if (!(((z->stress.val <= 5 && z->stress.val != 0) && follows) ||
+          (z->edge && follows)))
+        return 0;
+    if (z->prev.val == 0) return 0;
+    if (c == 0x17 || c == 0x1A || c == 0x1D || c == 0x1B) return 0;
+    return 1;
+}
+
+static int paired_german(int ph, int other) {
+    switch (ph) {
+    case 0x0F: return other == 0x14;
+    case 0x10: return other == 0x15;
+    case 0x11: return other == 0x16;
+    default:   return 0;
+    }
+}
+
+static int flanked_german(scan *z, int pos) {
+    int pv = bst_code(z->img, z->prev.val), nv = bst_code(z->img, z->next.val);
+    if (pv < 1 || pv > 0x36) return 0;
+    if (nv < 1 || nv > 0x36) return 0;
+    int ph = bst_code(z->img, z->s[pos]);
+    if ((a1(z, z->s[pos]) & 0x44) != 0x40) return 0;
+    if ((a1(z, z->prev.val) & 0x44) != 0x40 && (a1(z, z->next.val) & 0x44) != 0x40 &&
+        !paired_german(ph, pv) && !paired_german(ph, nv))
+        return 0;
+    return 1;
+}
+
+static int glide_run_german(scan *z) {
+    int nv = bst_code(z->img, z->next.val);
+    int an = a1(z, z->next.val);
+    if (!(an & 1) || nv == 0x1D || nv == 0x1C || nv == 0x1B || !(an & 4)) return 0;
+    for (int p = z->next.pos; p <= z->eight.pos; p++) {
+        int a = a1(z, z->s[p]);
+        if (((a & 1) && !(a & 4)) || (a & 0x80)) return 1;
+    }
+    return 0;
+}
+
+/* German's transition routine: the English one with its own sound sets, a
+   different fraction between two vowels, two extra lengthenings keyed on
+   neighbouring sounds, and a stronger thinning at the end. */
+static void trans_german(scan *z, int dur, int pos, int which) {
+    z->pending = (z->pending + 1) & 0xFF;
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int at = a1(z, ph);
+    int nc = bst_code(z->img, z->next.val);
+    int nudge = 0;
+    int done = 0;
+
+    if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
+
+    if (at & 0x80) {
+        if (which == 2 && glide_run_german(z)) dur = 0x3C;
+    } else if ((at & 0x22) && which != 0) {
+        if ((mc == 0x14 || mc == 0x15 || mc == 0x16) && which != 1 &&
+            weak_german(z, pos)) {
+            dur = (int16_t)(((int16_t)dur * 11) >> 4);
+        } else if (mc == 7) {
+            if (nc == 0x0A) dur = (int16_t)(((int16_t)dur * 11) >> 4);
+            done = 1;
+        }
+    } else {
+        if (weak_german(z, pos)) {
+            int ps = bst_code(z->img, z->prevstrong.val);
+            int skip = (!(at & 4) && (at & 2)) ||
+                       ps == 0x26 || ps == 0x22 || ps == 0x2D || ps == 0x23 ||
+                       ps == 0x2B || ps == 0x2A || ps == 0x28;
+            if (!skip) {
+                dur = (int16_t)dur >> 1;
+                if ((at & 0x44) == 0x40 && (a1(z, z->next.val) & 0x80) &&
+                    (a1(z, z->prev.val) & 0x80))
+                    nudge = 9;
+            }
+        } else if (flanked_german(z, pos)) {
+            dur = (int16_t)(((int16_t)dur * 11) >> 4);
+        } else if (between_vowels(z, pos)) {
+            dur = (int16_t)(((int16_t)dur * 9) >> 4);
+        }
+        if (mc == 3) {
+            if (nc == 0x10) dur = (int16_t)dur >> 1;
+            done = 1;
+        }
+    }
+    if (!done && mc == 0x0A && bst_code(z->img, z->prev.val) == 7) dur += dur;
+
+    unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
+    int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
+    int c7 = s8at(z->img, z->img->t.trans_pitch + 3, k * 6 + (unsigned)which);
+    if (c8 != 0x7F) c8 += nudge;
+
+    if ((at & 0x80) || mc == 0x1D || mc == 0x1B || mc == 0x1C) {
+        int pv = bst_code(z->img, z->prev.val);
+        int prev_open = (a1(z, z->prev.val) & 0x80) || pv == 0x1D || pv == 0x1B ||
+                        pv == 0x1C;
+        int next_open = (a1(z, z->next.val) & 0x80) || nc == 0x1D || nc == 0x1B ||
+                        nc == 0x1C;
+        if ((!prev_open || z->prev.val == 0) && which == 0) {
+            c8 -= 5;
+        } else if ((!next_open || z->prev.val == 0) && which == 2) {
+            c8 = 0x7F; c7 -= 5;
+        } else if (which == 0) {
+            c8 = 0x7F; c7 = 0x7F;
+        } else {
+            c8 = 0x7F;
+            if (which == 2) c7 = 0x7F;
+        }
+    }
+
+    int thin = (int16_t)(dur - ((int16_t)dur >> 3));
+    int d = (int16_t)(thin + z->img->t.trn_round) >> 1;
+    emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
+}
+
 /* One transition event. Position 0 falls before the sound, 1 and 2 after. */
 static void trans(scan *z, int dur, int pos, int which) {
+    if (z->img->t.trn_kind == 3) { trans_german(z, dur, pos, which); return; }
     if (z->img->t.trn_kind) { trans_simple(z, dur, pos, which); return; }
     z->pending = (z->pending + 1) & 0xFF;
     int ph = z->s[pos];
