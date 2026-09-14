@@ -327,13 +327,15 @@ static int vowel_german(scan *z, int pos, int which) {
     }
     d = (int16_t)(d + s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2));
     d = (int16_t)(d - (mc == 0x2F || mc == 0x30 ? 0x28 : 0x3C));
-    if (mc == 0x31 || mc == 0x32 || mc == 0x33) {
-        if ((int16_t)d < 0x37) d = 0x37;
-    } else if (mc == 0x2F || mc == 0x30) {
-        if ((int16_t)d < 0x0A) d = 0x0A;
-    } else if ((int16_t)d < 0x1E) {
+    /* The floors are tried in turn, and only the one that fires ends the
+       chain: a sound with a floor of its own that clears it still has to
+       clear the general thirty. */
+    if ((mc == 0x31 || mc == 0x32 || mc == 0x33) && (int16_t)d < 0x37)
+        d = 0x37;
+    else if ((mc == 0x2F || mc == 0x30) && (int16_t)d < 0x0A)
+        d = 0x0A;
+    else if ((int16_t)d < 0x1E)
         d = 0x1E;
-    }
     d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
         fprintf(stderr, "vdur ph=%02x which=%d row=%d base=%02x stress=%d"

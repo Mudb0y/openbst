@@ -445,6 +445,8 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .strip_kind     = 1,
+    .suffix_tail    = { [0] = 0x10, [1] = 0x1B, [2] = 0x0C, [3] = 0x0A },
     .unvoiced_no_frac = 1,
     .inton_mode     = 3,
     .long_silence_chunk = 1,
