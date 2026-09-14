@@ -68,6 +68,25 @@ static void cb_word(nemu *e, uint32_t sp) {
     (void)e;
 }
 
+/* Values to write into the language table's parameter blocks before running.
+   KGMTTS writes these and the oracle stands in for KGMTTS, so without them the
+   engine speaks with its intonation settings still at zero. */
+static const char *g_params;
+
+static void set_params(nemu *e, uint32_t tl) {
+    if (!g_params) return;
+    char buf[256];
+    snprintf(buf, sizeof buf, "%s", g_params);
+    for (char *t = strtok(buf, ","); t; t = strtok(NULL, ",")) {
+        unsigned blk = 0, off = 0, val = 0;
+        if (sscanf(t, "%u:%x:%x", &blk, &off, &val) != 3 || blk > 2) continue;
+        uint16_t o = ne_rd16(e, tl + 5 + blk * 4);
+        uint16_t sg = ne_rd16(e, tl + 7 + blk * 4);
+        uint32_t at = ne_lin(e, sg, o);
+        if (at) ne_wr16(e, at + off, (uint16_t)val);
+    }
+}
+
 static int drive(nemu *e, nemod *m, const char *text) {
     g_text = text;
     g_pos = 0;
@@ -101,33 +120,30 @@ static int drive(nemu *e, nemod *m, const char *text) {
     printf("language table at %04x:%04x, version %u\n",
            (uint16_t)(tab >> 16), (uint16_t)tab, ver);
 
-    /* The three data pointers before the two entry points: the parameter
-       blocks the host reads and writes. */
-    for (int k = 0; k < 3; k++) {
-        uint16_t off = ne_rd16(e, tl + 5 + k * 4), sg = ne_rd16(e, tl + 7 + k * 4);
-        uint32_t at = ne_lin(e, sg, off);
-        printf("  block %d at %04x:%04x", k, sg, off);
-        for (int i = 0; i < 32; i++)
-            printf(" %02x", (unsigned)(at ? ne_rd16(e, at + i) & 0xff : 0));
-        printf("\n");
-    }
-    printf("  table bytes:");
-    for (int i = 0; i < 5; i++) {
-        uint8_t v = 0;
-        ne_read(e, tl + i, &v, 1);
-        printf(" %02x", v);
-    }
-    printf("\n");
-
     uint16_t a_off = ne_rd16(e, tl + 0x11), a_seg = ne_rd16(e, tl + 0x13);
     uint16_t b_off = ne_rd16(e, tl + 0x15), b_seg = ne_rd16(e, tl + 0x17);
     printf("  reset %04x:%04x  run %04x:%04x\n", a_seg, a_off, b_seg, b_off);
 
     uint32_t r = 0;
     if (ne_call(e, a_seg, a_off, NULL, 0, &r) < 0) return -1;
+    set_params(e, tl);
     int rc = ne_call(e, b_seg, b_off, NULL, 0, &r);
     printf("run -> %08x%s, %zu frame bytes, %d characters taken\n",
            r, rc < 0 ? " (stopped early)" : "", e->frames_len, g_pos);
+    if (e->verbose) {
+        for (int k = 0; k < 3; k++) {
+            uint16_t off = ne_rd16(e, tl + 5 + k * 4);
+            uint16_t sg = ne_rd16(e, tl + 7 + k * 4);
+            uint32_t at = ne_lin(e, sg, off);
+            printf("  block %d after the run", k);
+            for (int i = 0; i < 24; i++) {
+                uint8_t v = 0;
+                if (at) ne_read(e, at + i, &v, 1);
+                printf(" %02x", v);
+            }
+            printf("\n");
+        }
+    }
     return 0;
 }
 
@@ -135,7 +151,8 @@ static void usage(void) {
     fprintf(stderr,
             "usage: neoracle [-v] [-vv] --core KGMTTS.DLL --lang KGMENG.DLL\n"
             "                [--info] [--dump DIR] [--call NAME[,word...]]\n"
-            "                [--engine TEXT] [--frames FILE] [--trace FILE]\n");
+            "                [--engine TEXT] [--frames FILE] [--trace FILE]\n"
+            "                [--set BLOCK:OFF:VALUE,...] [--peek SEG:OFF:DATA:ADDR,...]\n");
 }
 
 int main(int argc, char **argv) {
@@ -154,6 +171,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--probe") && i + 1 < argc) probe = argv[++i];
         else if (!strcmp(argv[i], "--trace") && i + 1 < argc) tracepath = argv[++i];
         else if (!strcmp(argv[i], "--peek") && i + 1 < argc) peek = argv[++i];
+        else if (!strcmp(argv[i], "--set") && i + 1 < argc) g_params = argv[++i];
         else if (!strcmp(argv[i], "--limit") && i + 1 < argc) limit = strtoull(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--eof") && i + 1 < argc) g_eof = (int)strtol(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--core") && i + 1 < argc) core = argv[++i];
