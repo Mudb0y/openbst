@@ -41,6 +41,268 @@ static void scan_back_seg(const bst_image *img, const uint8_t *s, int from, bst_
     }
 }
 
+/* Backward to the previous group marker, the companion of scan_back_seg that
+   the French build uses to decide whether a landmark sits inside a group. */
+static void scan_back_grp(const bst_image *img, const uint8_t *s, int from,
+                          bst_cur *c) {
+    int p = from;
+    for (;;) {
+        int q, b;
+        do {
+            q = p; p = q - 1;
+            b = p >= 0 ? s[p] : 0x4E;
+        } while (b == 0);
+        if (bst_ph_attr2(img, b) & 8) { c->val = b; c->pos = p; return; }
+        if (b == 0x7C) { p = q - 7; continue; }
+        if (p < 0) { c->val = 0; c->pos = 0; return; }
+    }
+}
+
+/* Whether the next marker after this position is the one that mutes a
+   function word rather than a group or phrase boundary. */
+static int weak_word_next(const bst_image *img, const uint8_t *s, int len, int i) {
+    int p = i + 1;
+    int c = p < len ? s[p] : 0;
+    if (bst_ph_attr2(img, c) & 8) return 0;
+    for (;;) {
+        if (p >= len) return 0;
+        if (c == 0x7C)      p += 6;
+        else if (c == 0x51) return 1;
+        p++;
+        c = p < len ? s[p] : 0;
+        if (bst_ph_attr2(img, c) & 8) return 0;
+    }
+}
+
+/* The French build's accent pass, which is a different algorithm rather than
+   the English one with other constants.
+ *
+ * It keeps no per-accent classification. It walks the stream noting three
+ * things -- the accent the phrase's last group opens on, the one a tilde
+ * command names, and the one an accent command names -- and then writes at
+ * most three codes: a rise on the syllable before the last group's, the
+ * shape code on the last group's own, and the sentence type's code on the
+ * last accent of all. Everything else is left flat, which is why a French
+ * phrase carries so much less contour than an English one. */
+static int accents_french(const bst_image *img, uint8_t *s, int len,
+                          bst_accent_state *st) {
+    short pos[ACC_MAX];
+    int n = 0;
+    int last = 0, latest = 0, marked = 0, first = 0;
+    int w = 0, wmark = 0, kind = 0;
+    int code = 0, rise = 1, pending = 0, seen = 0, tcode = 0;
+    int out = 0, type;
+
+    memset(pos, 0, sizeof pos);
+    st->emphasis = 0;
+
+    if (st->flags & 8) {
+        if (s[4] == 0) s[4] = 0x41;
+        if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
+            s[st->tail] = 0x41;
+        return 0;
+    }
+
+    if (s[6] != 'I') {
+        type = 0x12;
+        code = 0x3D;
+    } else {
+        type = s[8] + 0x0E;
+        if (s[9] == 0x48)      code = 0x44;
+        else if (s[9] == 0x4C) code = 0x3D;
+        else if (s[9] == 0x4D) code = 0x41;
+    }
+
+    bst_cur lastseg;
+    scan_back_seg(img, s, len - 6, &lastseg);
+    int voiced = lastseg.val != 0x2F;
+
+    for (int i = 0; i < len; i++) {
+        int b = s[i];
+        if (b == 0x7C) {
+            if (s[i + 1] == '~') {
+                int v = cmd16(s, i);
+                int w2 = (s[i + 4] << 8) | s[i + 5];
+                if (v == 0x1D) {
+                    tcode = s[i + 5];
+                    pending = 1;
+                    marked = n + 1;
+                } else if (v == 0x20 || v == 0x21) {
+                    if (w2 == 0x48)      code = 0x44;
+                    else if (w2 == 0x4C) code = 0x3D;
+                    else if (w2 == 0x4D) code = 0x41;
+                    first = n + 1;
+                    kind = v == 0x21 ? 2 : 1;
+                    seen = 1;
+                }
+            }
+            i += 6;
+            if (bst_ph_attr2(img, s[i + 1]) & 8) i++;
+            continue;
+        }
+        if (bst_ph_attr2(img, b) & 8) {
+            int go = 0;
+            w++;
+            if (seen || last != 0) {
+                go = first != 0;
+            } else if (first != 0) {
+                go = 1;
+            } else if (!weak_word_next(img, s, len, i) && latest == 0) {
+                if (type == 0x11) { first = n + 1; kind = 2; }
+                else if (type == 0x17) {
+                    wmark = w; code = 0x44; kind = 1; first = n + 1;
+                }
+            }
+            if (go && n != 0) {
+                if (kind == 2) {
+                    bst_cur c1, c2;
+                    scan_back_seg(img, s, first, &c1);
+                    scan_back_grp(img, s, first, &c2);
+                    if ((bst_ph_attr1(img, c1.val) & 1) && c1.pos > c2.pos) first++;
+                    last = first;
+                } else if (s[pos[n] - 1] == 0x26 && n > first) {
+                    last = n - 1;
+                } else {
+                    last = n;
+                }
+                first = 0;
+            }
+            if (pending) {
+                if (n != 0) {
+                    if (tcode == 0x12) {
+                        latest = (s[pos[n] - 1] == 0x26 && n > marked) ? n - 1 : n;
+                    } else {
+                        bst_cur c1, c2;
+                        scan_back_seg(img, s, marked, &c1);
+                        scan_back_grp(img, s, marked, &c2);
+                        if ((bst_ph_attr1(img, c1.val) & 1) && c1.pos > c2.pos) marked++;
+                        latest = marked;
+                    }
+                }
+                pending = 0;
+            }
+        } else if (bst_ph_attr1(img, b) & 0x80) {
+            if (n + 1 >= ACC_MAX) break;
+            n++;
+            pos[n] = (short)(i + 1);
+            i += 3;
+        }
+    }
+    w--;
+
+    if (last != 0 && !seen && latest == 0 && (type == 0x11 || type == 0x17)) {
+        if (n - last + 1 > 4) {
+            if (kind == 2) { if (type == 0x11) { type = 0x16; code = 0x44; } }
+            else if (w == wmark) code = 0x42;
+        } else if (kind == 2) {
+            last = 0;
+        } else if (w == wmark) {
+            code = 0x42;
+        }
+    }
+
+    if (n == 0) {
+        if (s[4] == 0) s[4] = 0x41;
+        if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
+            s[st->tail] = 0x41;
+        st->carried = 0;
+        return 0;
+    }
+
+    if (last == 0) { if (latest != 0) last = latest; }
+    else if (latest != 0 && last > latest) last = latest;
+
+    if (last < 2) {
+        out = code;
+        if (code != 0x3D) rise = 0;
+    } else {
+        out = 0x3D;
+        s[pos[last - 1] + 1] = 0x3D;
+        rise = 0;
+        if (latest == 0 || last < latest) s[pos[last] + 1] = (uint8_t)code;
+    }
+
+    if (s[4] == 0) {
+        if (st->carried) {
+            s[4] = (uint8_t)st->carried;
+            if (s[0] == 0x4E && st->carried != 0x3D && last != 1 && latest != 1)
+                s[pos[1] + 1] = 0x3D;
+        } else {
+            s[4] = (uint8_t)out;
+        }
+    }
+
+    if (pending || tcode) {
+        if (tcode == 0x10 || tcode == 0x17) {
+            s[pos[latest] + 1] = (uint8_t)(tcode == 0x10 ? 0x44 : 0x41);
+            if (latest == n) s[pos[latest] + 2] = 0x3D;
+            else             s[pos[latest + 1] + 1] = 0x3D;
+            if (rise) { s[pos[latest - 1] + 1] = 0x3D; rise = 0; }
+        } else if (tcode == 0x12) {
+            s[pos[latest] + 1] = 0x3C;
+        }
+    }
+
+    int dx, cx;
+    if (s[pos[n] - 1] == 0x26 && n > 1) {
+        dx = n - 1;
+        cx = n <= 2 ? n - 1 : n - 2;
+    } else {
+        dx = n;
+        cx = n > 1 ? n - 1 : n;
+    }
+
+    int slot = 0, slotcode = 0;
+    int gap = latest < cx && last < cx && cx < n;
+    switch (type) {
+    case 0x0F: out = 0x46; break;
+    case 0x10:
+        if (gap) { slot = pos[cx] + 1; slotcode = 0x44; }
+        out = voiced ? 0x3D : 0x3A;
+        if (rise && cx > 1) s[pos[cx - 1] + 1] = 0x3D;
+        break;
+    case 0x11:
+        slotcode = 0x3D;
+        if (tcode == 0x10)  slot = pos[dx] + 1;
+        else if (gap)       slot = pos[cx] + 1;
+        out = 0x46;
+        break;
+    case 0x12: out = voiced ? 0x3D : 0x3A; break;
+    case 0x13:
+        if (gap) { slot = pos[cx] + 1; slotcode = 0x3D; }
+        out = 0x40;
+        break;
+    case 0x14: out = 0x40; break;
+    case 0x15:
+        if (gap) { slot = pos[cx] + 1; slotcode = 0x44; }
+        out = 0x40;
+        if (rise && cx > 1) s[pos[cx - 1] + 1] = 0x3D;
+        break;
+    case 0x16:
+        if (gap) { slot = pos[cx] + 1; slotcode = 0x41; }
+        out = 0x46;
+        if (rise && cx > 1) s[pos[cx - 1] + 1] = 0x3D;
+        break;
+    case 0x17:
+        if (latest < dx && (last < dx || last == 1)) s[pos[dx] + 1] = 0x41;
+        out = voiced ? 0x3D : 0x3A;
+        if (rise && dx > 1) s[pos[dx - 1] + 1] = 0x3D;
+        break;
+    default: break;
+    }
+    if (slot) s[slot] = (uint8_t)slotcode;
+
+    if (bst_trace)
+        fprintf(stderr, "acc n=%d last=%d latest=%d w=%d/%d code=%02x type=%02x"
+                        " dx=%d cx=%d out=%02x\n",
+                n, last, latest, w, wmark, code, type, dx, cx, out);
+
+    if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
+        s[st->tail] = (uint8_t)out;
+    st->carried = voiced ? out : 0;
+    return n;
+}
+
 int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st) {
     acc e[ACC_MAX];
     short bcmd[16];
@@ -53,6 +315,8 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
     int emph = 0;
     int type, shape;
     int codeA = 0, codeB = 0;
+
+    if (img->t.acc_kind == 1) return accents_french(img, s, len, st);
 
     memset(e, 0, sizeof e);
     st->emphasis = 0;
