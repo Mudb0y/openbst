@@ -198,7 +198,7 @@ typedef struct {
 
     /* The accent level the build starts a text at. Zero means the usual
        three; Polish starts at two. */
-    uint8_t  init_level;
+    int8_t   init_level;
 
     /* Whether a transition's duration is halved whole. The English builds
        take a sixteenth off it first; the 2006 language builds do not. */
