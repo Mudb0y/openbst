@@ -400,6 +400,9 @@ static void emit(bst_gen *g) {
                 (uint16_t)g->dur, (uint16_t)g->gclock, (uint16_t)g->gain_acc,
                 (uint16_t)g->gain_target);
     compensate(g);
+    /* The fraction byte is the gain compensation's own input and is dropped on
+       the way out, not before it. */
+    if (g->nofrac && g->img->t.unvoiced_no_frac) g->frame[1] = 0;
     if (g->nout < g->maxout) memcpy(g->out + g->nout * 16, g->frame, 16);
     g->nout++;
 }
@@ -620,8 +623,8 @@ static void build(bst_gen *g, const uint8_t *rec) {
             v = v >> 1;
         g->frame[4 + i] = (uint8_t)v;
     }
-    if ((g->state[0] & 1) && !(nofrac && g->img->t.unvoiced_no_frac))
-        g->frame[1] |= 0x80;
+    if (g->state[0] & 1) g->frame[1] |= 0x80;
+    g->nofrac = nofrac;
     g->frame[2] = (uint8_t)gain_value(g);
     pitch_step(g);
     g->fresh = 0;

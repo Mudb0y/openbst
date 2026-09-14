@@ -39,6 +39,7 @@ typedef struct {
     bst_seg_rec cur;             /* the segment being consumed */
     bst_ito_rec inton, pend;     /* the intonation record and its predecessor */
     bst_trn_rec ctrn;            /* the transition being consumed */
+    int nofrac;                  /* this frame carries no pitch fraction */
 
     int16_t dur, left, gclock, segleft, mid, pclock;
     int16_t targets[BST_ORDER], prev[BST_ORDER], state[BST_ORDER];
