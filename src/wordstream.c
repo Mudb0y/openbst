@@ -20,7 +20,7 @@ static int a1(const bst_image *img, int c) { return bst_ph_attr1(img, c); }
 
 static int modmap(const bst_image *img, int v) {
     const uint8_t *p = bst_at(img, img->t.modmap + (unsigned)(v & 0xFF), 1);
-    return p ? *p : 0;
+    return p ? bst_uncode(img, *p) : 0;
 }
 
 /* The variant of a sound a modifier selects, or -1 when there is none, which
@@ -31,7 +31,8 @@ static int variant(const bst_image *img, int sound, int mod) {
     uint32_t va = (uint32_t)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
     if (!va) return -1;
     const uint8_t *p = bst_at(img, va + (unsigned)(mod & 0xFF), 1);
-    return p ? (int8_t)*p : -1;
+    if (!p) return -1;
+    return (int8_t)*p == -1 ? -1 : bst_uncode(img, *p);
 }
 
 typedef struct {

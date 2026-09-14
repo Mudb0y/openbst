@@ -461,6 +461,15 @@ static inline int bst_code(const bst_image *img, int c) {
     return c >= 0x2F ? (c + img->t.code_shift) & 0xFF : c;
 }
 
+/* The other way: a code read out of the image, in the module's own numbering,
+   turned into the numbering the library keeps its streams in. */
+static inline int bst_uncode(const bst_image *img, int c) {
+    if (img->t.cmd_code && c == img->t.cmd_code) return 0x7C;
+    int lo = (0x2F + img->t.code_shift) & 0xFF;
+    if (img->t.code_shift == 0) return c;
+    return c >= lo ? (c - img->t.code_shift) & 0xFF : c;
+}
+
 /* The two phoneme attribute bytes. The first classifies the sound; the second
    says which of the scans below stop on it. */
 int bst_ph_attr1(const bst_image *img, int c);

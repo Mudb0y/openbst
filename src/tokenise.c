@@ -94,11 +94,12 @@ static void emit_codes(bst_tok *t, unsigned va) {
     if (!p || !*p) return;
     emit(t, ' ');
     emit(t, 0xFE);
+    int cmd = bst_code(t->img, 0x7C);
     for (; *p; p++) {
-        if (*p == '|') {
-            for (int k = 0; k < 6 && *p; k++, p++) emit(t, *p);
-            p--;
-        } else emit(t, *p);
+        if (*p == cmd) {
+            emit(t, 0x7C);
+            for (int k = 1; k < 6 && p[1]; k++) emit(t, *++p);
+        } else emit(t, bst_uncode(t->img, *p));
     }
     emit(t, 0xFF);
     emit(t, ' ');
@@ -295,7 +296,7 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
         if (m > 0) {
             emit(t, ' ');
             emit(t, 0xFE);
-            for (int i = 0; i < m; i++) emit(t, codes[i]);
+            for (int i = 0; i < m; i++) emit(t, bst_uncode(t->img, codes[i]));
             emit(t, 0xFF);
             emit(t, ' ');
             t->prevkind = t->kind;
@@ -313,7 +314,7 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
         if (m > 0) {
             emit(t, ' ');
             emit(t, 0xFE);
-            for (int i = 0; i < m; i++) emit(t, codes[i]);
+            for (int i = 0; i < m; i++) emit(t, bst_uncode(t->img, codes[i]));
             emit(t, 0xFF);
             emit(t, ' ');
             t->prevkind = t->kind;
@@ -369,7 +370,7 @@ static int dotted_out(bst_tok *t) {
         if (m > 0) {
             emit(t, ' ');
             emit(t, 0xFE);
-            for (int i = 0; i < m; i++) emit(t, codes[i]);
+            for (int i = 0; i < m; i++) emit(t, bst_uncode(t->img, codes[i]));
             emit(t, 0xFF);
             emit(t, ' ');
             t->prevkind = t->kind;
