@@ -452,6 +452,23 @@ def main():
         print("    .trie_max_off = 11, .trie_po_off = 13,")
         print("    .silence_f0 = 0xD1, .unvoiced_dur = 0x6E, .unvoiced_reps = 8,")
         print("    .vowel_dur_shift = 1, .trn_round = 0,")
+        # A placed table has to look like the thing it claims to be. The
+        # phoneme attributes are a byte per sound and hardly any of them is
+        # zero; a run of zeros every fourth byte means the block anchor landed
+        # on a table of pointers instead.
+        for tab in ("phattr1", "phattr2", "chattr", "letterattr"):
+            if tab not in out:
+                continue
+            off = out[tab] & 0xFFFF
+            b = body[dg]
+            if off + 0x31 > len(b):
+                print("    /* %s runs off the end of the segment */" % tab)
+                continue
+            zeros = sum(1 for i in range(1, 0x31) if b[off + i] == 0)
+            if tab.startswith("ph") and zeros > 4:
+                print("    /* %s does not look like an attribute table:"
+                      " %d of its first 48 entries are zero */" % (tab, zeros))
+
         slots = out.get("_s")
         if not slots and "modmap" in found:
             slots = {nm: (dg << 16) | ((STRINGS[nm] + found["modmap"]) & 0xFFFF)
@@ -476,7 +493,8 @@ def main():
                 print("        [BST_H_%s] = 0x%08x," % (h, out["_handlers"][h]))
             print("    },")
         missing = [t for t in list(BLOCKS) + ["tokstates"]
-                   if t not in out and t not in ("names", "modmap", "modtab")]
+                   if t not in out
+                   and t not in ("names", "modmap", "modtab", "log", "alog")]
         missing += [t for t in ("names", "modmap", "modtab") if t not in out]
         if missing:
             print("    /* not placed: %s */" % " ".join(missing))
