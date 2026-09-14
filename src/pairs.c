@@ -185,10 +185,46 @@ static int div4(int v) { return (int16_t)((v + ((v >> 31) & 3)) >> 2); }
 
 static int d16(int v) { return (int16_t)v; }
 
+/* The shorter routine six of the 2006 language builds share. It scales the
+   table entry by the stress and adds the same four terms whatever the
+   context, where the English one has a second scaling and a set of cases. */
+static int vowel_simple(scan *z, int pos, int which) {
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur,
+                               (unsigned)(mc * 3 + which) * 2);
+    int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+    int mode = rate_mode(z);
+    int d = (int16_t)((int16_t)(scale * base) >> 5);
+
+    if (z->edge) {
+        d += 0x32;
+    } else {
+        int at = a1(z, z->next.val);
+        if (at & 4)    d += 0x14;
+        if (at & 0x40) d += 0x19;
+    }
+    d += s16at(z->img, z->img->t.stress_add, (unsigned)z->stress.val * 2);
+    if (mode == 2)      d += 0x23;
+    else if (mode == 0) d += 0x14;
+    d = (int16_t)d;
+    int tail = (int16_t)(s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2)
+                         - (int16_t)((scale * 60) >> 5));
+    d = (int16_t)(d + tail);
+    if ((int16_t)d < 10) d = 10;
+    if (bst_trace)
+        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                        " edge=%d -> %02x\n",
+                ph, which, base, z->stress.val, mode, z->edge, (unsigned)d & 0xFF);
+    return (int16_t)d;
+}
+
 static int vowel_duration(scan *z, int pos, int which) {
+    if (z->img->t.vdur_kind == 1) return vowel_simple(z, pos, which);
     int nv = z->next.val;
     int ph = z->s[pos];
-    int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur, (unsigned)(ph * 3 + which) * 2);
+    int mc = bst_code(z->img, ph);
+    int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur, (unsigned)(mc * 3 + which) * 2);
     int mode = rate_mode(z);
     int d;
     int scaled = 0;
@@ -234,7 +270,7 @@ static int vowel_duration(scan *z, int pos, int which) {
 
     if (mode == 2)      d += 0x41;
     else if (mode == 0) d += 0x14;
-    d += s16at(z->img, z->img->t.sound_add, (unsigned)z->s[pos] * 2) - 0x3C;
+    d += s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2) - 0x3C;
 
     if ((ph == 0x1F || ph == 0x20 || ph == 0x21) && d < 0x37) d = 0x37;
     else if (ph == 0x24 && d < 5) d = 5;
@@ -247,10 +283,69 @@ static int vowel_duration(scan *z, int pos, int which) {
     return (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
 }
 
-/* One transition event. Position 0 falls before the sound, 1 and 2 after. */
-static void trans(scan *z, int dur, int pos, int which) {
+/* Between two sounds that carry a formant target, in the shorter form the
+   2006 language builds use: no attribute or edge conditions on either side. */
+static int between_simple(scan *z, int pos) {
+    if (!(a1(z, z->s[pos]) & 1)) return 0;
+    return (a1(z, z->prev.val) & 1) || (a1(z, z->next.val) & 1);
+}
+
+/* Flanked by its own kind, in the same shorter form: no paired sounds. */
+static int flanked_simple(scan *z, int pos) {
+    int last = 0x2F + z->img->t.code_shift;
+    if (z->prev.val < 1 || z->prev.val >= last) return 0;
+    if (z->next.val < 1 || z->next.val >= last) return 0;
+    if ((a1(z, z->s[pos]) & 0x44) != 0x40) return 0;
+    return (a1(z, z->prev.val) & 0x44) == 0x40 ||
+           (a1(z, z->next.val) & 0x44) == 0x40;
+}
+
+/* The shorter transition routine. */
+static void trans_simple(scan *z, int dur, int pos, int which) {
     z->pending = (z->pending + 1) & 0xFF;
     int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int at = a1(z, ph);
+
+    if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
+    if (between_simple(z, pos) && (!(at & 2) || which == 0))
+        dur = (int16_t)((int16_t)(dur * 9) >> 4);
+    if (between_simple(z, pos) && (at & 0x80) && (which == 0 || which == 2)) {
+        int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+        dur = (int16_t)((int16_t)(scale * dur) >> 5);
+    }
+    if (flanked_simple(z, pos))
+        dur = (int16_t)((int16_t)(dur * 11) >> 4);
+
+    unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
+    int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
+    int c7 = s8at(z->img, z->img->t.trans_pitch + 3, k * 6 + (unsigned)which);
+
+    if (at & 0x80) {
+        int prev_open = (a1(z, z->prev.val) & 0x80) && z->prev.val != 0;
+        int next_open = (a1(z, z->next.val) & 0x80) != 0;
+        if (!prev_open && which == 0) {
+            c8 = (int8_t)(c8 - 5);
+        } else if ((!next_open || z->prev.val == 0) && which == 2) {
+            c8 = 0x7F; c7 = (int8_t)(c7 - 5);
+        } else if (which == 0 || which == 2) {
+            c8 = 0x7F; c7 = 0x7F;
+        } else {
+            c8 = 0x7F;
+        }
+    }
+
+    int thin = z->img->t.trn_whole ? dur : (int16_t)(dur - (dur >> 4));
+    int d = (int16_t)(thin + z->img->t.trn_round) >> 1;
+    emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
+}
+
+/* One transition event. Position 0 falls before the sound, 1 and 2 after. */
+static void trans(scan *z, int dur, int pos, int which) {
+    if (z->img->t.trn_kind == 1) { trans_simple(z, dur, pos, which); return; }
+    z->pending = (z->pending + 1) & 0xFF;
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
     int nudge = 100;
 
     if (z->emphasis && (a1(z, ph) & 2) && which == 2) dur >>= 2;
@@ -285,7 +380,7 @@ static void trans(scan *z, int dur, int pos, int which) {
         dur = 0x3C;
     }
 
-    unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + ph * 2);
+    unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
     int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
     int c7 = s8at(z->img, z->img->t.trans_pitch + 3, k * 6 + (unsigned)which);
     if (c8 != 0x7F) c8 = (int8_t)(c8 + (nudge - 100) / 5);
@@ -309,8 +404,9 @@ static void trans(scan *z, int dur, int pos, int which) {
         }
     }
 
-    int d = (int16_t)((int16_t)(dur - (dur >> 4)) + z->img->t.trn_round) >> 1;
-    emit(z, BST_EMIT_TRANS, (unsigned)((ph - 1) * 3 + which), (unsigned)d, c8, c7);
+    int thin = z->img->t.trn_whole ? dur : (int16_t)(dur - (dur >> 4));
+    int d = (int16_t)(thin + z->img->t.trn_round) >> 1;
+    emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
 }
 
 /* One diphone segment, carrying the events accumulated since the last. */

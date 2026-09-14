@@ -158,6 +158,20 @@ typedef struct {
        tools/analysis/pairclass.py reads the rest out of the build. */
     uint8_t  pair_class[0x40];
 
+    /* Whether a transition's duration is halved whole. The English builds
+       take a sixteenth off it first; the 2006 language builds do not. */
+    uint8_t  trn_whole;
+
+    /* Which of the vowel duration routines the build compiles. Zero is the
+       English one in pairs.c; one is the shorter one six of the 2006 language
+       builds share, which scales the table entry by the stress alone. */
+    uint8_t  vdur_kind;
+
+    /* Which of the transition routines the build compiles. Zero is the
+       English one in pairs.c; one is the shorter one the 2006 language builds
+       share, which drops the weak and paired cases and the pitch nudge. */
+    uint8_t  trn_kind;
+
     /* A comma ends the text outright in the 2006 builds: what follows it is
        never spoken, and the comma itself is said with a full stop's pause and
        a full stop's sentence type. */
