@@ -697,7 +697,12 @@ static int classify(bst_tok *t, int *cls) {
         if (t->ended) { *cls = 0x101; return 0xFFFF; }
         t->pos = 0;
         t->nout = 0;
+        /* A pass that neither consumes input nor emits anything would spin
+           for ever, which a build whose state table is not yet placed can
+           do. Treat it as the end of the text. */
+        int before = t->cur;
         if (!scan(t)) t->ended = 1;
+        else if (t->nout == 0 && t->cur == before) t->ended = 1;
     }
 }
 

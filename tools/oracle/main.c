@@ -45,6 +45,30 @@ struct outbuf { uint32_t addr; uint32_t len; };
 
 static int parse_arg(emu *e, const char *s, uint32_t *out, struct outbuf *ob) {
     if (strncmp(s, "str:", 4) == 0) { *out = emu_push_str(e, s + 4); return 0; }
+    if (strncmp(s, "wstru:", 6) == 0) {
+        /* The argument is UTF-8; widen it to real UTF-16 rather than
+           byte-per-unit, which is what a build outside Latin-1 needs. */
+        const char *t = s + 6;
+        size_t n = strlen(t);
+        uint16_t *w = calloc(n + 1, 2);
+        size_t k = 0;
+        for (size_t i = 0; i < n;) {
+            unsigned c = (unsigned char)t[i];
+            unsigned cp;
+            int len;
+            if (c < 0x80)        { cp = c; len = 1; }
+            else if ((c & 0xE0) == 0xC0) { cp = c & 0x1F; len = 2; }
+            else if ((c & 0xF0) == 0xE0) { cp = c & 0x0F; len = 3; }
+            else                 { cp = c & 0x07; len = 4; }
+            for (int j = 1; j < len && i + (size_t)j < n; j++)
+                cp = (cp << 6) | ((unsigned char)t[i + j] & 0x3F);
+            i += (size_t)len;
+            w[k++] = (uint16_t)cp;
+        }
+        *out = emu_push_bytes(e, w, (uint32_t)(k + 1) * 2);
+        free(w);
+        return 0;
+    }
     if (strncmp(s, "wstr:", 5) == 0) {
         const char *t = s + 5;
         size_t n = strlen(t);
