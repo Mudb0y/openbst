@@ -810,11 +810,15 @@ static void trans(scan *z, int dur, int pos, int which) {
 
     /* A sound with no spectral target of its own leaves the contour to its
        neighbours, so its offsets drop out. */
-    if (bst_ph_attr1(z->img, ph) & 0x80 || ph == 8 || ph == 9 || ph == 0x12) {
-        int prev_open = (a1(z, z->prev.val) & 0x80) || z->prev.val == 8 ||
-                        z->prev.val == 9 || z->prev.val == 0x12;
-        int next_open = (a1(z, z->next.val) & 0x80) || z->next.val == 8 ||
-                        z->next.val == 9 || z->next.val == 0x12;
+    int xtra = !z->img->t.open_plain;
+    if ((bst_ph_attr1(z->img, ph) & 0x80) ||
+        (xtra && (ph == 8 || ph == 9 || ph == 0x12))) {
+        int prev_open = (a1(z, z->prev.val) & 0x80) ||
+                        (xtra && (z->prev.val == 8 || z->prev.val == 9 ||
+                                  z->prev.val == 0x12));
+        int next_open = (a1(z, z->next.val) & 0x80) ||
+                        (xtra && (z->next.val == 8 || z->next.val == 9 ||
+                                  z->next.val == 0x12));
         if ((!prev_open || z->prev.val == 0) && which == 0) {
             c8 = (int8_t)(c8 - 5);
         } else if ((!next_open || z->prev.val == 0) && which == 2) {

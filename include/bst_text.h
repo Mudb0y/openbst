@@ -159,6 +159,11 @@ typedef struct {
        done in thirty-two bits. The 2006 builds do it that way, so a
        transition longer than a hundred and twenty-seven units still comes out
        positive; the 1995 build sign-extends the byte first. */
+    /* Whether three sounds beyond the ones the attribute marks count as
+       opening a group when the transition offsets are chosen. The 2006
+       English build counts them; the other builds of that year do not. */
+    uint8_t  open_plain;
+
     uint8_t  trn_dur_wide;
 
     uint8_t  xlat_kind;
