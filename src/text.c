@@ -27,6 +27,7 @@ const bst_tabmap BST_MAP_1995 = {
     .trie_st_off = 4, .trie_li_off = 8, .trie_base_off = 12,
     .trie_max_off = 14, .trie_po_off = 16,
     .silence_f0 = 0xC1, .unvoiced_dur = 0x6E, .unvoiced_reps = 1,
+    .vowel_dur_shift = 0,
 
     .code_medial   = 0x10020EA0, .code_initial  = 0x10020F10,
     .ph_single     = 0x10092D68, .ph_single_max = 0x10092E14,
@@ -118,6 +119,7 @@ const bst_tabmap BST_MAP_1998_ENG = {
     .trie_st_off = 1, .trie_li_off = 5, .trie_base_off = 9,
     .trie_max_off = 11, .trie_po_off = 13,
     .silence_f0 = 0xD1, .unvoiced_dur = 0x6E, .unvoiced_reps = 8,
+    .vowel_dur_shift = 1,
 
     .code_medial   = 0x00100068, .code_initial  = 0x001000d2,
     .ph_single     = 0x00100ff4, .ph_single_max = 0x001010a0,

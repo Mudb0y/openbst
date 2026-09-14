@@ -222,7 +222,7 @@ static int vowel_duration(scan *z, int pos, int which) {
     if ((ph == 0x1F || ph == 0x20 || ph == 0x21) && d < 0x37) d = 0x37;
     else if (ph == 0x24 && d < 5) d = 5;
     else if (d < 0x1E) d = 0x1E;
-    return (int16_t)d;
+    return (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
 }
 
 /* One transition event. Position 0 falls before the sound, 1 and 2 after. */

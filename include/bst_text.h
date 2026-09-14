@@ -75,6 +75,10 @@ typedef struct {
        eight periods of an eighth of that. The frame lasts as long either way,
        so the interpolation clock does not change; only the bytes do. */
     uint8_t  silence_f0, unvoiced_dur, unvoiced_reps;
+
+    /* The 1998 build halves a vowel's duration on the way out of the pair
+       scan, after the floors rather than before them. */
+    uint8_t  vowel_dur_shift;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
