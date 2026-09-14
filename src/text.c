@@ -192,6 +192,7 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .min_period     = 62,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
     .vdur_kind      = 1,
