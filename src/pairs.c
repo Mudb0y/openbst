@@ -482,9 +482,12 @@ static int between_simple(scan *z, int pos) {
 
 /* Flanked by its own kind, in the same shorter form: no paired sounds. */
 static int flanked_simple(scan *z, int pos) {
+    /* The bound is on the build's own numbering, so a pause, which sits just
+       past the sounds, fails it. */
     int last = 0x2F + z->img->t.code_shift;
-    if (z->prev.val < 1 || z->prev.val >= last) return 0;
-    if (z->next.val < 1 || z->next.val >= last) return 0;
+    int pv = bst_code(z->img, z->prev.val), nv = bst_code(z->img, z->next.val);
+    if (pv < 1 || pv >= last) return 0;
+    if (nv < 1 || nv >= last) return 0;
     if ((a1(z, z->s[pos]) & 0x44) != 0x40) return 0;
     return (a1(z, z->prev.val) & 0x44) == 0x40 ||
            (a1(z, z->next.val) & 0x44) == 0x40;

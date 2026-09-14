@@ -139,6 +139,7 @@ int main(int argc, char **argv) {
     bst_assemble_start(&z);
 
     uint8_t buf[128];
+    int nphrase = 0;
     for (int guard = 0; guard < 4096; guard++) {
         memset(buf, 0, sizeof buf);
         int kind = bst_tok_next(&tk, buf);
@@ -155,14 +156,17 @@ int main(int argc, char **argv) {
         int len = z.len > 0 ? z.len : z.wp + 1;
         if (len <= 0) { memset(stream, 0, sizeof stream); bst_assemble_start(&z); continue; }
 
-        if (map && map->no_closing_phrase) {
+        if (map && map->no_closing_phrase && nphrase > 0) {
             int spoken = 0;
             for (int i = 12; i < len; i++)
                 if (stream[i] && stream[i] < 0x2F) { spoken = 1; break; }
             /* The build says the phrase the closing brace opens only when
-               the sentence ended on something other than a full stop. */
+               the sentence ended on something other than a full stop. A
+               first phrase with nothing in it is still said, as the silence
+               it is. */
             if (!spoken && (tk.lastend == '.' || tk.lastend == 0)) break;
         }
+        nphrase++;
 
         if (bst_trace) {
             fprintf(stderr, "assembled");
