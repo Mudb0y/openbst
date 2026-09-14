@@ -260,7 +260,9 @@ static int vowel_italian(scan *z, int pos, int which) {
     } else {
         if ((at & 1) && z->next2.val != 0 && (a1(z, z->next2.val) & 1) &&
             !z->begins && z->stress.val >= 6)
-            d = (int16_t)((int16_t)(d * 5) >> 3);
+            d = z->img->t.stress_shift
+                    ? (int16_t)((int16_t)(d * 5) >> 3)
+                    : (int16_t)((int16_t)(d * 2) / 3);
         if (at & 0x40) d += 0x19;
     }
     d += s16at(z->img, z->img->t.stress_add, (unsigned)z->stress.val * 2);
@@ -268,6 +270,7 @@ static int vowel_italian(scan *z, int pos, int which) {
     else if (mode == 0) d += 0x14;
     d = (int16_t)(d + s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2));
     if ((int16_t)d < 10) d = 10;
+    d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
         fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
                         " edge=%d -> %02x\n",
