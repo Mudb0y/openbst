@@ -49,7 +49,8 @@ static int encode(const bst_image *img, const char *stem, uint8_t *out, int max)
     out[0] = (uint8_t)total;
     for (int i = 0; i < k; i++) out[1 + i] = nb[k - 1 - i];
     out[1 + k] = (uint8_t)flag;
-    if (total > 2 && out[1] == 0x0F && out[2] < 8) out[1] = 1;
+    int lead = img->t.dict_lead_max ? img->t.dict_lead_max : 8;
+    if (total > 2 && out[1] == 0x0F && out[2] < lead) out[1] = 1;
     return total;
 }
 
@@ -155,6 +156,11 @@ int bst_dict_lookup(const bst_image *img, const bst_word *w, bst_recs *out) {
     memset(out, 0, sizeof *out);
     if (!encode(img, stem, enc, (int)sizeof enc)) return 0;
 
+    if (bst_trace) {
+        fprintf(stderr, "dict key");
+        for (int q = 0; q <= enc[0]; q++) fprintf(stderr, " %02x", enc[q]);
+        fprintf(stderr, "\n");
+    }
     int bucket = enc[1] - 1;
     if (bucket < 0 || bucket >= 15) return 0;
 

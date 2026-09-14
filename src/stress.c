@@ -262,9 +262,15 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                    accent on its last syllable. */
                 s[slot[last]] = 0x36;
             } else if (chosen == 0) {
+                /* The accent falls on the last syllable but two. Russian
+                   takes the last but one instead unless the word is longer
+                   than four syllables. */
+                int ru = img->t.stress_kind == 3;
                 int k = first;
-                if (first + 2 < last) {
-                    k = last - 2;
+                int back = (!ru || n > 4) && first + 2 < last ? 2
+                         : (ru && first + 1 < last)           ? 1 : 0;
+                if (back) {
+                    k = last - back;
                     while (k > first && ((flags[k] & F_LONG) || s[slot[k]] == 0x76)) k--;
                 }
                 while (k < n && ((flags[k] & F_LONG) || (a2(img, s[slot[k]]) & 2))) k++;
