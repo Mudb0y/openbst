@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_text.h"
 
@@ -69,7 +70,7 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
 
     if (s[6] == 'I') {
         type  = s[8] + 0x0E;
-        shape = s[9] & 0x7F;
+        shape = img->t.acc_shape ? img->t.acc_shape : (s[9] & 0x7F);
     } else {
         shape = img->t.hdr_shape ? img->t.hdr_shape : 0x4C;
         type  = 0x12;
@@ -156,6 +157,10 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
     }
     last = seen;
 
+    /* A phrase with one accent falls back to the plain shape unless the
+       header's tenth byte has its top bit set. */
+    if (first == last && !(s[9] & 0x80)) shape = 0x4C;
+
     int kind = e[first].kind;
     int nextkind = 0;
     for (int k = first; k <= last; k++) {
@@ -199,6 +204,12 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
             }
         }
     }
+
+    if (bst_trace)
+        fprintf(stderr, "acc n=%d first=%d last=%d kind=%d nextkind=%d emph=%d"
+                        " shape=%02x type=%02x level=%d lead=%02x codeA=%02x\n",
+                n, first, last, kind, nextkind, emph, shape, type, st->level,
+                lead, codeA);
 
     int cur = first;
     if (kind == 2) {

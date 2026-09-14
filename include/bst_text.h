@@ -135,6 +135,11 @@ typedef struct {
        Zero means 0x4C. */
     uint8_t  hdr_shape;
 
+    /* The shape the accent pass works from. Most builds read it back out of
+       the phrase header; Spanish keeps the header's own byte for the rest of
+       the engine and hands the accent pass 0x4C. Zero means the header's. */
+    uint8_t  acc_shape;
+
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
        last when the word ends in a consonant that is not in stress_keep, and

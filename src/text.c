@@ -2500,6 +2500,7 @@ const bst_tabmap BST_MAP_2006_RUS = {
 /* not placed: lts_index dispatch rules outputs trie_desc trans_pitch vowel_dur stress_num stress_add sound_add diph_records diph_offsets voices h.BST_H_LETTER h.BST_H_DIGIT h.BST_H_EAT1 h.BST_H_SPACE h.BST_H_DOT h.BST_H_CURRENCY h.BST_H_PUNCT h.BST_H_DASH h.BST_H_EXPONENT h.BST_H_MODE1 h.BST_H_MODE2 h.BST_H_DEL h.BST_H_OPENER h.BST_H_TILDE h.BST_H_APOSDOT h.BST_H_APOS h.BST_H_POSSESS h.BST_H_EAT2 h.BST_H_EAT3 h.BST_H_WORD h.BST_H_NUMBER h.BST_H_DOTTED h.BST_H_SEP h.BST_H_GROUPS h.BST_H_SEPNUM h.BST_H_MONEY h.BST_H_DASH2 h.BST_H_ORDINAL h.BST_H_ORDEMIT h.BST_H_PUNCTOUT h.BST_H_DOTOUT s.BST_S_POINT s.BST_S_DOLLARS s.BST_S_AND s.BST_S_CENTS s.BST_S_ORD_ST s.BST_S_ORD_ND s.BST_S_ORD_RD s.BST_S_ORD_TIETH s.BST_S_ORD_FIFTH s.BST_S_ORD_FIRST s.BST_S_ORD_TH s.BST_S_GRPSEP s.BST_S_PLURAL s.BST_S_OH s.BST_S_HUNDRED bucket_index bucket_data code_shift cmd_code */
 /* SPA: 189 functions matched, 2873 addresses carried */
 const bst_tabmap BST_MAP_2006_SPA = {
+    .hdr_shape     = 0x52,
     .trn_kind      = 1,
     .vdur_kind     = 1,
     .trn_whole     = 1,
@@ -2519,7 +2520,6 @@ const bst_tabmap BST_MAP_2006_SPA = {
     .dur_frac_shift = 1,
     .possessive_is = 1,
     .sepnum_first_three = 1,
-    .hdr_shape     = 0x52,
     .code_shift        = -13,
     .chattr            = 0x1001A88C,
     .letterattr        = 0x1001A58C,
