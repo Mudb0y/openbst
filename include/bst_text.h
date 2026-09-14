@@ -135,6 +135,11 @@ typedef struct {
        a full stop's sentence type. */
     uint8_t  comma_ends_text;
 
+    /* The 2006 builds read a possessive as two words: "dog's" is "dog is".
+       The earlier ones put the possessive's own sound on the end of the
+       word. */
+    uint8_t  possessive_is;
+
     /* What a transition's stored duration is multiplied by on its way to a
        sample count. Fifty-six in the earlier builds, fifty-three in the 2006
        ones. */

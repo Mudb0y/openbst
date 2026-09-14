@@ -275,6 +275,18 @@ static void say_char(bst_tok *t, int c) {
 static void word_range(bst_tok *t, int from, int to, int dotted) {
     int n = to - from + 1;
     int first = n > 0 ? t->ring[from] : 0;
+
+    /* A possessive is two words here, and the second of them is "is", which
+       is what the two characters become once the apostrophe is overwritten. */
+    if (t->img->t.possessive_is && n > 2 &&
+        (t->ring[to] == 's' || t->ring[to] == 'S') &&
+        (t->ring[to - 1] == '\'' || t->ring[to - 1] == '`')) {
+        word_range(t, from, to - 2, dotted);
+        emit(t, ' ');
+        t->ring[to - 1] = 'i';
+        word_range(t, to - 1, to, 0);
+        return;
+    }
     /* A lone letter is said by name. The three that are words in their own
        right are not, and neither is one the exception table holds. */
     if (n == 1 && (dotted || (first != 'a' && first != 'A' && first != 'I'))) {
