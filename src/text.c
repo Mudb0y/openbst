@@ -2478,6 +2478,26 @@ const bst_tabmap BST_MAP_2006_SPA = {
     },
 };
 
+/* A directory by name, for the tools that take one on the command line. */
+const bst_tabmap *bst_map_named(const char *name) {
+    static const struct { const char *name; const bst_tabmap *map; } M[] = {
+        { "1995", &BST_MAP_1995 },
+        { "ENG", &BST_MAP_1998_ENG }, { "DUT", &BST_MAP_1998_DUT },
+        { "FRN", &BST_MAP_1998_FRN }, { "GRM", &BST_MAP_1998_GRM },
+        { "ITL", &BST_MAP_1998_ITL }, { "SPN", &BST_MAP_1998_SPN },
+        { "2006ENG", &BST_MAP_2006_ENG }, { "2006ARA", &BST_MAP_2006_ARA },
+        { "2006DUT", &BST_MAP_2006_DUT }, { "2006FRE", &BST_MAP_2006_FRE },
+        { "2006GER", &BST_MAP_2006_GER }, { "2006GRE", &BST_MAP_2006_GRE },
+        { "2006HEB", &BST_MAP_2006_HEB }, { "2006ITA", &BST_MAP_2006_ITA },
+        { "2006JPN", &BST_MAP_2006_JPN }, { "2006POL", &BST_MAP_2006_POL },
+        { "2006POR", &BST_MAP_2006_POR }, { "2006RUS", &BST_MAP_2006_RUS },
+        { "2006SPA", &BST_MAP_2006_SPA },
+    };
+    for (size_t i = 0; i < sizeof M / sizeof M[0]; i++)
+        if (!strcmp(M[i].name, name)) return M[i].map;
+    return NULL;
+}
+
 /* Names every entry the directory has not been given, so a build's map can be
    read for what is missing rather than tried and puzzled over. */
 int bst_map_gaps(const bst_tabmap *m, const char **names, int max) {

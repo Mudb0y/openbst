@@ -256,6 +256,7 @@ extern const bst_tabmap BST_MAP_2006_SPA;
 /* Fills names with the entries the map has not been given and returns how
    many there were, so an incomplete build can say so rather than misbehave. */
 int bst_map_gaps(const bst_tabmap *m, const char **names, int max);
+const bst_tabmap *bst_map_named(const char *name);
 
 
 typedef struct {
@@ -453,10 +454,16 @@ typedef struct { int val, pos; } bst_cur;
 
 /* A stream code as this build's tables index it. Sounds are numbered the same
    everywhere; marks are not. */
+/* English's inventory is forty-eight sounds, 0x00 to 0x2F, and the last of
+   them is the pause. A language with more sounds puts its pause and every
+   mark above it further up, so the boundary is the pause itself, and the
+   library's streams keep English's numbering and shift only here.
+ *
+ * A language with more sounds than English has some that English has no
+ * number for. Those sit in the stream with the top bit set, out of the way of
+ * every mark, and come back to the module's own numbering here. */
 static inline int bst_code(const bst_image *img, int c) {
-    /* English's inventory is forty-eight sounds, 0x00 to 0x2F, and the last
-       of them is the pause. A language with more sounds puts its pause and
-       every mark above it further up, so the boundary is the pause itself. */
+    if (c >= 0x80) return (c - 0x80 + 0x2F) & 0xFF;
     if (c == 0x7C && img->t.cmd_code) return img->t.cmd_code;
     return c >= 0x2F ? (c + img->t.code_shift) & 0xFF : c;
 }
@@ -465,10 +472,15 @@ static inline int bst_code(const bst_image *img, int c) {
    turned into the numbering the library keeps its streams in. */
 static inline int bst_uncode(const bst_image *img, int c) {
     if (img->t.cmd_code && c == img->t.cmd_code) return 0x7C;
-    int lo = (0x2F + img->t.code_shift) & 0xFF;
-    if (img->t.code_shift == 0) return c;
-    return c >= lo ? (c - img->t.code_shift) & 0xFF : c;
+    if (img->t.code_shift <= 0) return c;
+    int pause = (0x2F + img->t.code_shift) & 0xFF;
+    if (c >= pause) return (c - img->t.code_shift) & 0xFF;
+    if (c >= 0x2F) return 0x80 + (c - 0x2F);
+    return c;
 }
+
+/* Whether a byte in a stream is a sound rather than a mark. */
+static inline int bst_is_sound(int c) { return (c >= 1 && c <= 0x30) || c >= 0x80; }
 
 /* The two phoneme attribute bytes. The first classifies the sound; the second
    says which of the scans below stop on it. */

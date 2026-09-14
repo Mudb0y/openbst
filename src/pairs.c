@@ -403,7 +403,7 @@ int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
            sound. The stream also carries stress marks, phrase markers and the
            intonation records written after the rule pass, all above this
            range, and the scan steps straight over them. */
-        if (c >= 1 && c <= 0x30) {
+        if (bst_is_sound(c)) {
             carry = c;
             switch (c) {
             case 0x0E: case 0x0F: case 0x10:

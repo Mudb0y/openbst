@@ -6,8 +6,13 @@
 /* Runs the word path over each word given and prints what it produces, so the
    library can be exercised without the emulator. */
 
+extern const bst_tabmap *bst_map_named(const char *name);
+
 int main(int argc, char **argv) {
-    if (argc < 3) { fprintf(stderr, "usage: say DLL WORD...\n"); return 2; }
+    const char *mapname = NULL;
+    if (argc > 2 && !strcmp(argv[1], "--map")) { mapname = argv[2]; argv += 2; argc -= 2; }
+    if (argc > 1 && !strcmp(argv[1], "--trace")) { bst_trace = 1; argv++; argc--; }
+    if (argc < 3) { fprintf(stderr, "usage: say [--map NAME] DLL WORD...\n"); return 2; }
     FILE *f = fopen(argv[1], "rb");
     if (!f) { fprintf(stderr, "cannot open %s\n", argv[1]); return 1; }
     fseek(f, 0, SEEK_END);
@@ -18,7 +23,10 @@ int main(int argc, char **argv) {
     fclose(f);
 
     bst_image img;
-    if (bst_image_init(&img, d, n) < 0) { fprintf(stderr, "bad image\n"); return 1; }
+    const bst_tabmap *map = mapname ? bst_map_named(mapname) : NULL;
+    if (mapname && !map) { fprintf(stderr, "no map named %s\n", mapname); return 2; }
+    int rc = map ? bst_image_init_map(&img, d, n, map) : bst_image_init(&img, d, n);
+    if (rc < 0) { fprintf(stderr, "bad image\n"); return 1; }
 
     for (int i = 2; i < argc; i++) {
         bst_recs r;

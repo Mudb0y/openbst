@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_text.h"
 
@@ -174,7 +175,7 @@ void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp) {
         int prio, next, patoff, outoff;
         rule_fields(img, ridx, &prio, &next, &patoff, &outoff);
         const char *o = pat_at(img, img->t.outputs + (uint32_t)outoff);
-        for (; *o; o++) bst_build_emit(img, &b, (unsigned char)*o);
+        for (; *o; o++) bst_build_emit(img, &b, bst_uncode(img, (unsigned char)*o));
         pos += used > 0 ? used : 1;
     }
     *bp = b;

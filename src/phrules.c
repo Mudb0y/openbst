@@ -113,7 +113,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
         else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E) latch_p = 1;
         else if (a2(img, c) & 8)                                  latch_o = latch_p = 0;
 
-        if (c == 0 || c >= 0x31) continue;
+        if (c == 0 || (c >= 0x31 && c < 0x80)) continue;
 
         int skip_rest = 0;
 
