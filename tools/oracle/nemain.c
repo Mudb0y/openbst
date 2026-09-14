@@ -53,11 +53,27 @@ static void cb_getc(nemu *e, uint32_t sp) {
     if (g_trace) fprintf(stderr, "  getc -> %d\n", c);
 }
 
+/* A window on the module's own data, printed once per frame, so a variable
+   can be found by the sequence of values it takes. */
+static uint16_t g_state_sel;
+static uint16_t g_state_off;
+static int      g_state_n;
+
 static void cb_putfr(nemu *e, uint32_t sp) {
     uint32_t p = ne_lin(e, ne_argc(e, sp, 1), ne_argc(e, sp, 0));
     uint8_t f[16];
     if (ne_read(e, p, f, sizeof f) < 0) return;
     frames_append(e, f, sizeof f);
+    if (g_state_n) {
+        uint8_t b[512];
+        int n = g_state_n * 2 > (int)sizeof b ? (int)sizeof b / 2 : g_state_n;
+        if (ne_read(e, ne_lin(e, g_state_sel, g_state_off), b, (size_t)n * 2) == 0) {
+            printf("S");
+            for (int i = 0; i < n; i++)
+                printf(" %04x", (unsigned)(b[i * 2] | (b[i * 2 + 1] << 8)));
+            printf("\n");
+        }
+    }
     e->ax = 0;
 }
 
@@ -152,6 +168,7 @@ static void usage(void) {
             "usage: neoracle [-v] [-vv] --core KGMTTS.DLL --lang KGMENG.DLL\n"
             "                [--info] [--dump DIR] [--call NAME[,word...]]\n"
             "                [--engine TEXT] [--frames FILE] [--trace FILE]\n"
+            "                [--state SEG:OFF:N]\n"
             "                [--set BLOCK:OFF:VALUE,...] [--peek SEG:OFF:DATA:ADDR,...]\n");
 }
 
@@ -159,7 +176,7 @@ int main(int argc, char **argv) {
     const char *core = NULL, *lang = NULL, *call = NULL, *dump = NULL;
     const char *say = NULL, *engine = NULL, *probe = NULL, *tracepath = NULL;
     const char *peek = NULL, *watch = NULL;
-    const char *wframes = NULL;
+    const char *wframes = NULL, *state = NULL;
     int verbose = 0, info = 0, btrace = 0;
     unsigned long long limit = 0;
 
@@ -182,6 +199,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--say") && i + 1 < argc) say = argv[++i];
         else if (!strcmp(argv[i], "--engine") && i + 1 < argc) engine = argv[++i];
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc) wframes = argv[++i];
+        else if (!strcmp(argv[i], "--state") && i + 1 < argc) state = argv[++i];
         else { usage(); return 2; }
     }
     if (!core && !lang) { usage(); return 2; }
@@ -289,6 +307,15 @@ int main(int argc, char **argv) {
                 if (sscanf(t, "%u:%x:%u", &seg, &off, &n) < 2) continue;
                 if (seg < 1 || seg > (unsigned)ml->nseg) continue;
                 ne_hook_regs(e, ml->seg[seg - 1].sel, (uint16_t)off, (int)n);
+            }
+        }
+        if (state) {
+            unsigned sg = 16, off = 0, n = 16;
+            if (sscanf(state, "%u:%x:%u", &sg, &off, &n) >= 2 &&
+                sg >= 1 && sg <= (unsigned)ml->nseg) {
+                g_state_sel = ml->seg[sg - 1].sel;
+                g_state_off = (uint16_t)off;
+                g_state_n = (int)n;
             }
         }
         if (drive(e, ml, engine) < 0) { fprintf(stderr, "the engine faulted\n"); return 1; }
