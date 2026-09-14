@@ -287,10 +287,17 @@ static int vowel_german(scan *z, int pos, int which) {
     if (mode == 2)      base += 0x41;
     else if (mode == 0) base += 0x14;
 
-    int scale = mc == 0x29 ? bst_u8(z->img, z->img->t.stress_num, 6)
-                           : bst_u8(z->img, z->img->t.stress_num,
-                                    (unsigned)z->stress.val);
-    int d = (int16_t)((int16_t)(scale * base) >> 5);
+    int who = mc == 0x29 ? 6 : z->stress.val;
+    int d;
+    if (z->img->t.stress_shift) {
+        int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)who);
+        d = (int16_t)((int16_t)(scale * base) >> z->img->t.stress_shift);
+    } else {
+        /* The 1998 build scales by a stored fraction rather than a shift. */
+        int num = s16at(z->img, z->img->t.stress_num, (unsigned)who * 4);
+        int den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)who * 4);
+        d = den ? (int16_t)(num * base) / den : 0;
+    }
     if (z->edge) {
         d += 0x32;
         if ((a1(z, z->next.val) & 0x80) && z->stress.val > 3) d += 0x1E;
@@ -298,12 +305,13 @@ static int vowel_german(scan *z, int pos, int which) {
     d = (int16_t)(d + s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2));
     d = (int16_t)(d - (mc == 0x2F || mc == 0x30 ? 0x28 : 0x3C));
     if (mc == 0x31 || mc == 0x32 || mc == 0x33) {
-        if ((int16_t)d < 0x37) return 0x37;
+        if ((int16_t)d < 0x37) d = 0x37;
     } else if (mc == 0x2F || mc == 0x30) {
-        if ((int16_t)d < 0x0A) return 0x0A;
+        if ((int16_t)d < 0x0A) d = 0x0A;
     } else if ((int16_t)d < 0x1E) {
         d = 0x1E;
     }
+    d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
         fprintf(stderr, "vdur ph=%02x which=%d row=%d base=%02x stress=%d"
                         " mode=%d edge=%d -> %02x\n",

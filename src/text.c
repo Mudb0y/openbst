@@ -190,6 +190,12 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 1, 7, 7, 7, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0,
+    },
     .basedur        = 0x000a0da6,
     .casemap        = 0x000a1914,
     .chattr         = 0x000a1714,
@@ -297,6 +303,12 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
     .basedur        = 0x000a0ae2,
     .casemap        = 0x000a15a2,
     .chattr         = 0x000a13a2,
@@ -405,6 +417,15 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .ph_kind        = 5,
+    .pair_class = {
+        0, 7, 2, 7, 2, 7, 2, 2, 2, 2, 1, 1, 1, 1, 1, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 2,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0,
+    },
+    .vdur_kind      = 3,
+    .trn_kind       = 3,
     .fall_code      = 0x3C,
     .basedur        = 0x000a0d8e,
     .casemap        = 0x000a18ea,
@@ -513,6 +534,12 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 2, 2, 7, 7, 7, 7, 1, 1, 1, 1, 1,
+        7, 7, 7, 7, 7, 1, 1, 1, 7, 7, 7, 7, 6, 6, 6, 6,
+        6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
     .basedur        = 0x000a0a6e,
     .casemap        = 0x000a1524,
     .chattr         = 0x000a1324,
@@ -620,6 +647,12 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .pair_class = {
+        0, 7, 7, 7, 2, 7, 2, 7, 2, 7, 1, 1, 1, 1, 7, 7,
+        7, 7, 7, 7, 1, 1, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
     .basedur        = 0x000a0a4c,
     .casemap        = 0x000a14fa,
     .chattr         = 0x000a12fa,
