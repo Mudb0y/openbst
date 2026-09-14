@@ -192,8 +192,8 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
-    .silence_period = 0x68,
-    .voice_top      = 154,
+    .dur_mult       = 53,
+    .pitch_rate     = 10400,
     .inton_mode     = 3,
     .slope_mult     = 167,
     .inton_dur_mult = 887,
@@ -254,7 +254,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
     .lts_index_stride = 3, .rule_stride = 7, .rule_prio_w = 1,
     .trie_st_off = 1, .trie_li_off = 5, .trie_base_off = 9,
     .trie_max_off = 11, .trie_po_off = 13,
-    .silence_f0 = 0xD1, .unvoiced_dur = 0x6E, .unvoiced_reps = 8,
+    .silence_f0 = 0xD1, .unvoiced_dur = 0x68, .unvoiced_reps = 8,
     .voice_span = 500,
     .vowel_dur_shift = 1, .code_shift = 9,
     .s = {

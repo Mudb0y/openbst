@@ -340,6 +340,8 @@ static int interp_clock(bst_gen *g) {
               + g->pend.dur * dm + g->segleft;
         }
     }
+    if (bst_trace) fprintf(stderr, "clk dur=%d slope=%d mid=%d segleft=%d -> %d\n",
+                           g->pend.dur, g->pend.slope, g->mid, g->segleft, v);
     g->pclock = (int16_t)v;
     if (g->pend.kind == 0) {
         g->pend.kind = 2;
@@ -502,9 +504,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
             /* This generation holds a long silence in whole periods rather
                than in one frame of eight-period units. */
             while (g->dur > g->img->t.unvoiced_dur) {
-                g->frame[3] = g->img->t.silence_period
-                            ? g->img->t.silence_period
-                            : (uint8_t)g->img->t.unvoiced_dur;
+                g->frame[3] = (uint8_t)g->img->t.unvoiced_dur;
                 emit(g);
                 g->dur = (int16_t)(g->dur - g->img->t.unvoiced_dur);
             }

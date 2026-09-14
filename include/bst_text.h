@@ -98,10 +98,6 @@ typedef struct {
        way: they are the shape of a frame, not a table. */
     uint8_t  class_shift;
     uint8_t  long_silence_chunk; /* a long silence is held in whole periods */
-    /* The period a whole-period silence chunk carries, where it is not the
-       length the chunk actually spends. Dutch spends a hundred and ten and
-       says a hundred and four. */
-    uint8_t  silence_period;
     /* The highest pitch level a build's accent codes reach. French tops
        out four above the middle where the others climb ten. */
     uint8_t  level_max;
