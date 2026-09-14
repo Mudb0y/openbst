@@ -130,6 +130,11 @@ typedef struct {
        seven. Zero means one. */
     uint8_t  close_pause;
 
+    /* A comma ends the text outright in the 2006 builds: what follows it is
+       never spoken, and the comma itself is said with a full stop's pause and
+       a full stop's sentence type. */
+    uint8_t  comma_ends_text;
+
     /* What a transition's stored duration is multiplied by on its way to a
        sample count. Fifty-six in the earlier builds, fifty-three in the 2006
        ones. */

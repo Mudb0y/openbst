@@ -756,7 +756,7 @@ const bst_tabmap BST_MAP_2006_ENG = {
     .min_period = 0x3E, .interp_round_mask = 0x007, .coef_round_mask = 0x006,
     .class_shift = 13, .long_silence_f0 = 0xD8, .exc_two_way = 1,
     .unvoiced_chunk = 1, .no_breath_break = 1, .no_closing_phrase = 1,
-    .sepnum_first_three = 1, .close_pause = 7,
+    .sepnum_first_three = 1, .close_pause = 7, .comma_ends_text = 1,
     .dur_mult = 0x35, .nearest_round = 1, .pitch_rate = 0x28A0,
     .slope_mult = 0xA7, .inton_dur_mult = 0x377, .inton_slope_shift = 1,
     .dur_frac_shift = 1,

@@ -171,6 +171,13 @@ static void punct_out(bst_tok *t, int c) {
     t->sentence = !closes(b);
     if (t->literal) return;
     if (b == ':' && is_digit(t, t->prevch) && is_digit(t, c)) { emit(t, ','); return; }
+    if (b == ',' && t->img->t.comma_ends_text) {
+        /* The build stops here: nothing after the comma reaches the machine,
+           and the comma is said the way a full stop is. */
+        t->tp = t->tn;
+        emit(t, '.');
+        return;
+    }
     if (!t->sentence && b != '\'' && b != '`') { emit(t, b); return; }
     if (b == '-') { emit(t, ','); return; }
     /* Anything else is said by name: "percent", "dollar", "at". */
