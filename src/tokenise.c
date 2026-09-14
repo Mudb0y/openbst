@@ -684,7 +684,10 @@ static int classify(bst_tok *t, int *cls) {
                 else                              *cls = 0x112;
                 return b;
             }
-            if ((b != 0 && b < 0x31) || (b > 0x4E && b < 0x5C)) { *cls = 0x124; return b; }
+            /* A sound, including one of the extra ones a language with more
+               than forty-eight keeps above 0x80. */
+            if ((b != 0 && b < 0x31) || b >= 0x80 ||
+                (b > 0x4E && b < 0x5C)) { *cls = 0x124; return b; }
             if (b < 0x39) { *cls = 0x25;  return b; }
             if (b < 0x49) { *cls = 0x68;  return b; }
             if (b < 0x4F) { *cls = 0x146; return b; }
