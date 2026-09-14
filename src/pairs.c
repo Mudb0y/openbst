@@ -349,8 +349,15 @@ static int vowel_french(scan *z, int pos, int which) {
     int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur,
                                (unsigned)(mc * 3 + which) * 2);
     int mode = rate_mode(z);
-    int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
-    int d = (int16_t)((int16_t)(scale * base) >> 5);
+    int d;
+    if (z->img->t.stress_shift) {
+        int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+        d = (int16_t)((int16_t)(scale * base) >> z->img->t.stress_shift);
+    } else {
+        int num = s16at(z->img, z->img->t.stress_num, (unsigned)z->stress.val * 4);
+        int den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)z->stress.val * 4);
+        d = den ? (int16_t)(num * base) / den : 0;
+    }
 
     if (z->edge) {
         d += 0x32;
@@ -358,7 +365,8 @@ static int vowel_french(scan *z, int pos, int which) {
                (nc == 0x12 || nc == 0x13 || nc == 0x0E || nc == 0x0F ||
                 nc == 0x10 || mc == 0x22 || mc == 0x23 || mc == 0x24 ||
                 mc == 0x25)) {
-        d = (int16_t)(d + ((int16_t)d >> 2));
+        d = z->img->t.stress_shift ? (int16_t)(d + ((int16_t)d >> 2))
+                                   : (int16_t)((int16_t)(d * 5) / 4);
     } else {
         int at = a1(z, z->next.val);
         if (at & 4)    d += 0x14;
@@ -366,9 +374,10 @@ static int vowel_french(scan *z, int pos, int which) {
     }
     if (mode == 2)      d += 0x41;
     else if (mode == 0) d += 0x14;
-    d = (int16_t)(d + (int16_t)(s16at(z->img, z->img->t.sound_add + 4,
+    d = (int16_t)(d + (int16_t)(s16at(z->img, z->img->t.sound_add,
                                       (unsigned)mc * 2) - 0x3C));
     if ((int16_t)d < 0x1E) d = 0x1E;
+    d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
         fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
                         " edge=%d -> %02x\n",

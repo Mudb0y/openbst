@@ -308,6 +308,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .vdur_kind      = 4,
     .trn_kind       = 4,
     .punct_s8       = { 5, 3, 9, 1, 9, 3, 9, 5, 9 },
     .punct_s9       = { 0, 0x4C, 0x4C, 0, 0x4C, 0x4C, 0x48, 0, 0x4C },
@@ -351,7 +352,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
     .suffix_ptrs    = 0x000a0076,
     .symmap         = 0x000a16a2,
     .tokstates      = 0x000a10ea,
-    .trans_pitch    = 0x000a0206,
+    .trans_pitch    = 0x000a01fe,
     .trie_desc      = 0x00070000,
     .voices         = 0x00090000,
     .vowel_dur      = 0x000a03ea,
@@ -1299,7 +1300,7 @@ const bst_tabmap BST_MAP_2006_FRE = {
     .vowel_dur      = 0x1001BD00,
     .stress_num        = 0x1001BF08,
     .stress_add        = 0x1001BEF4,
-    .sound_add         = 0x1001BE9C,
+    .sound_add         = 0x1001BEA0,
     .diph_records      = 0x100167F8,
     .diph_offsets      = 0x10019EA8,
     .diph_offsets_end  = 0x1001B10C,
