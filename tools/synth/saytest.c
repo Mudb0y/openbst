@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
         else if (argc > 2 && strcmp(argv[1], "--tables") == 0) { tablespec = argv[2]; argv += 2; argc -= 2; }
         else if (argc > 2 && strcmp(argv[1], "--voice") == 0) { voice_sel = atoi(argv[2]); argv += 2; argc -= 2; }
         else if (argc > 2 && strcmp(argv[1], "--params") == 0) { params = argv[2]; argv += 2; argc -= 2; }
+        else if (argc > 1 && strcmp(argv[1], "--gaintrace") == 0) { bst_trace = 1; argv++; argc--; }
         else break;
     }
     if (argc < 3) {

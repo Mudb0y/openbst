@@ -141,6 +141,7 @@ static void usage(void) {
 int main(int argc, char **argv) {
     const char *core = NULL, *lang = NULL, *call = NULL, *dump = NULL;
     const char *say = NULL, *engine = NULL, *probe = NULL, *tracepath = NULL;
+    const char *peek = NULL;
     const char *wframes = NULL;
     int verbose = 0, info = 0, btrace = 0;
     unsigned long long limit = 0;
@@ -152,6 +153,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--btrace")) btrace = 1;
         else if (!strcmp(argv[i], "--probe") && i + 1 < argc) probe = argv[++i];
         else if (!strcmp(argv[i], "--trace") && i + 1 < argc) tracepath = argv[++i];
+        else if (!strcmp(argv[i], "--peek") && i + 1 < argc) peek = argv[++i];
         else if (!strcmp(argv[i], "--limit") && i + 1 < argc) limit = strtoull(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--eof") && i + 1 < argc) g_eof = (int)strtol(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--core") && i + 1 < argc) core = argv[++i];
@@ -235,6 +237,25 @@ int main(int argc, char **argv) {
 
     if (engine) {
         if (!ml) { fprintf(stderr, "--engine needs --lang\n"); return 1; }
+        if (peek) {
+            /* seg:off:dataseg:addr,addr,... */
+            char buf[256];
+            snprintf(buf, sizeof buf, "%s", peek);
+            unsigned seg = 1, off = 0, dseg = 16;
+            char *rest = strchr(buf, ':');
+            if (rest) {
+                sscanf(buf, "%u:%x:%u", &seg, &off, &dseg);
+                char *list = strrchr(buf, ':');
+                uint16_t at[8];
+                int na = 0;
+                for (char *t = strtok(list + 1, ","); t && na < 8; t = strtok(NULL, ","))
+                    at[na++] = (uint16_t)strtoul(t, NULL, 16);
+                if (seg >= 1 && seg <= (unsigned)ml->nseg &&
+                    dseg >= 1 && dseg <= (unsigned)ml->nseg)
+                    ne_hook_peek(e, ml->seg[seg - 1].sel, (uint16_t)off,
+                                 ml->seg[dseg - 1].sel, at, na);
+            }
+        }
         if (probe) {
             char buf[256];
             snprintf(buf, sizeof buf, "%s", probe);

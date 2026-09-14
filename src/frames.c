@@ -1,5 +1,8 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_frames.h"
+
+int bst_trace = 0;
 
 /* Frame generation. See bst_frames.h for the shape; this file follows the
    engine's own control flow, because the three cursors feed each other and a
@@ -163,10 +166,24 @@ static int expand(bst_gen *g, bst_seg_rec *r) {
         int b0;
         do {
             b0 = pb[0];
-            int u = (uint16_t)g->durscale[b0 & 0x0F];
-            int32_t d = (int32_t)(((((u * (int)tp->dur) >> 6) & 0xFFFF) * 0x38) >> 2);
+            /* Sixteen bits throughout, as the engine has it: the product of
+               the scale and the duration is truncated before it is shifted,
+               and so is the product with fifty-six. Doing either in wider
+               arithmetic agrees for as long as nothing overflows, which is
+               always in the 1995 build and not in the 1998 one, whose first
+               scale entry is twice as large. */
+            uint16_t u = (uint16_t)g->durscale[b0 & 0x0F];
+            /* The duration byte is signed: the engine sign-extends it before
+               the multiply, so a transition longer than 127 units multiplies
+               as a negative number. */
+            uint16_t p16 = (uint16_t)(u * (uint16_t)(int16_t)(int8_t)tp->dur);
+            p16 = (uint16_t)(p16 >> 6);
+            int32_t d = (int32_t)(uint16_t)((uint16_t)(p16 * 0x38) >> 2);
             if (g->flags & 4) d = (int16_t)(d << 2);
             int16_t dd = (int16_t)d;
+            if (bst_trace)
+                fprintf(stderr, "expand nib=%x u=%04x dur=%02x -> %04x\n",
+                        b0 & 0x0F, u, tp->dur, (uint16_t)dd);
             if (enqueue(g, pb, dd) == -2) { fail(g); return -2; }
             total = (int16_t)(total + dd);
             if (rec_class(g, pb) != 0) voiced = (int16_t)(voiced + dd);
@@ -342,6 +359,10 @@ static void compensate(bst_gen *g) {
 }
 
 static void emit(bst_gen *g) {
+    if (bst_trace)
+        fprintf(stderr, "gain dur=%04x gclock=%04x acc=%04x target=%04x\n",
+                (uint16_t)g->dur, (uint16_t)g->gclock, (uint16_t)g->gain_acc,
+                (uint16_t)g->gain_target);
     compensate(g);
     if (g->nout < g->maxout) memcpy(g->out + g->nout * 16, g->frame, 16);
     g->nout++;

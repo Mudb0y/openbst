@@ -61,4 +61,9 @@ typedef struct {
 /* Runs the whole generation. Returns the number of frames written. */
 int bst_generate(bst_gen *g);
 
+/* Set to print the duration of each expanded record and the gain smoother's
+   inputs at each frame, which is what a build is compared against the engine
+   on when its frames stop agreeing. */
+extern int bst_trace;
+
 #endif

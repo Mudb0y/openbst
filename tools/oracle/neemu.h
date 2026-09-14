@@ -113,6 +113,9 @@ struct nemu {
     struct { uint32_t lin; int nstack; } probe[8];
     int nprobe;
 
+    struct { uint32_t lin, base; uint16_t at[8]; int n; } peek[4];
+    int npeek;
+
     /* One entry per instruction that reads the module's data, rather than one
        per read: a sentence makes hundreds of millions of reads and only a few
        hundred instructions make them. */
@@ -178,6 +181,11 @@ void     ne_backtrace(nemu *e);
 /* Prints the registers and a few stack words each time control reaches an
    address, which is how an argument list gets read without guessing. */
 void     ne_hook_regs(nemu *e, uint16_t sel, uint16_t off, int nstack);
+
+/* Prints chosen words of a segment each time control reaches an address,
+   which is how a running value is followed without stepping. */
+void     ne_hook_peek(nemu *e, uint16_t sel, uint16_t off,
+                      uint16_t data, const uint16_t *addrs, int n);
 
 /* Records every read of a loaded module's data, as twelve-byte records of
    address, program counter and size. Both addresses are in the same form the

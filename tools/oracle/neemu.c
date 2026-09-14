@@ -258,6 +258,32 @@ void ne_hook_regs(nemu *e, uint16_t sel, uint16_t off, int nstack) {
     uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_probe, e, lin, lin);
 }
 
+static void hook_peek(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
+    (void)uc; (void)size;
+    nemu *e = ud;
+    for (int k = 0; k < e->npeek; k++) {
+        if (e->peek[k].lin != (uint32_t)addr) continue;
+        printf("peek");
+        for (int i = 0; i < e->peek[k].n; i++)
+            printf(" %04x=%04x", e->peek[k].at[i],
+                   ne_rd16(e, e->peek[k].base + e->peek[k].at[i]));
+        printf("\n");
+    }
+}
+
+void ne_hook_peek(nemu *e, uint16_t sel, uint16_t off, uint16_t data,
+                  const uint16_t *addrs, int n) {
+    if (e->npeek >= (int)(sizeof e->peek / sizeof e->peek[0])) return;
+    int k = e->npeek++;
+    e->peek[k].lin = ne_lin(e, sel, off);
+    e->peek[k].base = ne_lin(e, data, 0);
+    e->peek[k].n = n > 8 ? 8 : n;
+    for (int i = 0; i < e->peek[k].n; i++) e->peek[k].at[i] = addrs[i];
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_CODE, hook_peek, e,
+                e->peek[k].lin, e->peek[k].lin);
+}
+
 static void hook_ring(uc_engine *uc, uint64_t addr, uint32_t size, void *ud) {
     (void)uc; (void)addr; (void)size;
     nemu *e = ud;
