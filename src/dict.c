@@ -205,5 +205,11 @@ found:
         while (p < entry + (uint32_t)total)
             p += (uint32_t)decode_one(img, u8at(img, p), u8at(img, p + 1), out);
     }
+    if (bst_trace) {
+        fprintf(stderr, "dict recs");
+        for (int q = 0; q < out->n; q++)
+            fprintf(stderr, " %c%d,%d", out->rec[q].type, out->rec[q].a, out->rec[q].b);
+        fprintf(stderr, "\n");
+    }
     return 1;
 }
