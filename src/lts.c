@@ -98,7 +98,8 @@ static int match(const bst_image *img, const char *pat, int pi,
 
 static int chain_head(const bst_image *img, int key) {
     int bucket = key % 0xED;
-    uint32_t o = img->t.lts_index + (uint32_t)bucket * 4;
+    uint32_t o = img->t.lts_index +
+                 (uint32_t)bucket * img->t.lts_index_stride;
     int entry_off = rs16(img, o);
     int count = ru8(img, o + 2);
     if (entry_off < 0) return -1;
@@ -114,11 +115,12 @@ static int chain_head(const bst_image *img, int key) {
 
 static void rule_fields(const bst_image *img, int ridx,
                         int *prio, int *next, int *pat, int *out) {
-    uint32_t r = img->t.rules + (uint32_t)ridx * 8;
-    *prio = rs16(img, r);
-    *next = rs16(img, r + 2);
-    *pat  = rs16(img, r + 4);
-    *out  = rs16(img, r + 6);
+    uint32_t r = img->t.rules + (uint32_t)ridx * img->t.rule_stride;
+    int w = img->t.rule_prio_w;
+    *prio = w == 1 ? ru8(img, r) : rs16(img, r);
+    *next = rs16(img, r + (uint32_t)w);
+    *pat  = rs16(img, r + (uint32_t)w + 2);
+    *out  = rs16(img, r + (uint32_t)w + 4);
 }
 
 static int try_at(const bst_image *img, const unsigned char *t, int len, int pos,

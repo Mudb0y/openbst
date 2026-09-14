@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "bst_frames.h"
+#include "bst_synth.h"
 #include "bst_token.h"
 
 /* The whole engine in our own code: text in, samples out.
@@ -23,9 +24,22 @@ static uint8_t frames[80000 * 16];
 static uint8_t stream[0x200];
 
 int main(int argc, char **argv) {
-    int want_frames = 0;
-    if (argc > 1 && strcmp(argv[1], "--frames") == 0) { want_frames = 1; argv++; argc--; }
-    if (argc < 3) { fprintf(stderr, "usage: saytest [--frames] DLL TEXT > pcm\n"); return 2; }
+    int want_frames = 0, ne = 0, voice_sel = 1;
+    const char *params = NULL;
+    const char *tablespec = NULL;
+    for (;;) {
+        if (argc > 1 && strcmp(argv[1], "--frames") == 0) { want_frames = 1; argv++; argc--; }
+        else if (argc > 1 && strcmp(argv[1], "--ne") == 0) { ne = 1; argv++; argc--; }
+        else if (argc > 2 && strcmp(argv[1], "--tables") == 0) { tablespec = argv[2]; argv += 2; argc -= 2; }
+        else if (argc > 2 && strcmp(argv[1], "--voice") == 0) { voice_sel = atoi(argv[2]); argv += 2; argc -= 2; }
+        else if (argc > 2 && strcmp(argv[1], "--params") == 0) { params = argv[2]; argv += 2; argc -= 2; }
+        else break;
+    }
+    if (argc < 3) {
+        fprintf(stderr, "usage: saytest [--frames] [--ne] [--tables o,o,o,o,o,o]"
+                        " DLL TEXT > pcm\n");
+        return 2;
+    }
     FILE *f = fopen(argv[1], "rb");
     if (!f) return 1;
     fseek(f, 0, SEEK_END);
@@ -36,13 +50,41 @@ int main(int argc, char **argv) {
     fclose(f);
 
     bst_image img;
-    bst_image_init(&img, d, n);
+    if (ne) {
+        if (bst_image_init_ne(&img, d, n, &BST_MAP_1998_ENG) < 0) {
+            fprintf(stderr, "not a 16-bit module\n");
+            return 1;
+        }
+    } else {
+        bst_image_init(&img, d, n);
+    }
     bst_tables tab;
-    if (bst_tables_load(&tab, d, n) < 0) return 1;
+    if (tablespec) {
+        bst_offsets o = { 0, 0, 0, 0, 0, 0 };
+        size_t *fields[6] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog, &o.duration };
+        const char *q = tablespec;
+        for (int i = 0; i < 6 && q && *q; i++) {
+            char *e = NULL;
+            *fields[i] = (size_t)strtoul(q, &e, 16);
+            q = (e && *e == ',') ? e + 1 : NULL;
+        }
+        if (bst_tables_load_at(&tab, d, n, &o) < 0) return 1;
+    } else if (bst_tables_load(&tab, d, n) < 0) {
+        return 1;
+    }
 
     /* The voice, as the engine has it before the first word. */
-    int base = 0x50, top = 0xA0, level = 3, vsel = 1, rate = 0;
+    int base = 0x50, top = 0xA0, level = 3, vsel = voice_sel, rate = 0;
     int gflags = 0, defexc = 0x30, gb = 0x10, ga = -0x12;
+    if (params) {
+        int *f[9] = { &base, &top, &level, &vsel, &rate, &gflags, &defexc, &gb, &ga };
+        const char *q = params;
+        for (int i = 0; i < 9 && q && *q; i++) {
+            char *e = NULL;
+            *f[i] = (int)strtol(q, &e, 0);
+            q = (e && *e == ',') ? e + 1 : NULL;
+        }
+    }
     int nframes = 0, have_voice = 0;
 
     bst_voice voice;

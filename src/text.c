@@ -22,6 +22,10 @@ const bst_tabmap BST_MAP_1995 = {
     .tok_state_off = 0, .tok_state_w = 4,
     .tok_handler_off = 4, .tok_handler_w = 4,
     .tok_next_off = 8, .tok_next_w = 4,
+    .lts_index_stride = 4,
+    .rule_stride = 8, .rule_prio_w = 2,
+    .trie_st_off = 4, .trie_li_off = 8, .trie_base_off = 12,
+    .trie_max_off = 14, .trie_po_off = 16,
 
     .code_medial   = 0x10020EA0, .code_initial  = 0x10020F10,
     .ph_single     = 0x10092D68, .ph_single_max = 0x10092E14,
@@ -108,6 +112,10 @@ const bst_tabmap BST_MAP_1998_ENG = {
     .tok_state_off = 0, .tok_state_w = 1,
     .tok_handler_off = 1, .tok_handler_w = 2,
     .tok_next_off = 5, .tok_next_w = 1,
+    .lts_index_stride = 3,
+    .rule_stride = 7, .rule_prio_w = 1,
+    .trie_st_off = 1, .trie_li_off = 5, .trie_base_off = 9,
+    .trie_max_off = 11, .trie_po_off = 13,
 
     .code_medial   = 0x00100068, .code_initial  = 0x001000d2,
     .ph_single     = 0x00100ff4, .ph_single_max = 0x001010a0,
@@ -124,10 +132,10 @@ const bst_tabmap BST_MAP_1998_ENG = {
     },
 
     .suffix_ptrs   = 0x0010005c, .lts_index = 0x00060000,
-    .dispatch      = 0x00050000, .rules     = 0,
+    .dispatch      = 0x00050000, .rules     = 0x00030000,
     .patterns      = 0x00020000, .outputs = 0x00040000,
 
-    .trie_desc     = 0,
+    .trie_desc     = 0x00070000,
     .modmap        = 0x00102452, .modtab = 0x00102654,
 
     .trans_pitch   = 0x001001ec, .vowel_dur  = 0x00100438,
@@ -135,7 +143,7 @@ const bst_tabmap BST_MAP_1998_ENG = {
     .sound_add     = 0x00100154,
 
     .diph_records  = 0x000f6018, .diph_offsets = 0x000fa280,
-    .diph_offsets_end = 0x000fb590, .voices    = 0x00040604,
+    .diph_offsets_end = 0x000fb590, .voices    = 0x000f0000,
 
     .h = {
         [BST_H_LETTER]   = 0x00008376, [BST_H_DIGIT]    = 0x0000837c,

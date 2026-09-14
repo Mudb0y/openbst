@@ -59,6 +59,15 @@ typedef struct {
     uint8_t  tok_state_off, tok_state_w;
     uint8_t  tok_handler_off, tok_handler_w;
     uint8_t  tok_next_off, tok_next_w;
+
+    /* The other records whose packing differs between generations. The 16-bit
+       build squeezes a rule's priority into a byte and drops a byte of padding
+       from a letter-to-sound index entry; its trie descriptor holds far
+       pointers where the 32-bit one holds flat ones, which read the same way
+       but sit at different offsets. */
+    uint8_t  lts_index_stride;
+    uint8_t  rule_stride, rule_prio_w;
+    uint8_t  trie_st_off, trie_li_off, trie_base_off, trie_max_off, trie_po_off;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;

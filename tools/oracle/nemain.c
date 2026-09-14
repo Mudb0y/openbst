@@ -101,6 +101,24 @@ static int drive(nemu *e, nemod *m, const char *text) {
     printf("language table at %04x:%04x, version %u\n",
            (uint16_t)(tab >> 16), (uint16_t)tab, ver);
 
+    /* The three data pointers before the two entry points: the parameter
+       blocks the host reads and writes. */
+    for (int k = 0; k < 3; k++) {
+        uint16_t off = ne_rd16(e, tl + 5 + k * 4), sg = ne_rd16(e, tl + 7 + k * 4);
+        uint32_t at = ne_lin(e, sg, off);
+        printf("  block %d at %04x:%04x", k, sg, off);
+        for (int i = 0; i < 32; i++)
+            printf(" %02x", (unsigned)(at ? ne_rd16(e, at + i) & 0xff : 0));
+        printf("\n");
+    }
+    printf("  table bytes:");
+    for (int i = 0; i < 5; i++) {
+        uint8_t v = 0;
+        ne_read(e, tl + i, &v, 1);
+        printf(" %02x", v);
+    }
+    printf("\n");
+
     uint16_t a_off = ne_rd16(e, tl + 0x11), a_seg = ne_rd16(e, tl + 0x13);
     uint16_t b_off = ne_rd16(e, tl + 0x15), b_seg = ne_rd16(e, tl + 0x17);
     printf("  reset %04x:%04x  run %04x:%04x\n", a_seg, a_off, b_seg, b_off);

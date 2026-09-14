@@ -27,14 +27,14 @@ typedef struct {
 } trie;
 
 static int load_trie(const bst_image *img, trie *w) {
-    const uint8_t *d = bst_at(img, img->t.trie_desc, 20);
-    if (!d) return 0;
-    uint32_t st = (uint32_t)(d[4] | (d[5] << 8) | (d[6] << 16) | (d[7] << 24));
-    uint32_t li = (uint32_t)(d[8] | (d[9] << 8) | (d[10] << 16) | (d[11] << 24));
-    uint32_t po = (uint32_t)(d[16] | (d[17] << 8) | (d[18] << 16) | (d[19] << 24));
+    const bst_tabmap *m = &img->t;
+    if (!bst_at(img, m->trie_desc, 20)) return 0;
+    uint32_t st = bst_u32(img, m->trie_desc + m->trie_st_off, 0);
+    uint32_t li = bst_u32(img, m->trie_desc + m->trie_li_off, 0);
+    uint32_t po = bst_u32(img, m->trie_desc + m->trie_po_off, 0);
     w->img = img;
-    w->base = d[12] | (d[13] << 8);
-    w->max  = d[14] | (d[15] << 8);
+    w->base = bst_u16(img, m->trie_desc + m->trie_base_off, 0);
+    w->max  = bst_u16(img, m->trie_desc + m->trie_max_off, 0);
     w->states = bst_at(img, st, 4);
     w->links  = bst_at(img, li, 4);
     w->pool   = bst_at(img, po, 1);
