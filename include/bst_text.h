@@ -140,6 +140,7 @@ typedef struct {
     /* The shape the accent pass works from. Most builds read it back out of
        the phrase header; Spanish keeps the header's own byte for the rest of
        the engine and hands the accent pass 0x4C. Zero means the header's. */
+    uint8_t  pat_ext;            /* the rule pattern has the cluster operators */
     uint8_t  acc_kind;           /* 1 = the French accent pass */
     uint8_t  acc_shape;
 

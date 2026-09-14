@@ -37,6 +37,7 @@ static int lattr(const bst_image *img, int c) {
    left. */
 static int match(const bst_image *img, const char *pat, int pi,
                  const unsigned char *t, int len, int ti, int step) {
+    int ext = img->t.pat_ext;
     while (pi >= 0 && pat[pi]) {
         char pc = pat[pi];
         if (pc == ')') { pi++; continue; }
@@ -53,7 +54,33 @@ static int match(const bst_image *img, const char *pat, int pi,
         switch (pc) {
         case ' ':
             if (tc && is_letter(img, tc)) return 0;
+            if (ext && tc == '`') return 0;
             pi += step; ti += step; continue;
+        case '&':
+            /* A doubled consonant, which eats two letters. */
+            if (!ext) return 0;
+            if (!(lattr(img, tc) & 4)) return 0;
+            ti += step;
+            if (tc != ((ti >= 0 && ti < len) ? t[ti] : 0)) return 0;
+            pi += step; ti += step; continue;
+        case '$': {
+            /* One of six two-letter clusters. The right-context form walks
+               the pair backwards and leaves the walk going that way, which
+               is what the original does. */
+            if (!ext) return 0;
+            pi += step;
+            if (step == 1) { ti++; step = -1; tc = (ti >= 0 && ti < len) ? t[ti] : 0; }
+            int nx;
+            ti += step;
+            nx = (ti >= 0 && ti < len) ? t[ti] : 0;
+            if (tc == 'h')      { if (nx != 'c' && nx != 't' && nx != 'p') return 0; }
+            else if (tc == 'u') { if (nx != 'q' && nx != 'g') return 0; }
+            else if (tc == 'n') { if (nx != 'g') return 0; }
+            else if (tc == 'c') { if (nx != 's') return 0; }
+            else return 0;
+            ti += step;
+            continue;
+        }
         case '#':
             if (!(lattr(img, tc) & 1)) return 0;
             pi += step; ti += step; continue;
