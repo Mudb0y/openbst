@@ -119,7 +119,7 @@ SCALARS = ("tok_stride tok_state_off tok_state_w tok_handler_off tok_handler_w "
            "inton_slope_shift stress_shift voice_span voice_stride "
            "vowel_dur_shift trn_round ph_single_n ph_pair_n "
            "close_pause comma_ends_text contour_round dur_frac_shift "
-           "possessive_is sepnum_first_three "
+           "possessive_is sepnum_first_three no_suffix trn_whole "
            "code_lo code_hi").split()
 
 ADDRS = ("chattr letterattr casemap symmap phattr1 phattr2 classtab exctab "

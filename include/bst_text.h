@@ -169,6 +169,15 @@ typedef struct {
        it stands. */
     uint8_t  in_map[0x100];
 
+    /* The bit the letter attributes use for a consonant, which the rule
+       patterns' caret and colon test. Zero means the usual 4; Polish uses
+       0x20. */
+    uint8_t  la_cons;
+
+    /* Whether a rule pattern's colon needs at least one consonant. The
+       English builds let it match none; Polish does not. */
+    uint8_t  rule_run_one;
+
     /* Whether a transition's duration is halved whole. The English builds
        take a sixteenth off it first; the 2006 language builds do not. */
     uint8_t  trn_whole;

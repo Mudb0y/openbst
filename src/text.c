@@ -2140,6 +2140,8 @@ const bst_tabmap BST_MAP_2006_JPN = {
 };
 /* POL: 183 functions matched, 2739 addresses carried */
 const bst_tabmap BST_MAP_2006_POL = {
+    .rule_run_one  = 1,
+    .la_cons       = 0x20,
     .vdur_kind     = 1,
     .trn_whole     = 1,
     .pair_class = {
