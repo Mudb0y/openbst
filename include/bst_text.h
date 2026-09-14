@@ -146,6 +146,10 @@ typedef struct {
     /* One letter a build spells out before the rule pass rather than through
        it: Russian names its hard vowel this way. Zero means there is none. */
     uint8_t  lts_lit_char, lts_lit_code;
+
+    /* How small the second nibble of a dictionary key has to be for a leading
+       fifteen to be folded to one. Zero means the usual eight. */
+    uint8_t  dict_lead_max;
     uint8_t  acc_kind;           /* 1 = the French accent pass */
     uint8_t  acc_shape;
 

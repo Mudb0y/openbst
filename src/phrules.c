@@ -391,6 +391,50 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 10) {
+            /* Russian: the tap at the head of a word is trilled, two vowels
+               centre between soft consonants, the voiced labial at the head
+               of a word unvoices before a voiceless sound, and the front
+               vowel backs after a hard one. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x34) { pend.val = (uint8_t)c; continue; }
+            int seg = (a2(img, c) & 1) != 0;
+            int wstart = seg && prev8.pos >= prev.pos;
+            int wend = seg && eight.pos >= i && eight.pos < next.pos;
+            int done = 0;
+            if (wstart && (mc == 0x22 || mc == 0x23)) {
+                mc += 2;
+                c = bst_uncode(img, mc);
+                s[i] = (uint8_t)c;
+                done = 1;
+            }
+            if (!done && (mc == 0x29 || mc == 0x2C) && prev.pos >= prev8.pos) {
+                if ((a1(img, prev.val) & 8) && next.pos <= eight.pos &&
+                    (a1(img, next.val) & 8)) {
+                    mc = mc == 0x29 ? 0x2A : 0x2D;
+                    c = bst_uncode(img, mc);
+                    s[i] = (uint8_t)c;
+                }
+            }
+            if (wstart) {
+                int edge = next.val == 0 || wend ||
+                           bst_code(img, next.val) == 0x33;
+                if (edge && !(a1(img, next.val) & 4) && mc == 0x13) {
+                    mc = 0x11;
+                    c = bst_uncode(img, mc);
+                    s[i] = (uint8_t)c;
+                }
+                int pa = a1(img, prev.val);
+                if ((pa & 1) && !(pa & 8) && mc == 0x27) {
+                    mc = 0x2E;
+                    c = bst_uncode(img, mc);
+                    s[i] = (uint8_t)c;
+                }
+            }
+            pend.val = (uint8_t)c;
+            continue;
+        }
+
         if (img->t.ph_kind == 1) {
             /* The Romance rules: no aspiration, no glottal stop, no vowel
                reduction; the voiced stops soften between sounds, the sibilant
