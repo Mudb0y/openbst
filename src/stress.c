@@ -207,7 +207,10 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 }
             }
 
-            if (chosen == 0 && img->t.stress_kind == 1) {
+            if (chosen == 0 && img->t.stress_kind == 2) {
+                /* Japanese chooses nothing: what the rules marked is all the
+                   accent a word gets. */
+            } else if (chosen == 0 && img->t.stress_kind == 1) {
                 /* Hebrew has no search: what is left unchosen takes the
                    accent on its last syllable. */
                 s[slot[last]] = 0x36;
@@ -238,7 +241,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     }
 
     /* Everything else reduces, and an empty slot becomes the reduced mark. */
-    if (img->t.stress_kind == 1) {
+    if (img->t.stress_kind) {
         for (int k = tail; k > 0; k--) {
             if (s[slot[k]] == 0x35 && k < tail) s[slot[k + 1]] = 0x31;
             int v = s[slot[k]];

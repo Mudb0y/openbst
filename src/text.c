@@ -2057,6 +2057,9 @@ const bst_tabmap BST_MAP_2006_ITA = {
 };
 /* JPN: 182 functions matched, 2642 addresses carried */
 const bst_tabmap BST_MAP_2006_JPN = {
+    .long_ku       = 1,
+    .join_words    = 1,
+    .stress_kind   = 2,
     .trn_whole     = 1,
     .pair_class = {
         0, 7, 7, 7, 2, 2, 2, 7, 7, 7, 7, 7, 7, 7, 7, 7,

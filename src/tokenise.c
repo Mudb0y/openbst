@@ -872,11 +872,22 @@ static int token(bst_tok *t, uint8_t *buf) {
         case 0x111: {
             /* A run of letters and apostrophes: one word. */
             int n = 0;
+            /* A build that writes its words without spaces joins the run
+               across them. */
+            int join = t->img->t.join_words;
             do {
-                if (n < 99) buf[n + 1] = (uint8_t)b;
-                n++;
+                if (cls == 0x111) {
+                    if (n < 99) buf[n + 1] = (uint8_t)b;
+                    n++;
+                    /* The Japanese build writes this pair long. */
+                    if (t->img->t.long_ku && b == 'u' && n > 1 &&
+                        buf[n - 1] == 'k') {
+                        if (n < 99) buf[n + 1] = 'u';
+                        n++;
+                    }
+                }
                 b = classify(t, &cls);
-            } while (b != 0xFFFF && cls == 0x111);
+            } while (b != 0xFFFF && (cls == 0x111 || (join && cls == 0x13)));
             if (b != 0xFFFF) t->pos--;
             buf[n + 1] = 0;
             buf[0] = 0;
