@@ -229,6 +229,7 @@ static int vowel_simple(scan *z, int pos, int which) {
     } else if ((int16_t)d < 10) {
         d = 10;
     }
+    d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
         fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
                         " edge=%d -> %02x\n",

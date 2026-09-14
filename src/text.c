@@ -256,7 +256,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
     .trie_max_off = 11, .trie_po_off = 13,
     .silence_f0 = 0xD1, .unvoiced_dur = 0x68, .unvoiced_reps = 8,
     .voice_span = 500,
-    .vowel_dur_shift = 1, .code_shift = 9,
+    .vowel_dur_shift = 0, .code_shift = 9,
     .s = {
         [BST_S_AND] = 0x000a25d2,
         [BST_S_CENTS] = 0x000a25de,
