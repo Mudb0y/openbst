@@ -219,8 +219,41 @@ static int vowel_simple(scan *z, int pos, int which) {
     return (int16_t)d;
 }
 
+/* Italian's, which scales a vowel between two of its own kind and adds the
+   English build's phrase terms rather than the Romance ones. */
+static int vowel_italian(scan *z, int pos, int which) {
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur,
+                               (unsigned)(mc * 3 + which) * 2);
+    int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+    int mode = rate_mode(z);
+    int d = (int16_t)((int16_t)(scale * base) >> 5);
+    int at = a1(z, z->next.val);
+
+    if (z->edge) {
+        d += 0x32;
+    } else {
+        if ((at & 1) && z->next2.val != 0 && (a1(z, z->next2.val) & 1) &&
+            !z->begins && z->stress.val >= 6)
+            d = (int16_t)((int16_t)(d * 5) >> 3);
+        if (at & 0x40) d += 0x19;
+    }
+    d += s16at(z->img, z->img->t.stress_add, (unsigned)z->stress.val * 2);
+    if (mode == 2)      d += 0x41;
+    else if (mode == 0) d += 0x14;
+    d = (int16_t)(d + s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2));
+    if ((int16_t)d < 10) d = 10;
+    if (bst_trace)
+        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                        " edge=%d -> %02x\n",
+                ph, which, base, z->stress.val, mode, z->edge, (unsigned)d & 0xFF);
+    return (int16_t)d;
+}
+
 static int vowel_duration(scan *z, int pos, int which) {
     if (z->img->t.vdur_kind == 1) return vowel_simple(z, pos, which);
+    if (z->img->t.vdur_kind == 2) return vowel_italian(z, pos, which);
     int nv = z->next.val;
     int ph = z->s[pos];
     int mc = bst_code(z->img, ph);
@@ -300,7 +333,9 @@ static int flanked_simple(scan *z, int pos) {
            (a1(z, z->next.val) & 0x44) == 0x40;
 }
 
-/* The shorter transition routine. */
+/* The shorter transition routine. Kind one, which Spanish uses, stretches a
+   sound between two vowels and scales a vowel of its own by the stress; kind
+   two, Italian's, keeps only the flanking test. */
 static void trans_simple(scan *z, int dur, int pos, int which) {
     z->pending = (z->pending + 1) & 0xFF;
     int ph = z->s[pos];
@@ -308,11 +343,14 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
     int at = a1(z, ph);
 
     if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
-    if (between_simple(z, pos) && (!(at & 2) || which == 0))
-        dur = (int16_t)((int16_t)(dur * 9) >> 4);
-    if (between_simple(z, pos) && (at & 0x80) && (which == 0 || which == 2)) {
-        int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
-        dur = (int16_t)((int16_t)(scale * dur) >> 5);
+    if (z->img->t.trn_kind == 1) {
+        if (between_simple(z, pos) && (!(at & 2) || which == 0))
+            dur = (int16_t)((int16_t)(dur * 9) >> 4);
+        if (between_simple(z, pos) && (at & 0x80) && (which == 0 || which == 2)) {
+            int scale = bst_u8(z->img, z->img->t.stress_num,
+                               (unsigned)z->stress.val);
+            dur = (int16_t)((int16_t)(scale * dur) >> 5);
+        }
     }
     if (flanked_simple(z, pos))
         dur = (int16_t)((int16_t)(dur * 11) >> 4);
@@ -335,14 +373,15 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
         }
     }
 
-    int thin = z->img->t.trn_whole ? dur : (int16_t)(dur - (dur >> 4));
+    int sh = z->img->t.trn_thin ? z->img->t.trn_thin : 4;
+    int thin = z->img->t.trn_whole ? dur : (int16_t)(dur - ((int16_t)dur >> sh));
     int d = (int16_t)(thin + z->img->t.trn_round) >> 1;
     emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
 }
 
 /* One transition event. Position 0 falls before the sound, 1 and 2 after. */
 static void trans(scan *z, int dur, int pos, int which) {
-    if (z->img->t.trn_kind == 1) { trans_simple(z, dur, pos, which); return; }
+    if (z->img->t.trn_kind) { trans_simple(z, dur, pos, which); return; }
     z->pending = (z->pending + 1) & 0xFF;
     int ph = z->s[pos];
     int mc = bst_code(z->img, ph);

@@ -167,6 +167,10 @@ typedef struct {
        take a sixteenth off it first; the 2006 language builds do not. */
     uint8_t  trn_whole;
 
+    /* How much of a transition's duration is taken off before it is halved:
+       a shift, defaulting to four. Italian takes a quarter. */
+    uint8_t  trn_thin;
+
     /* Which of the vowel duration routines the build compiles. Zero is the
        English one in pairs.c; one is the shorter one six of the 2006 language
        builds share, which scales the table entry by the stress alone. */

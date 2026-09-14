@@ -165,6 +165,35 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 2) {
+            /* The Italian rules: two glides open before a stressed vowel, one
+               sound doubles after nothing, and a phrase-final sound takes a
+               vowel of its own. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x30 + img->t.code_shift) continue;
+            if (mc == 0x1E) {
+                if (stress.val < 3) s[i] = 0x1D;
+            } else if (mc == 0x21) {
+                if (stress.val < 3) s[i] = 0x20;
+            } else if (mc == 0x18) {
+                if (eight.val > 0x4C && next.val == 0x2F && len + 3 <= cap) {
+                    s[i] = 0x1C;
+                    for (int k = len + 2; k > i + 3; k--) s[k] = s[k - 3];
+                    s[i + 1] = 0x32;
+                    s[i + 2] = 0;
+                    s[i + 3] = 0;
+                    len += 3; lim += 3;
+                    if (i <= last) last += 3;
+                    inserted = 3;
+                    inserted_total += 3;
+                }
+            } else if (mc == 0x15) {
+                if (prev.val == 0) s[i] = 0x16;
+            }
+            pend.val = s[i];
+            continue;
+        }
+
         if (c == 0x4F && stress.val < 5 && eight.val < 0x4E)      latch_o = 1;
         else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E) latch_p = 1;
         else if (a2(img, c) & 8)                                  latch_o = latch_p = 0;
