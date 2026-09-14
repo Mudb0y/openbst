@@ -911,6 +911,7 @@ const bst_tabmap BST_MAP_2006_ARA = {
     .vdur_kind     = 1,
     .trn_kind      = 2,
     .stress_kind   = 4,
+    .ph_kind       = 11,
     .join_words    = 1,
     .vdur_slow     = 0x41,
     .trn_whole     = 1,

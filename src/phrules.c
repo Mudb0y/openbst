@@ -435,6 +435,13 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 11) {
+            /* Arabic rewrites nothing here: every sound its rules produce is
+               the sound it speaks. */
+            pend.val = (uint8_t)c;
+            continue;
+        }
+
         if (img->t.ph_kind == 1) {
             /* The Romance rules: no aspiration, no glottal stop, no vowel
                reduction; the voiced stops soften between sounds, the sibilant

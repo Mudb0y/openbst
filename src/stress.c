@@ -244,9 +244,15 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
             } else if (chosen == 0 && img->t.stress_kind == 4) {
                 /* Arabic: the accent goes on the last long vowel, and on the
                    first syllable if the word has none. */
-                int k = 0;
-                for (int j = last; j >= first; j--)
-                    if (a1(img, s[slot[j] - 1]) & 8) { k = j; break; }
+                int k = 0, after = 0;
+                for (int p = slot[last] + 1; p < len; p++)
+                    if (s[p] && (a2(img, s[p]) & 1)) { after = 1; break; }
+                if (after && (a1(img, s[slot[last] - 1]) & 8)) {
+                    k = last;
+                } else {
+                    for (int j = last - 1; j >= first; j--)
+                        if (a1(img, s[slot[j] - 1]) & 8) { k = j; break; }
+                }
                 if (k == 0) k = first;
                 flags[k] |= F_MARKED;
                 mark(&s[slot[k]], emph);
