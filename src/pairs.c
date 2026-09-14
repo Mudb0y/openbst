@@ -193,9 +193,18 @@ static int vowel_simple(scan *z, int pos, int which) {
     int mc = bst_code(z->img, ph);
     int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur,
                                (unsigned)(mc * 3 + which) * 2);
-    int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
     int mode = rate_mode(z);
-    int d = (int16_t)((int16_t)(scale * base) >> 5);
+    /* The 1998 builds scale by a stored fraction where the 2006 ones use a
+       byte and a shift. */
+    int num = 0, den = 0, scale = 0, d;
+    if (z->img->t.stress_shift) {
+        scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+        d = (int16_t)((int16_t)(scale * base) >> z->img->t.stress_shift);
+    } else {
+        num = s16at(z->img, z->img->t.stress_num, (unsigned)z->stress.val * 4);
+        den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)z->stress.val * 4);
+        d = den ? (int16_t)(num * base) / den : 0;
+    }
 
     if (z->edge) {
         if (!z->img->t.vdur_flat) d += 0x32;
@@ -208,8 +217,11 @@ static int vowel_simple(scan *z, int pos, int which) {
     if (mode == 2)      d += z->img->t.vdur_slow ? z->img->t.vdur_slow : 0x23;
     else if (mode == 0) d += 0x14;
     d = (int16_t)d;
-    int tail = (int16_t)(s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2)
-                         - (int16_t)((scale * 60) >> 5));
+    int tail = z->img->t.stress_shift
+        ? (int16_t)(s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2)
+                    - (int16_t)((scale * 60) >> z->img->t.stress_shift))
+        : (int16_t)(s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2)
+                    + (den ? (int16_t)(-60 * num) / den : 0));
     d = (int16_t)(d + tail);
     if (z->img->t.vdur_hi && mc >= z->img->t.vdur_lo &&
         mc <= z->img->t.vdur_hi) {
@@ -231,9 +243,16 @@ static int vowel_italian(scan *z, int pos, int which) {
     int mc = bst_code(z->img, ph);
     int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur,
                                (unsigned)(mc * 3 + which) * 2);
-    int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
     int mode = rate_mode(z);
-    int d = (int16_t)((int16_t)(scale * base) >> 5);
+    int d;
+    if (z->img->t.stress_shift) {
+        int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+        d = (int16_t)((int16_t)(scale * base) >> z->img->t.stress_shift);
+    } else {
+        int num = s16at(z->img, z->img->t.stress_num, (unsigned)z->stress.val * 4);
+        int den = s16at(z->img, z->img->t.stress_num + 2, (unsigned)z->stress.val * 4);
+        d = den ? (int16_t)(num * base) / den : 0;
+    }
     int at = a1(z, z->next.val);
 
     if (z->edge) {
@@ -478,7 +497,7 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
             dur = (int16_t)((int16_t)(scale * dur) >> 5);
         }
     }
-    if (flanked_simple(z, pos))
+    if (z->img->t.trn_kind != 6 && flanked_simple(z, pos))
         dur = (int16_t)((int16_t)(dur * 11) >> 4);
 
     unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
