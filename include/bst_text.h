@@ -155,6 +155,12 @@ typedef struct {
        see it. One means the Arabic set. The map turns its code page into the
        build's own numbering, and the two tables give the one or two Latin
        characters each of those stands for. */
+    /* Whether a transition's duration byte is unsigned and its scaling is
+       done in thirty-two bits. The 2006 builds do it that way, so a
+       transition longer than a hundred and twenty-seven units still comes out
+       positive; the 1995 build sign-extends the byte first. */
+    uint8_t  trn_dur_wide;
+
     uint8_t  xlat_kind;
     uint8_t  xlat_map[0x100];
     uint32_t xlat_first, xlat_second;

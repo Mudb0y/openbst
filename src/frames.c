@@ -176,10 +176,17 @@ static int expand(bst_gen *g, bst_seg_rec *r) {
             /* The duration byte is signed: the engine sign-extends it before
                the multiply, so a transition longer than 127 units multiplies
                as a negative number. */
-            uint16_t p16 = (uint16_t)(u * (uint16_t)(int16_t)(int8_t)tp->dur);
-            p16 = (uint16_t)(p16 >> 6);
             uint16_t mul = g->img->t.dur_mult ? g->img->t.dur_mult : 0x38;
-            int32_t d = (int32_t)(uint16_t)((uint16_t)(p16 * mul) >> 2);
+            uint16_t p16;
+            int32_t d;
+            if (g->img->t.trn_dur_wide) {
+                p16 = (uint16_t)(((uint32_t)u * tp->dur) >> 6);
+                d = (int32_t)(((uint32_t)p16 * mul) >> 2);
+            } else {
+                p16 = (uint16_t)(u * (uint16_t)(int16_t)(int8_t)tp->dur);
+                p16 = (uint16_t)(p16 >> 6);
+                d = (int32_t)(uint16_t)((uint16_t)(p16 * mul) >> 2);
+            }
             if (g->flags & 4) d = (int16_t)(d << 2);
             int16_t dd = (int16_t)d;
             if (bst_trace)
