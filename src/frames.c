@@ -319,8 +319,10 @@ static int next_record(bst_gen *g, int prev_index, int first) {
 static int interp_clock(bst_gen *g) {
     int v;
     if (g->pend.dur == -1) {
-        v = (g->mid < 1) ? (g->pend.slope * g->segleft) / 0x55
-                         : (g->pend.slope * g->mid) / 0x55;
+        int x = (g->mid < 1) ? g->segleft : g->mid;
+        v = g->img->t.inton_slope_shift
+          ? (g->pend.slope * x * 3) >> 8
+          : (g->pend.slope * x) / 0x55;
     } else {
         if (g->pend.dur < 0) return -2;
         if (g->pend.slope == 0 && g->pend.dur == 0 && g->mid > 0) v = g->mid;
@@ -572,6 +574,10 @@ static void build(bst_gen *g, const uint8_t *rec) {
         memcpy(g->state, g->prev, sizeof g->state);
     }
 
+    if (bst_trace)
+        fprintf(stderr, "P acc=%04x tgt=%04x pclk=%04x dur=%d\n",
+                (unsigned)(uint16_t)g->pitch_acc, (unsigned)(uint16_t)g->pitch_target,
+                (unsigned)(uint16_t)g->pclock, (int)g->dur);
     for (int i = 0; i < BST_ORDER; i++) {
         int v = g->state[i];
         if (g->img->t.coef_round_mask & (1u << i))

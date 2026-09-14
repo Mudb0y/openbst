@@ -656,7 +656,7 @@ static int token(bst_tok *t, uint8_t *buf);
 static void split(bst_tok *t) {
     int prev = 0, n = t->held, i = t->rd;
     int acc = 0;
-    if (!n) return;
+    if (!n || t->img->t.no_breath_break) return;
     while (n--) {
         if (t->tok[i].type == 3) {
             int f = t->tok[i].flag;

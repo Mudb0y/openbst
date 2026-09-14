@@ -106,6 +106,19 @@ typedef struct {
        carries is dropped. */
     uint8_t  unvoiced_chunk;
 
+    /* The 1995 and 1998 builds put a break into a sentence longer than one
+       breath, at the last word whose opening marker allows one. The 2006
+       builds dropped the rule and say a sentence in one phrase however long
+       it is. */
+    uint8_t  no_breath_break;
+
+    /* The text has a closing brace appended to it, which shuts the last
+       phrase and opens one more holding nothing but a pause. The earlier
+       builds speak that phrase; the 2006 ones stop instead, and what reaches
+       the buffer in its place is the twenty silent samples of their own
+       shutdown. */
+    uint8_t  no_closing_phrase;
+
     /* What a transition's stored duration is multiplied by on its way to a
        sample count. Fifty-six in the earlier builds, fifty-three in the 2006
        ones. */
@@ -126,6 +139,11 @@ typedef struct {
        into a sample count. They scale with the sample rate: 177 and 940 in
        the earlier builds, 167 and 887 in the 2006 ones. */
     uint16_t slope_mult, inton_dur_mult;
+
+    /* A record with no duration of its own spreads its slope over the time
+       left. The earlier builds divide by eighty-five; the 2006 ones multiply
+       by three and shift down eight, which is eighty-five and a third. */
+    uint8_t  inton_slope_shift;
 
     /* The 1998 build halves a vowel's duration on the way out of the pair
        scan, after the floors rather than before them, and rounds the

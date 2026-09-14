@@ -6,9 +6,11 @@
 # the converted buffer holding one character, so the engine says nothing and
 # the comparison is silence against silence.
 #
-# The engine's last output buffer is not always flushed before Say_TTS
-# returns, so ours can be one frame longer; the comparison is over the samples
-# the engine actually delivered.
+# The engine's own start-up writes a twenty-sample silent frame at index zero
+# of the output buffer, which lands over the first twenty samples of what it
+# has already produced, and the last twenty never reach the buffer. So its
+# audio is ours with those twenty samples zeroed and twenty missing from the
+# end, and that is what is checked.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 ref=$root/dll/1995/B32_TTS.DLL
@@ -31,12 +33,19 @@ for dll in "$root"/dll/2006/*.dll; do
     "$root/build/synth" --dll "$dll" --frames "$work/f.txt" --tables "$tables" \
         --out "$work/ours.wav" >/dev/null 2>&1
     tail -c +45 "$work/ours.wav" > "$work/ours.pcm"
-    n=$(stat -c%s "$work/ref.pcm")
-    if [ "$n" -gt 0 ] && cmp -s -n "$n" "$work/ref.pcm" "$work/ours.pcm"; then
+    if python3 - "$work/ref.pcm" "$work/ours.pcm" <<'PY'
+import sys
+a = open(sys.argv[1], 'rb').read()
+b = open(sys.argv[2], 'rb').read()
+ok = (len(a) > 4000 and len(b) == len(a) + 40
+      and a[:40] == b'\0' * 40 and a[40:] == b[40:len(a)])
+sys.exit(0 if ok else 1)
+PY
+    then
         same=$((same + 1))
     else
         diff=$((diff + 1))
-        echo "  $name: $n vs $(stat -c%s "$work/ours.pcm") bytes, differ"
+        echo "  $name: $(stat -c%s "$work/ref.pcm") vs $(stat -c%s "$work/ours.pcm") bytes, differ"
     fi
 done
 

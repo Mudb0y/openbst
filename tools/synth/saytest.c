@@ -128,6 +128,11 @@ int main(int argc, char **argv) {
     for (int guard = 0; guard < 4096; guard++) {
         memset(buf, 0, sizeof buf);
         int kind = bst_tok_next(&tk, buf);
+        if (bst_trace) {
+            fprintf(stderr, "tok kind=%d len=%d:", kind, buf[0]);
+            for (int i = 0; i < 8; i++) fprintf(stderr, " %02x", buf[i]);
+            fprintf(stderr, "\n");
+        }
         z.emph = 0;
         z.mode = 0;
         int done = bst_assemble_token(&z, kind, buf);
@@ -135,6 +140,13 @@ int main(int argc, char **argv) {
 
         int len = z.len > 0 ? z.len : z.wp + 1;
         if (len <= 0) { memset(stream, 0, sizeof stream); bst_assemble_start(&z); continue; }
+
+        if (map && map->no_closing_phrase) {
+            int spoken = 0;
+            for (int i = 12; i < len; i++)
+                if (stream[i] && stream[i] < 0x2F) { spoken = 1; break; }
+            if (!spoken) break;
+        }
 
         if (bst_trace) {
             fprintf(stderr, "assembled");
