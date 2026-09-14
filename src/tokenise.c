@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "bst_token.h"
 
@@ -850,6 +851,10 @@ static int can_read(const bst_tok *t) {
 void bst_tok_init(bst_tok *t, const bst_image *img, const char *text) {
     memset(t, 0, sizeof *t);
     t->img = img;
+    if (img->t.xlat_kind && bst_translit(img, text, t->xbuf, sizeof t->xbuf) >= 0) {
+        text = t->xbuf;
+        if (bst_trace) fprintf(stderr, "xlat '%s'\n", t->xbuf);
+    }
     t->text = (const uint8_t *)text;
     t->tn = (int)strlen(text);
     t->cur = -1;

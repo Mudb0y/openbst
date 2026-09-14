@@ -63,6 +63,7 @@ typedef struct {
     int      ord, ordlast, ordprev;
     int      lastend;    /* the character that ended the last sentence */
     int      queued;   /* the second character of a build's expansion */
+    char     xbuf[BST_XLAT_MAX];  /* the text after a build's own rewrite */
 } bst_tok;
 
 /* The reader, shared with the exception engine's lookahead. */

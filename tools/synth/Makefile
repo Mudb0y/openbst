@@ -24,8 +24,8 @@ pipetest_MODS   := text cursors accents pairs contour diphone frames interp synt
 stresstest_MODS := text cursors stress
 asmtest_MODS    := text cursors stress assemble
 fulltest_MODS   := text cursors stress assemble phrules accents pairs contour diphone frames interp synth
-toktest_MODS    := text cursors tokenise except numbers wordstream dict lts
-saytest_MODS    := text cursors tokenise except numbers wordstream dict lts stress assemble phrules accents pairs contour diphone frames interp synth
+toktest_MODS    := text cursors tokenise translit except numbers wordstream dict lts
+saytest_MODS    := text cursors tokenise translit except numbers wordstream dict lts stress assemble phrules accents pairs contour diphone frames interp synth
 say_MODS        := text dict lts cursors wordstream
 nedump_MODS     := text
 

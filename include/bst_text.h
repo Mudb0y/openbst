@@ -150,6 +150,14 @@ typedef struct {
     /* How small the second nibble of a dictionary key has to be for a leading
        fifteen to be folded to one. Zero means the usual eight. */
     uint8_t  dict_lead_max;
+
+    /* A build that rewrites its text into a Latin spelling before the rules
+       see it. One means the Arabic set. The map turns its code page into the
+       build's own numbering, and the two tables give the one or two Latin
+       characters each of those stands for. */
+    uint8_t  xlat_kind;
+    uint8_t  xlat_map[0x100];
+    uint32_t xlat_first, xlat_second;
     uint8_t  acc_kind;           /* 1 = the French accent pass */
     uint8_t  acc_shape;
 
@@ -427,6 +435,11 @@ static inline uint32_t bst_u32(const bst_image *img, uint32_t va, int i) {
 #define BST_SUF_S    0x10
 #define BST_SUF_APOS 0x08
 
+#define BST_XLAT_MAX 2048
+
+/* Rewrites a build's own code page into the Latin spelling its rules read.
+   Returns the length, or -1 if the build does not do this. */
+int bst_translit(const bst_image *img, const char *in, char *out, int max);
 #define BST_WORD_MAX 96
 
 typedef struct {
