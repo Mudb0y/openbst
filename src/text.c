@@ -104,6 +104,8 @@ const bst_tabmap BST_MAP_1995 = {
 
    A zero means not yet settled, not absent. bst_map_gaps reports them. */
 const bst_tabmap BST_MAP_1998_ENG = {
+    .long_silence_chunk = 1,
+    .long_silence_f0 = 0xD1,
     .chattr        = 0x00101476, .letterattr = 0x00101576,
     .casemap       = 0x00101676, .symmap     = 0x00101776,
 
@@ -190,6 +192,8 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .long_silence_chunk = 1,
+    .long_silence_f0 = 0xD1,
     .vdur_kind      = 1,
     .vdur_slow      = 0x41,
     .trn_kind       = 6,
@@ -308,6 +312,8 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .long_silence_chunk = 1,
+    .long_silence_f0 = 0xD1,
     .vdur_kind      = 4,
     .trn_kind       = 4,
     .punct_s8       = { 5, 3, 9, 1, 9, 3, 9, 5, 9 },
@@ -428,6 +434,8 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .long_silence_chunk = 1,
+    .long_silence_f0 = 0xD1,
     .ph_kind        = 5,
     .pair_class = {
         0, 7, 2, 7, 2, 7, 2, 2, 2, 2, 1, 1, 1, 1, 1, 7,
@@ -545,6 +553,8 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .long_silence_chunk = 1,
+    .long_silence_f0 = 0xD1,
     .trn_kind       = 2,
     .trn_thin       = 2,
     .stress_rule    = 1,
@@ -661,6 +671,8 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .long_silence_chunk = 1,
+    .long_silence_f0 = 0xD1,
     .fall_on_next   = 1,
     .hdr_shape      = 0x52,
     .trn_kind       = 1,

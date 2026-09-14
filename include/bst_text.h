@@ -97,6 +97,7 @@ typedef struct {
        nibble has the two extra cases the earlier builds carry, go the same
        way: they are the shape of a frame, not a table. */
     uint8_t  class_shift;
+    uint8_t  long_silence_chunk; /* a long silence is held in whole periods */
     uint8_t  long_silence_f0;
     uint8_t  exc_two_way;
 

@@ -486,7 +486,21 @@ static void build(bst_gen *g, const uint8_t *rec) {
             g->frame[3] = 0xFF;
             emit(g);
         }
-        if (g->dur < g->img->t.unvoiced_dur) {
+        if (g->img->t.long_silence_chunk) {
+            /* This generation holds a long silence in whole periods rather
+               than in one frame of eight-period units. */
+            while (g->dur > g->img->t.unvoiced_dur) {
+                g->frame[3] = (uint8_t)g->img->t.unvoiced_dur;
+                emit(g);
+                g->dur = (int16_t)(g->dur - g->img->t.unvoiced_dur);
+            }
+            g->frame[0] = g->img->t.silence_f0;
+            if (g->dur < mper(g)) {
+                g->frame[3] = mper(g);
+                g->dur = g->left;
+                return;
+            }
+        } else if (g->dur < g->img->t.unvoiced_dur) {
             g->frame[0] = g->img->t.silence_f0;
             if (g->dur < mper(g)) {
                 g->frame[3] = mper(g);
