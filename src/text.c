@@ -405,6 +405,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .fall_code      = 0x3C,
     .basedur        = 0x000a0d8e,
     .casemap        = 0x000a18ea,
     .chattr         = 0x000a16ea,
