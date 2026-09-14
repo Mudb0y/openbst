@@ -381,7 +381,7 @@ static void pitch_step(bst_gen *g) {
 static void silence_frame(bst_gen *g) {
     g->frame[2] = 0;
     g->frame[3] = 0;
-    g->frame[0] = 0xC1;
+    g->frame[0] = g->img->t.silence_f0;
 }
 
 static void build(bst_gen *g, const uint8_t *rec) {
@@ -419,7 +419,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
             emit(g);
         }
         if (g->dur < 0x6E) {
-            g->frame[0] = 0xC1;
+            g->frame[0] = g->img->t.silence_f0;
             if (g->dur < 0x42) {
                 g->frame[3] = 0x42;
                 g->dur = g->left;
@@ -451,18 +451,21 @@ static void build(bst_gen *g, const uint8_t *rec) {
             g->frame[3] = 0x42;
             emit(g);
         }
-        g->dur = 0x6E;
+        g->dur = g->img->t.unvoiced_dur;
     }
 
+    int reps = g->voiced == 1 ? 1 : g->img->t.unvoiced_reps;
     if (g->exc < 0x30) {
-        if (g->exc == 0x20) g->frame[0] = 0xE1;
-        else                g->frame[0] = (g->exc == 0x10) ? 0xF1 : 0xC1;
-    } else g->frame[0] = 0xD1;
+        if (g->exc == 0x20) g->frame[0] = (uint8_t)(0xE0 | reps);
+        else                g->frame[0] = (uint8_t)((g->exc == 0x10 ? 0xF0 : 0xC0) | reps);
+    } else g->frame[0] = (uint8_t)(0xD0 | reps);
 
     uint8_t f0 = g->frame[0];
     if (g->exc < 0x30) {
         g->frame[1] = 0; g->frame[2] = 0; g->frame[3] = 0;
-        g->frame[3] = (uint8_t)g->dur;
+        /* The frame lasts as long either way; a build that chunks it says so
+           in the count, and the period it holds is the chunk. */
+        g->frame[3] = (uint8_t)(g->dur / reps);
     } else {
         g->frame[3] = (uint8_t)g->dur;
         g->frame[0] = f0;

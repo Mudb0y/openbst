@@ -68,6 +68,13 @@ typedef struct {
     uint8_t  lts_index_stride;
     uint8_t  rule_stride, rule_prio_w;
     uint8_t  trie_st_off, trie_li_off, trie_base_off, trie_max_off, trie_po_off;
+
+    /* Three constants the frame builder holds rather than reads. A silent
+       frame's first byte, and how an unvoiced frame is chunked: the 1995 build
+       holds it for one period of a hundred and ten samples, the 1998 one for
+       eight periods of an eighth of that. The frame lasts as long either way,
+       so the interpolation clock does not change; only the bytes do. */
+    uint8_t  silence_f0, unvoiced_dur, unvoiced_reps;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
