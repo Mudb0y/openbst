@@ -377,6 +377,13 @@ static int dotted_out(bst_tok *t) {
 
 /* A run of digits. The machine has read one character past it, and the run
    itself is whatever lies between the token's start and here. */
+/* The currency word, singular when the amount is exactly one. */
+static void say_currency(bst_tok *t, const uint8_t *d, int n) {
+    int one = (n == 1 && d[0] == '1');
+    emit_ptr(t, t->img->t.s[one ? BST_S_DOLLAR : BST_S_DOLLARS]);
+    t->money = 0;
+}
+
 static int number_out(bst_tok *t) {
     unread(t, 1);
     while (t->cur >= t->start && !is_digit(t, t->ring[t->cur])) unread(t, 1);
@@ -385,7 +392,7 @@ static int number_out(bst_tok *t) {
     for (int i = 0; i < n; i++)
         if (!is_digit(t, t->ring[t->start + i])) return 0;
     bst_say_number(t, t->ring + t->start, n);
-    if (t->money) { emit_ptr(t, t->img->t.s[BST_S_DOLLARS]); t->money = 0; }
+    if (t->money) say_currency(t, t->ring + t->start, n);
     t->prevkind = t->kind;
     t->kind = 6;
     return 1;
@@ -505,7 +512,7 @@ static int sepnum_out(bst_tok *t) {
             /* The build gives up here: the first group is said and the rest
                of the text never reaches the machine. */
             bst_say_number(t, t->ring + p, len);
-            if (t->money) { emit_ptr(t, t->img->t.s[BST_S_DOLLARS]); t->money = 0; }
+            if (t->money) say_currency(t, t->ring + p, len);
             t->push = 0;
             t->tp = t->tn;
             t->prevkind = t->kind;
@@ -530,7 +537,8 @@ static int sepnum_out(bst_tok *t) {
 
     bst_say_grouped(t, digits, nd);
     if (t->money) {
-        emit_ptr(t, t->img->t.s[BST_S_DOLLARS]);
+        emit_ptr(t, t->img->t.s[(nd == 1 && digits[0] == '1')
+                                ? BST_S_DOLLAR : BST_S_DOLLARS]);
         if (frac >= 0) {
             emit_ptr(t, t->img->t.s[BST_S_AND]);
             bst_say_number(t, t->ring + frac, fn);
