@@ -177,6 +177,12 @@ typedef struct {
        share, which drops the weak and paired cases and the pitch nudge. */
     uint8_t  trn_kind;
 
+    /* Which phonological rules the build compiles. Zero is the English set in
+       phrules.c; one is the Romance set, which softens the voiced stops
+       between sounds, assimilates the sibilant, and lowers a weak vowel's
+       stress mark next to another vowel. */
+    uint8_t  ph_kind;
+
     /* A comma ends the text outright in the 2006 builds: what follows it is
        never spoken, and the comma itself is said with a full stop's pause and
        a full stop's sentence type. */

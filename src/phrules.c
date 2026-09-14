@@ -109,6 +109,62 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 1) {
+            /* The Romance rules: no aspiration, no glottal stop, no vowel
+               reduction; the voiced stops soften between sounds, the sibilant
+               takes the voicing of what follows, and a weak vowel beside
+               another vowel drops its stress mark a level. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x30 + img->t.code_shift) continue;
+            bst_cur nstress;
+            bst_scan_stress(img, s, lim, i + 2, &nstress);
+            int nv = next.val, pv = prev.val;
+            int voiced = (a1(img, nv) & 4) && (a1(img, nv) & 1) &&
+                         (a1(img, nv) & 0xFA);
+            int flank = (a1(img, nv) & 0x80) || (a1(img, pv) & 0x80);
+            switch (mc) {
+            case 4:
+                if (pv != 0 && pv != 0x0A) s[i] = 5;
+                break;
+            case 6:
+                if (pv != 0 && pv != 0x0B && pv != 0x13) s[i] = 7;
+                break;
+            case 8:
+                if (pv != 0 && pv != 0x0D && nv != 0x17) s[i] = 9;
+                break;
+            case 0x0B:
+                if ((nv == 3 || nv == 8 || nv == 0x11 || nv == 0x17) && !after_seg)
+                    s[i] = 0x0D;
+                break;
+            case 0x0F:
+                if (voiced) s[i] = 0x10;
+                break;
+            case 0x10:
+                s[i] = voiced ? 0x10 : 0x0F;
+                break;
+            case 0x18:
+                if (stress.val < 5 && flank) s[i] = 0x16;
+                break;
+            case 0x1C:
+                if (stress.val < 5 && flank) s[i] = 0x17;
+                break;
+            case 0x19: case 0x1A: case 0x1B:
+                if (stress.val >= 5) break;
+                if (nv == mc && nstress.val < 5) {
+                    s[i] = 0;
+                    if (i + 1 < lim) s[i + 1] = 0;
+                    pend.val = nv;
+                } else if (flank && stress.pos > 0) {
+                    s[stress.pos] = 0x31;
+                }
+                break;
+            default:
+                break;
+            }
+            pend.val = s[i];
+            continue;
+        }
+
         if (c == 0x4F && stress.val < 5 && eight.val < 0x4E)      latch_o = 1;
         else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E) latch_p = 1;
         else if (a2(img, c) & 8)                                  latch_o = latch_p = 0;
