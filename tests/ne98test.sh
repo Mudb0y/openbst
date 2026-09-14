@@ -10,8 +10,16 @@
 # after it.
 #
 # What is compared is therefore what the dictionary, the rules, the diphone
-# inventory and the interpolator decide between them. The voice settings this
-# build defaults differently are not yet matched.
+# inventory and the interpolator decide between them.
+#
+# The prosody is not compared, and the reason is worth writing down. Driven
+# this way the engine never has its intonation parameters set -- KGMTTS writes
+# them and the oracle stands in for KGMTTS -- so it carries no level from one
+# phrase to the next. Its phoneme stream for "water." differs from ours in
+# three bytes out of thirty-five: the slot that hands a level on, and the two
+# command operands that carry it. Everything else, every phoneme and every
+# accent, is the same. Those three bytes change the stress the vowel durations
+# are computed against, which is what pulls the frames apart.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 lang=${DLL:-$root/dll/1998/KGMENG.DLL}

@@ -267,6 +267,7 @@ int main(int argc, char **argv) {
             }
         }
         if (drive(e, ml, engine) < 0) { fprintf(stderr, "the engine faulted\n"); return 1; }
+        if (dump) dump_segments(e, dump, "run");
         if (wframes) {
             FILE *f = fopen(wframes, "wb");
             if (f) { fwrite(e->frames, 1, e->frames_len, f); fclose(f); }

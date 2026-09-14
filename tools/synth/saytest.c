@@ -76,11 +76,12 @@ int main(int argc, char **argv) {
 
     /* The voice, as the engine has it before the first word. */
     int base = 0x50, top = 0xA0, level = 3, vsel = voice_sel, rate = 0;
-    int gflags = 0, defexc = 0x30, gb = 0x10, ga = -0x12;
+    int gflags = 0, defexc = 0x30, gb = 0x10, ga = -0x12, aflags = 0;
     if (params) {
-        int *f[9] = { &base, &top, &level, &vsel, &rate, &gflags, &defexc, &gb, &ga };
+        int *f[10] = { &base, &top, &level, &vsel, &rate, &gflags, &defexc,
+                       &gb, &ga, &aflags };
         const char *q = params;
-        for (int i = 0; i < 9 && q && *q; i++) {
+        for (int i = 0; i < 10 && q && *q; i++) {
             char *e = NULL;
             *f[i] = (int)strtol(q, &e, 0);
             q = (e && *e == ',') ? e + 1 : NULL;
@@ -116,7 +117,7 @@ int main(int argc, char **argv) {
         int grew = bst_phrules(&img, stream, &len, (int)sizeof stream, 0);
         z.hdr += grew;
 
-        as.flags = 0;
+        as.flags = aflags;
         as.level = level;
         as.tail = z.hdr >= 0 ? z.hdr + 3 : -1;
         bst_accents(&img, stream, len, &as);
