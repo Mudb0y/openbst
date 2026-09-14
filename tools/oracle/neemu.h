@@ -120,6 +120,8 @@ struct nemu {
        per read: a sentence makes hundreds of millions of reads and only a few
        hundred instructions make them. */
     FILE *trace;
+    uint32_t watch_lo, watch_hi;
+    int      watching;
     struct { uint32_t pc, lo, hi; uint64_t n; int order; } *tab;
     int    ntab, captab;
     int    tabseq;
@@ -192,6 +194,11 @@ void     ne_hook_peek(nemu *e, uint16_t sel, uint16_t off,
    table directory uses, (segment << 16) | offset, so the analysis tools do not
    have to know where the emulator put anything. */
 void     ne_trace_reads(nemu *e, FILE *out);
+
+/* Reports every write into a range of one segment, with the instruction that
+   made it. A read trace says which tables a stage consults; this says which
+   instruction put a byte where, which is what a difference of one byte needs. */
+void     ne_watch_writes(nemu *e, uint16_t seg, uint16_t lo, uint16_t hi);
 void     ne_trace_report(nemu *e);
 void     ne_frames_reset(nemu *e);
 

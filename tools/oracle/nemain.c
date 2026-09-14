@@ -158,7 +158,7 @@ static void usage(void) {
 int main(int argc, char **argv) {
     const char *core = NULL, *lang = NULL, *call = NULL, *dump = NULL;
     const char *say = NULL, *engine = NULL, *probe = NULL, *tracepath = NULL;
-    const char *peek = NULL;
+    const char *peek = NULL, *watch = NULL;
     const char *wframes = NULL;
     int verbose = 0, info = 0, btrace = 0;
     unsigned long long limit = 0;
@@ -172,6 +172,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--trace") && i + 1 < argc) tracepath = argv[++i];
         else if (!strcmp(argv[i], "--peek") && i + 1 < argc) peek = argv[++i];
         else if (!strcmp(argv[i], "--set") && i + 1 < argc) g_params = argv[++i];
+        else if (!strcmp(argv[i], "--watch") && i + 1 < argc) watch = argv[++i];
         else if (!strcmp(argv[i], "--limit") && i + 1 < argc) limit = strtoull(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--eof") && i + 1 < argc) g_eof = (int)strtol(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--core") && i + 1 < argc) core = argv[++i];
@@ -255,6 +256,12 @@ int main(int argc, char **argv) {
 
     if (engine) {
         if (!ml) { fprintf(stderr, "--engine needs --lang\n"); return 1; }
+        if (watch) {
+            unsigned sg = 16, lo = 0, hi = 0;
+            if (sscanf(watch, "%u:%x:%x", &sg, &lo, &hi) == 3 &&
+                sg >= 1 && sg <= (unsigned)ml->nseg)
+                ne_watch_writes(e, ml->seg[sg - 1].sel, (uint16_t)lo, (uint16_t)hi);
+        }
         if (peek) {
             /* seg:off:dataseg:addr,addr,... */
             char buf[256];

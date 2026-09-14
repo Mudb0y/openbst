@@ -208,6 +208,30 @@ static void hook_trace(uc_engine *uc, uc_mem_type t, uint64_t addr,
     e->ntab++;
 }
 
+static void hook_write(uc_engine *uc, uc_mem_type t, uint64_t addr,
+                       int size, int64_t val, void *ud) {
+    (void)uc; (void)t;
+    nemu *e = ud;
+    if (!e->watching) return;
+    if (addr < e->watch_lo || addr >= e->watch_hi) return;
+    uint32_t cs = 0, ip = 0;
+    uc_reg_read(e->uc, UC_X86_REG_CS, &cs);
+    uc_reg_read(e->uc, UC_X86_REG_IP, &ip);
+    uint32_t a = seg_addr(e, (uint32_t)addr, 0);
+    uint32_t p = seg_addr(e, ne_lin(e, (uint16_t)cs, 0) + ip, 0);
+    printf("write %08x %d = %04x from %08x\n", a, size, (unsigned)(val & 0xffff), p);
+}
+
+void ne_watch_writes(nemu *e, uint16_t seg, uint16_t lo, uint16_t hi) {
+    uint32_t base = ne_lin(e, seg, 0);
+    e->watch_lo = base + lo;
+    e->watch_hi = base + hi;
+    e->watching = 1;
+    uc_hook h;
+    uc_hook_add(e->uc, &h, UC_HOOK_MEM_WRITE, hook_write, e,
+                e->watch_lo, e->watch_hi - 1);
+}
+
 void ne_trace_reads(nemu *e, FILE *out) {
     e->trace = out;
     uc_hook h;

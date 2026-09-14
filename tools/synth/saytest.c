@@ -33,12 +33,12 @@ int main(int argc, char **argv) {
         else if (argc > 2 && strcmp(argv[1], "--tables") == 0) { tablespec = argv[2]; argv += 2; argc -= 2; }
         else if (argc > 2 && strcmp(argv[1], "--voice") == 0) { voice_sel = atoi(argv[2]); argv += 2; argc -= 2; }
         else if (argc > 2 && strcmp(argv[1], "--params") == 0) { params = argv[2]; argv += 2; argc -= 2; }
-        else if (argc > 1 && strcmp(argv[1], "--gaintrace") == 0) { bst_trace = 1; argv++; argc--; }
+        else if (argc > 1 && strcmp(argv[1], "--trace") == 0) { bst_trace = 1; argv++; argc--; }
         else break;
     }
     if (argc < 3) {
         fprintf(stderr, "usage: saytest [--frames] [--ne] [--tables o,o,o,o,o,o]"
-                        " DLL TEXT > pcm\n");
+                        " [--trace] DLL TEXT > pcm\n");
         return 2;
     }
     FILE *f = fopen(argv[1], "rb");
@@ -114,7 +114,17 @@ int main(int argc, char **argv) {
         int len = z.len > 0 ? z.len : z.wp + 1;
         if (len <= 0) { memset(stream, 0, sizeof stream); bst_assemble_start(&z); continue; }
 
+        if (bst_trace) {
+            fprintf(stderr, "assembled");
+            for (int i = 0; i < len; i++) fprintf(stderr, " %02x", stream[i]);
+            fprintf(stderr, "\n");
+        }
         int grew = bst_phrules(&img, stream, &len, (int)sizeof stream, 0);
+        if (bst_trace) {
+            fprintf(stderr, "ruled    ");
+            for (int i = 0; i < len; i++) fprintf(stderr, " %02x", stream[i]);
+            fprintf(stderr, "\n");
+        }
         z.hdr += grew;
 
         as.flags = aflags;
@@ -123,6 +133,11 @@ int main(int argc, char **argv) {
         bst_accents(&img, stream, len, &as);
         level = as.level;
 
+        if (bst_trace) {
+            fprintf(stderr, "atpairs");
+            for (int i = 0; i < len; i++) fprintf(stderr, " %02x", stream[i]);
+            fprintf(stderr, "\n");
+        }
         int ne = bst_pairs(&img, stream, len, &ps, em,
                            (int)(sizeof em / sizeof em[0]));
         if (ne < 0) ne = (int)(sizeof em / sizeof em[0]);
@@ -151,7 +166,8 @@ int main(int argc, char **argv) {
             for (int i = 0; i < len; i++) fprintf(stderr, " %02x", stream[i]);
             fprintf(stderr, "\ntrn");
             for (int i = 0; i < nt; i++)
-                fprintf(stderr, " %02x/%02x", trn[i].index, trn[i].dur);
+                fprintf(stderr, " %02x:%02x,%02x,%02x", trn[i].index, trn[i].dur,
+                        trn[i].p1, trn[i].p2);
             fprintf(stderr, "\nseg");
             for (int i = 0; i < ns; i++)
                 fprintf(stderr, " %u:%d", seg[i].index, seg[i].count);

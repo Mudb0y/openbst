@@ -12,14 +12,14 @@
 # What is compared is therefore what the dictionary, the rules, the diphone
 # inventory and the interpolator decide between them.
 #
-# The prosody is not compared, and the reason is worth writing down. Driven
-# this way the engine never has its intonation parameters set -- KGMTTS writes
-# them and the oracle stands in for KGMTTS -- so it carries no level from one
-# phrase to the next. Its phoneme stream for "water." differs from ours in
-# three bytes out of thirty-five: the slot that hands a level on, and the two
-# command operands that carry it. Everything else, every phoneme and every
-# accent, is the same. Those three bytes change the stress the vowel durations
-# are computed against, which is what pulls the frames apart.
+# The prosody is not compared, and the reason is worth writing down. The
+# phoneme stream is not the problem: read out of the engine's data segment at
+# the point its own pair scan reads it, it is byte for byte ours, accents and
+# lead byte and all. What differs is the transition duration the pair scan then
+# computes for two positions of one sound -- 0x24 and 0x1d against the engine's
+# 0x11 and 0x1c -- from tables that are byte-identical to the ones our code
+# already reads. So it is the formula around them, in this build, and 0x11 is
+# below the floor our version of it will return.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 lang=${DLL:-$root/dll/1998/KGMENG.DLL}
