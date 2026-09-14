@@ -36,7 +36,7 @@ run() {
     tables=$(python3 "$root/tools/analysis/tables2006.py" \
              "$root/dll/1995/B32_TTS.DLL" "$d") || return
     timeout 120 "$root/build/oracle" --dll "$d" --limit 800000000 \
-        --call Init_TTS --call "Say_TTS:wstr:$t" --raw --out "$work/r.pcm" \
+        --call Init_TTS --call "Say_TTS:${form:-wstr}:$t" --raw --out "$work/r.pcm" \
         >/dev/null 2>&1
     "$root/build/saytest" --map "2006$(echo "$l" | tr a-z A-Z)" --voice 0 \
         --params 0x50,0xA0,3,0,0,0,0x30,0x10,-0x12,0 --tables "$tables" \
@@ -49,6 +49,10 @@ run() {
     fi
 }
 
+# The Arabic build reads its own code page a byte at a time rather than as a
+# wide string, so the text is given as bytes and the call form differs.
+form=str run ara "$(printf '\312\307\310 \312\310\355\321.')"
+form=wstr
 run dut Dit is een test.
 run fre Ceci est un test.
 run ger Dies ist ein Test.
