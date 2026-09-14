@@ -156,6 +156,12 @@ typedef struct {
        by three and shift down eight, which is eighty-five and a third. */
     uint8_t  inton_slope_shift;
 
+    /* A transition whose sound is weak or sits between vowels keeps six or
+       seven tenths of its duration. The 2006 builds reach those fractions by
+       shifts -- nineteen over thirty-two and eleven over sixteen -- which are
+       not quite the same numbers. */
+    uint8_t  dur_frac_shift;
+
     /* The 1998 build halves a vowel's duration on the way out of the pair
        scan, after the floors rather than before them, and rounds the
        transition's own halving down where the 1995 build rounds it up. */

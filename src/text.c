@@ -759,6 +759,7 @@ const bst_tabmap BST_MAP_2006_ENG = {
     .sepnum_first_three = 1, .close_pause = 7,
     .dur_mult = 0x35, .nearest_round = 1, .pitch_rate = 0x28A0,
     .slope_mult = 0xA7, .inton_dur_mult = 0x377, .inton_slope_shift = 1,
+    .dur_frac_shift = 1,
     .voice_span = 0, .voice_stride = 4,
     .vowel_dur_shift = 0, .trn_round = 1,
     .stress_shift = 5,

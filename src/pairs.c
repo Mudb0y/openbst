@@ -275,7 +275,12 @@ static void trans(scan *z, int dur, int pos, int which) {
                                      (a1(z, z->prev.val) & 0x12)))) {
             mul = 6;
         }
-        if (mul) dur = dur * mul / 10;
+        if (mul) {
+            if (z->img->t.dur_frac_shift)
+                dur = mul == 6 ? (dur * 19) >> 5 : (dur * 11) >> 4;
+            else
+                dur = dur * mul / 10;
+        }
     } else if (which == 2 && glide_run(z)) {
         dur = 0x3C;
     }
