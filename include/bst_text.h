@@ -101,6 +101,11 @@ typedef struct {
 
 extern const bst_tabmap BST_MAP_1995;
 extern const bst_tabmap BST_MAP_1998_ENG;
+extern const bst_tabmap BST_MAP_1998_DUT;
+extern const bst_tabmap BST_MAP_1998_FRN;
+extern const bst_tabmap BST_MAP_1998_GRM;
+extern const bst_tabmap BST_MAP_1998_ITL;
+extern const bst_tabmap BST_MAP_1998_SPN;
 
 /* Fills names with the entries the map has not been given and returns how
    many there were, so an incomplete build can say so rather than misbehave. */

@@ -163,6 +163,56 @@ def relocated(d):
     return segs, body
 
 
+def pointer_runs(body, nseg, dg, least=8):
+    """Runs of far pointers in the data segment. Every language lays these out
+    in the same order and mostly the same sizes: the character names, then the
+    digit, tens and teens names, then a run of twenty-eight, then the block of
+    forty-one that holds the words a number or a price is read with, then the
+    sound variants."""
+    b = body[dg]
+    out = []
+    i = 0
+    while i + 4 <= len(b):
+        off, sg = struct.unpack_from("<HH", b, i)
+        if 1 <= sg <= nseg and off < len(body[sg]):
+            j, k = i, 0
+            while j + 4 <= len(b):
+                o2, g2 = struct.unpack_from("<HH", b, j)
+                if not (1 <= g2 <= nseg and o2 < len(body[g2])):
+                    break
+                j += 4
+                k += 1
+            if k >= least:
+                out.append((i, k))
+            i = j
+        else:
+            i += 2
+    return out
+
+
+def suffix_array(body, nseg, dg):
+    """The three pointers to the suffix spellings, found by what they point at:
+    a one to four letter string in the same segment. It is the first thing in
+    the block that holds the character codes and the duration offsets, and the
+    only thing in it a language does not rewrite."""
+    b = body[dg]
+    for i in range(0, len(b) - 12, 2):
+        ok = True
+        for k in range(3):
+            off, sg = struct.unpack_from("<HH", b, i + k * 4)
+            if sg != dg or not 1 <= off < len(b) - 5:
+                ok = False
+                break
+            t = b[off:off + 5]
+            end = t.find(0)
+            if end < 1 or end > 4 or not all(0x61 <= c <= 0x7A for c in t[:end]):
+                ok = False
+                break
+        if ok:
+            return i
+    return None
+
+
 def buckets(code):
     """The fifteen dictionary buckets, read out of the switch that selects
     them: each case loads an index offset and a segment, then a data offset
@@ -232,7 +282,11 @@ def main():
                     continue
                 found[block] = (addr & 0xFFFF) - BLOCKS[tab][1]
                 break
-            if block not in found:
+            if block == "stress_num" and block not in found:
+                at = suffix_array(body, n, dg)
+                if at is not None:
+                    found[block] = at - BLOCKS["suffix_ptrs"][1]
+            if block not in found and block != "modmap":
                 print("    /* no anchor matched for the %s block */" % block)
 
         out = {}
@@ -298,7 +352,9 @@ def main():
                 live = [e for e in entries if 0 < e < off_base]
                 if len(live) < 100:
                     continue
-                for nv in range(1, 9):
+                # Zero is a real answer: Spanish numbers its records from the
+                # start of the segment and lets them run past the targets.
+                for nv in range(0, 9):
                     recs = nv * 0x1004
                     if recs + max(live) >= off_base:
                         continue
@@ -329,10 +385,60 @@ def main():
             named = {v: k for k, v in L.HANDLERS.items()}
             out["_handlers"] = {named[h]: hmap[h][0] for h in hmap if h in named}
 
+        # The block the 1995 bytes cannot place, placed by the shape of the
+        # data segment instead.
+        runs = pointer_runs(body, n, dg)
+        # The block sits immediately after a run of twenty-eight, which is the
+        # one size every language agrees on; the block itself is forty-one in
+        # five of them and forty-two in French.
+        strings = None
+        for idx, (a, k) in enumerate(runs):
+            if 27 <= k <= 29 and idx + 1 < len(runs):
+                strings = runs[idx + 1][0]
+                break
+        if strings is not None:
+            before = [a for a, k in runs if a < strings and 9 <= k <= 12]
+            names = next((a for a, k in runs if k == 186), None)
+            after = [a for a, k in runs if a > strings]
+            if len(before) >= 3:
+                teens_real, tens_real, digits_real = before[-1], before[-2], before[-3]
+                out["names"] = (dg << 16) | names if names is not None else 0
+                if not out.get("names"):
+                    out.pop("names", None)
+                for nm, v in (("DIGITS", digits_real - 0xC0),
+                              ("TENS", tens_real - 0xC0),
+                              ("TEENS", teens_real - 0xC0),
+                              ("ZERO", digits_real),
+                              ("SCALES", teens_real + 0x28)):
+                    out.setdefault("_s", {})[nm] = (dg << 16) | (v & 0xFFFF)
+                base = strings + 0x10
+                for nm, off in (("DOLLARS", 0), ("AND", 4), ("CENTS", 0x10),
+                                ("HUNDRED", 0x14), ("OH", 0x1C), ("POINT", 0x20),
+                                ("ORD_ST", 0x4C), ("ORD_ND", 0x50),
+                                ("ORD_RD", 0x54), ("ORD_FIFTH", 0x58),
+                                ("ORD_FIRST", 0x5C), ("ORD_TIETH", 0x60),
+                                ("ORD_TH", 0x64), ("GRPSEP", 0x6C),
+                                ("PLURAL", 0x5C)):
+                    out.setdefault("_s", {})[nm] = (dg << 16) | ((base + off) & 0xFFFF)
+            if after:
+                out["modtab"] = (dg << 16) | after[0]
+                out["modmap"] = (dg << 16) | ((after[0] - 0x202) & 0xFFFF)
+
         bk = buckets(bytes(body[1]))
         if len(bk) >= 15:
             out["_buckets"] = [((c << 16) | a, (c << 16) | dd) for _, c, a, dd in bk[:15]]
 
+        # The log pair belongs to the synthesizer's own table set, not to the
+        # directory, so it is reported as the file offsets that loader wants.
+        for k in ("log", "alog"):
+            if k in out:
+                off = None
+                for va, vsize, raw, rawsize in secs:
+                    if va <= out[k] < va + vsize:
+                        off = raw + (out[k] - va)
+                if off is not None:
+                    print("    /* %s at file offset 0x%x */" % (k, off))
+                del out[k]
         for k in sorted(out):
             if k.startswith("_"):
                 continue
@@ -346,12 +452,17 @@ def main():
         print("    .trie_max_off = 11, .trie_po_off = 13,")
         print("    .silence_f0 = 0xD1, .unvoiced_dur = 0x6E, .unvoiced_reps = 8,")
         print("    .vowel_dur_shift = 1, .trn_round = 0,")
-        if "modmap" in found:
+        slots = out.get("_s")
+        if not slots and "modmap" in found:
+            slots = {nm: (dg << 16) | ((STRINGS[nm] + found["modmap"]) & 0xFFFF)
+                     for nm in STRINGS}
+        if slots:
             print("    .s = {")
-            for nm in sorted(STRINGS):
-                print("        [BST_S_%s] = 0x%08x," %
-                      (nm, (dg << 16) | ((STRINGS[nm] + found["modmap"]) & 0xFFFF)))
+            for nm in sorted(slots):
+                print("        [BST_S_%s] = 0x%08x," % (nm, slots[nm]))
             print("    },")
+        else:
+            print("    /* the block of pointer slots was not placed */")
         if "_buckets" in out:
             print("    .bucket_index = { %s }," %
                   " ".join("0x%08x," % b[0] for b in out["_buckets"]))
@@ -364,7 +475,9 @@ def main():
             for h in sorted(out["_handlers"]):
                 print("        [BST_H_%s] = 0x%08x," % (h, out["_handlers"][h]))
             print("    },")
-        missing = [t for t in list(BLOCKS) + ["tokstates"] if t not in out]
+        missing = [t for t in list(BLOCKS) + ["tokstates"]
+                   if t not in out and t not in ("names", "modmap", "modtab")]
+        missing += [t for t in ("names", "modmap", "modtab") if t not in out]
         if missing:
             print("    /* not placed: %s */" % " ".join(missing))
         print()

@@ -25,7 +25,7 @@ static uint8_t stream[0x200];
 
 int main(int argc, char **argv) {
     int want_frames = 0, ne = 0, voice_sel = 1;
-    const char *params = NULL;
+    const char *params = NULL, *mapname = NULL;
     const char *tablespec = NULL;
     for (;;) {
         if (argc > 1 && strcmp(argv[1], "--frames") == 0) { want_frames = 1; argv++; argc--; }
@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
         else if (argc > 2 && strcmp(argv[1], "--tables") == 0) { tablespec = argv[2]; argv += 2; argc -= 2; }
         else if (argc > 2 && strcmp(argv[1], "--voice") == 0) { voice_sel = atoi(argv[2]); argv += 2; argc -= 2; }
         else if (argc > 2 && strcmp(argv[1], "--params") == 0) { params = argv[2]; argv += 2; argc -= 2; }
+        else if (argc > 2 && strcmp(argv[1], "--map") == 0) { mapname = argv[2]; argv += 2; argc -= 2; }
         else if (argc > 1 && strcmp(argv[1], "--trace") == 0) { bst_trace = 1; argv++; argc--; }
         else break;
     }
@@ -50,9 +51,22 @@ int main(int argc, char **argv) {
     if (!d || fread(d, 1, n, f) != (size_t)n) return 1;
     fclose(f);
 
+    static const struct { const char *name; const bst_tabmap *map; } MAPS[] = {
+        { "ENG", &BST_MAP_1998_ENG }, { "DUT", &BST_MAP_1998_DUT },
+        { "FRN", &BST_MAP_1998_FRN }, { "GRM", &BST_MAP_1998_GRM },
+        { "ITL", &BST_MAP_1998_ITL }, { "SPN", &BST_MAP_1998_SPN },
+    };
+    const bst_tabmap *map = &BST_MAP_1998_ENG;
+    if (mapname) {
+        map = NULL;
+        for (size_t i = 0; i < sizeof MAPS / sizeof MAPS[0]; i++)
+            if (strcmp(MAPS[i].name, mapname) == 0) map = MAPS[i].map;
+        if (!map) { fprintf(stderr, "no map named %s\n", mapname); return 2; }
+    }
+
     bst_image img;
     if (ne) {
-        if (bst_image_init_ne(&img, d, n, &BST_MAP_1998_ENG) < 0) {
+        if (bst_image_init_ne(&img, d, n, map) < 0) {
             fprintf(stderr, "not a 16-bit module\n");
             return 1;
         }
