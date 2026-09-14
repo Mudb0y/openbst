@@ -476,6 +476,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
     } else if (t == 0) {
         g->exc = 0;
         g->dur = g->left;
+        if (bst_trace) fprintf(stderr, "sil left=%d voiced=%d\n", g->left, g->voiced);
         int16_t keep = g->dur;
         if (g->left < g->img->t.unvoiced_dur) {
             silence_frame(g);
@@ -501,7 +502,9 @@ static void build(bst_gen *g, const uint8_t *rec) {
             /* This generation holds a long silence in whole periods rather
                than in one frame of eight-period units. */
             while (g->dur > g->img->t.unvoiced_dur) {
-                g->frame[3] = (uint8_t)g->img->t.unvoiced_dur;
+                g->frame[3] = g->img->t.silence_period
+                            ? g->img->t.silence_period
+                            : (uint8_t)g->img->t.unvoiced_dur;
                 emit(g);
                 g->dur = (int16_t)(g->dur - g->img->t.unvoiced_dur);
             }
