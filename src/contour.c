@@ -61,7 +61,7 @@ static void set_range(bst_voice *p, int a, int b) {
        negative percentage truncates the other way. */
     short s2 = p->round10 ? (short)((p->top * a) / 100 + p->top)
                           : (short)((p->top * (100 + a)) / 100);
-    int top = s2 + (s2 * b) / 100;
+    int top = p->reach ? p->reach : s2 + (s2 * b) / 100;
     if (top < mid) top = mid;
     if (top > 600) top = 600;
     build(p, p->base, mid, top);
@@ -187,6 +187,7 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
     bst_cur eight, strong, prev8, prevstrong;
 
     p->round10 = img->t.contour_round ? 5 : 0;
+    p->reach = img->t.voice_top;
 
     memset(e, 0, sizeof e);
     p->emphasis = 0;

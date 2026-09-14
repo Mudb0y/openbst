@@ -165,11 +165,11 @@ typedef struct {
     /* Whether the German transition between two vowels keeps nineteen
        thirty-seconds of its duration rather than nine sixteenths. The 1998
        module does; the 2006 one does not. */
-    /* The top of the pitch range this build starts from. The 1995 and 1998
-       English builds reach a hundred and sixty-eight at the top of the
-       accent table; the other five 1998 modules reach a hundred and
-       fifty-three, which is what a top of a hundred and forty-six gives.
-       Zero leaves the host's. */
+    /* The ceiling this build's pitch table reaches, where its own arithmetic
+       does not fall out of the range commands. The Dutch module reaches a
+       hundred and fifty-four where the other four reach a hundred and
+       fifty-three. The 1995 and 1998
+       Zero leaves the range commands to decide. */
     /* The sentence mode a build starts in, which decides the two percentages
        the pitch range is built from. The 1998 modules do not write it into
        the stream, so it has to be said here: the English one starts at four
@@ -723,6 +723,7 @@ typedef struct {
     int   strong;      /* the group cursor's value, carried between calls */
     int   mid, hi;     /* the current middle and ceiling */
     int   round10;     /* half a step, added before the table's division */
+    int   reach;       /* the ceiling a build reaches whatever the range says */
     short table[14];
 } bst_voice;
 
