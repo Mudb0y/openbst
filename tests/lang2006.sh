@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# The twelve other 2006 language builds through our own front end and lattice,
-# each with the directory carried over from the English build. Say_TTS takes a
-# wide string, and the engine's start-up writes twenty silent samples at index
-# zero of the output buffer, so the comparison allows for those.
+# The other 2006 language builds through our own front end and lattice, each
+# with the directory carried over from the English build. Say_TTS takes a wide
+# string, and the engine's start-up writes twenty silent samples at index zero
+# of the output buffer, so the comparison allows for those.
 #
-# None of them matches outright yet; what this reports is how far each gets
-# before it diverges, so a change can be seen to help or not.
+# The ones listed here match outright; the report says how far each gets before
+# it diverges, so a change can be seen to help or not.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
@@ -52,6 +52,7 @@ run() {
 run dut Dit is een test.
 run fre Ceci est un test.
 run ger Dies ist ein Test.
+run heb ze mivchan.
 run ita Questo e un test.
 run pol To jest test.
 run por Isto e um teste.

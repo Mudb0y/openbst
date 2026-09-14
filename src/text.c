@@ -1696,6 +1696,10 @@ const bst_tabmap BST_MAP_2006_GRE = {
 };
 /* HEB: 190 functions matched, 2842 addresses carried */
 const bst_tabmap BST_MAP_2006_HEB = {
+    .ph_kind       = 7,
+    .stress_kind   = 1,
+    .trn_kind      = 2,
+    .vdur_slow     = 0x41,
     .vdur_kind     = 1,
     .trn_whole     = 1,
     .pair_class = {

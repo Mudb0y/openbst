@@ -98,6 +98,24 @@ static int fr_weak_ahead(const bst_image *img, const uint8_t *s, int len, int fr
     }
 }
 
+/* Whether the sound at this position opens its group: walking back from it,
+   a group boundary comes before another sound does. */
+static int opens_run(const bst_image *img, const uint8_t *s, int pos) {
+    if (!(a2(img, s[pos]) & 1)) return 0;
+    int p = pos - 1;
+    while (p != 0) {
+        int b = s[p];
+        if (b != 0 && b != CMD) {
+            int a = a2(img, b);
+            if (a & 1) return 0;
+            if (a & 8) return 1;
+        }
+        if (b == CMD) p -= 6;
+        p--;
+    }
+    return 1;
+}
+
 static int marker_ahead(const bst_image *img, const uint8_t *s, int len, int from) {
     int p = from + 1;
     for (;;) {
@@ -280,6 +298,19 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 }
             }
 
+            pend.val = (uint8_t)c;
+            continue;
+        }
+
+        if (img->t.ph_kind == 7) {
+            /* Hebrew has one rule: an unstressed open vowel closes when it
+               ends a phrase or stands at the head of the next group. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x23) continue;
+            if (mc == 0x1A && stress.val < 6 &&
+                (bst_code(img, next.val) == 0x22 ||
+                 (next.pos > 0 && opens_run(img, s, next.pos))))
+                c = bst_uncode(img, 0x21), s[i] = (uint8_t)c;
             pend.val = (uint8_t)c;
             continue;
         }

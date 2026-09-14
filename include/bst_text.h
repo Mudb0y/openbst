@@ -148,6 +148,7 @@ typedef struct {
        in stress.c. One is the Romance rule: the last syllable but one, or the
        last when the word ends in a consonant that is not in stress_keep, and
        every other syllable flat rather than reduced. */
+    uint8_t  stress_kind;        /* 1 = the Hebrew fallback and reduce */
     uint8_t  stress_rule;
     uint8_t  stress_keep[4];
 
