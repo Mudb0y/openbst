@@ -57,7 +57,7 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
     int fin = 0;
     for (int i = len - 1; i >= 0; i--)
         if (s[i] && s[i] < 0x2F) { fin = s[i]; break; }
-    int keep = (a1(img, fin) & 0x80) != 0;
+    int keep = img->t.stress_rule == 3 || (a1(img, fin) & 0x80) != 0;
     for (int k = 0; !keep && k < (int)sizeof img->t.stress_keep; k++)
         if (img->t.stress_keep[k] && fin == img->t.stress_keep[k]) keep = 1;
 

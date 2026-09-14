@@ -121,6 +121,8 @@ int main(int argc, char **argv) {
             q = (e && *e == ',') ? e + 1 : NULL;
         }
     }
+    if (img.t.init_level) level = img.t.init_level;
+
     int nframes = 0, have_voice = 0;
 
     bst_voice voice;

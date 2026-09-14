@@ -31,9 +31,7 @@ static int is_letter(const bst_image *img, int c) {
 static int lattr(const bst_image *img, int c) {
     return (c > 0 && c < 256) ? ru8(img, img->t.letterattr + (unsigned)c) : 0;
 }
-static int cons_bit(const bst_image *img) {
-    return img->t.la_cons ? img->t.la_cons : 4;
-}
+
 
 /* Walks one side of a pattern. step is +1 for the right context, -1 for the
    left. */
@@ -48,6 +46,10 @@ static int match(const bst_image *img, const char *pat, int pi,
             if ((unsigned char)pc != tc) return 0;
             pi += step; ti += step; continue;
         }
+        if ((unsigned char)pc < 0x60 && img->t.pat_bit[(unsigned char)pc]) {
+            if (!(lattr(img, tc) & img->t.pat_bit[(unsigned char)pc])) return 0;
+            pi += step; ti += step; continue;
+        }
         switch (pc) {
         case ' ':
             if (tc && is_letter(img, tc)) return 0;
@@ -56,21 +58,15 @@ static int match(const bst_image *img, const char *pat, int pi,
             if (!(lattr(img, tc) & 1)) return 0;
             pi += step; ti += step; continue;
         case '^':
-            if (!(tc && is_letter(img, tc) && (lattr(img, tc) & cons_bit(img))))
+            if (!(tc && is_letter(img, tc) && (lattr(img, tc) & 4)))
                 return 0;
             pi += step; ti += step; continue;
-        case ':': {
-            int got = 0;
-            while (tc && is_letter(img, tc) && (lattr(img, tc) & cons_bit(img))) {
+        case ':':
+            while (tc && is_letter(img, tc) && (lattr(img, tc) & 4)) {
                 ti += step;
                 tc = (ti >= 0 && ti < len) ? t[ti] : 0;
-                got++;
             }
-            if (img->t.rule_run_one &&
-                (!got || (tc && is_letter(img, tc))))
-                return 0;
             pi += step; continue;
-        }
         case '+':
             if (tc != 'i' && tc != 'e' && tc != 'y') return 0;
             pi += step; ti += step; continue;
