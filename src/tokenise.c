@@ -385,6 +385,7 @@ static int number_out(bst_tok *t) {
     for (int i = 0; i < n; i++)
         if (!is_digit(t, t->ring[t->start + i])) return 0;
     bst_say_number(t, t->ring + t->start, n);
+    if (t->money) { emit_ptr(t, t->img->t.s[BST_S_DOLLARS]); t->money = 0; }
     t->prevkind = t->kind;
     t->kind = 6;
     return 1;
@@ -504,6 +505,8 @@ static int sepnum_out(bst_tok *t) {
             /* The build gives up here: the first group is said and the rest
                of the text never reaches the machine. */
             bst_say_number(t, t->ring + p, len);
+            if (t->money) { emit_ptr(t, t->img->t.s[BST_S_DOLLARS]); t->money = 0; }
+            t->push = 0;
             t->tp = t->tn;
             t->prevkind = t->kind;
             t->kind = 6;
