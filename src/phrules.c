@@ -315,6 +315,49 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 8) {
+            /* Greek: an unvoiced stop after the nasal voices, three of them
+               taking an extra sound with it, and a glottal stop goes between
+               two sounds that open across a segment boundary. The original
+               leaves its cursors where they were after an insertion, so this
+               does too. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x29) continue;
+            if (!(prev.pos > prev8.pos) && bst_code(img, prev.val) == 0x0A) {
+                int to = 0, extra = 0;
+                switch (mc) {
+                case 5:    to = 7; break;
+                case 3:    to = 4; break;
+                case 1:    to = 2; break;
+                case 0x16: to = 4; extra = 1; break;
+                case 0x18: to = 7; extra = 1; break;
+                case 0x15: to = 2; extra = 1; break;
+                default:   break;
+                }
+                if (to) {
+                    c = bst_uncode(img, to);
+                    s[i] = (uint8_t)c;
+                    if (extra && len + 1 < cap) {
+                        for (int k = len; k > i + 1; k--) s[k] = s[k - 1];
+                        s[i + 1] = (uint8_t)bst_uncode(img, 0x11);
+                        len++; lim++;
+                        if (i + 1 <= last) last++;
+                        inserted_total++;
+                    }
+                }
+            }
+            if (after_seg && (a1(img, prev.val) & 0x80) && (a1(img, c) & 0x80) &&
+                len + 1 < cap) {
+                for (int k = len; k > i; k--) s[k] = s[k - 1];
+                s[i] = (uint8_t)bst_uncode(img, 0x28);
+                len++; lim++;
+                if (i <= last) last++;
+                inserted_total++;
+            }
+            pend.val = (uint8_t)c;
+            continue;
+        }
+
         if (img->t.ph_kind == 1) {
             /* The Romance rules: no aspiration, no glottal stop, no vowel
                reduction; the voiced stops soften between sounds, the sibilant

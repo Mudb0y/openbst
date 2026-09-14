@@ -52,6 +52,8 @@ run() {
 run dut Dit is een test.
 run fre Ceci est un test.
 run ger Dies ist ein Test.
+# Greek reads its own code page, so the text is given as bytes.
+run gre "$(printf '\364\357 \363\360\337\364\351.')"
 run heb ze mivchan.
 run ita Questo e un test.
 run pol To jest test.
