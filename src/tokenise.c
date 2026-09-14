@@ -29,7 +29,10 @@ static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
    the tail, because the lookahead must not read into the tail. */
 static int source(bst_tok *t, int *real) {
     *real = 1;
-    if (t->tp < t->tn) return t->text[t->tp++];
+    if (t->tp < t->tn) {
+        int c = t->text[t->tp++];
+        return t->img->t.in_map[1] ? t->img->t.in_map[c] : c;
+    }
     *real = 0;
     if (t->tail < (int)(sizeof TAIL)) return TAIL[t->tail++];
     return 0xFFFF;

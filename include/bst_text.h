@@ -163,6 +163,12 @@ typedef struct {
        tools/analysis/pairclass.py reads the rest out of the build. */
     uint8_t  pair_class[0x40];
 
+    /* The characters the build rewrites as it reads the text: a few builds
+       treat a plain letter as its accented form, and all of them fold the
+       Latin-1 range into their own encoding. Empty means it takes the text as
+       it stands. */
+    uint8_t  in_map[0x100];
+
     /* Whether a transition's duration is halved whole. The English builds
        take a sixteenth off it first; the 2006 language builds do not. */
     uint8_t  trn_whole;
