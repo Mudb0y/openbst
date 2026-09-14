@@ -63,6 +63,21 @@ BLOCKS = {
     "letterattr": ("chattr", 0x1576),
     "casemap":    ("chattr", 0x1676),
     "symmap":     ("chattr", 0x1776),
+
+    "names":      ("modmap", 0x1D1E),
+    "modmap":     ("modmap", 0x2452),
+    "modtab":     ("modmap", 0x2654),
+}
+
+# The pointer slots that name a spoken word, in the same block as modmap.
+STRINGS = {
+    "DIGITS": 0x1F76, "TENS": 0x1FE0, "ZERO": 0x2036, "TEENS": 0x2058,
+    "SCALES": 0x2140,
+    "DOLLARS": 0x23A4, "AND": 0x23A8, "CENTS": 0x23B4, "HUNDRED": 0x23B8,
+    "OH": 0x23C0, "POINT": 0x23C4,
+    "ORD_ST": 0x23F0, "ORD_ND": 0x23F4, "ORD_RD": 0x23F8, "ORD_FIFTH": 0x23FC,
+    "ORD_FIRST": 0x2400, "ORD_TIETH": 0x2404, "ORD_TH": 0x2408,
+    "GRPSEP": 0x2410, "PLURAL": 0x2400,
 }
 
 # What to match a block on, in order of preference: a table whose bytes are
@@ -81,7 +96,12 @@ ANCHORS = {
     "chattr":     [("chattr", 0x10021020, 256),
                    ("casemap", 0x10021220, 256),
                    ("symmap", 0x10021320, 256)],
+    "modmap":     [("modmap", 0x10037638, 0x30)],
 }
+
+# modmap's bytes are the same in every build but short enough that the default
+# search will not commit to them, so it gets a narrower window.
+FINE = {"modmap"}
 
 
 def segments(d):
@@ -198,8 +218,14 @@ def main():
         for block, cands in ANCHORS.items():
             for tab, va, ln in cands:
                 start = L.RDATA_OFF + (va - L.RDATA_VA)
-                base, score = L.locate(ref, d, start, ln)
-                if base is None or score * 10 < ln * 8:
+                if tab in FINE:
+                    base, score = L.locate(ref, d, start, ln,
+                                           window=8, step=2, minvotes=2)
+                    need = ln * 6
+                else:
+                    base, score = L.locate(ref, d, start, ln)
+                    need = ln * 8
+                if base is None or score * 10 < need:
                     continue
                 addr = L.to_addr(secs, base)
                 if addr is None or (addr >> 16) != dg:
@@ -311,6 +337,21 @@ def main():
             if k.startswith("_"):
                 continue
             print("    .%-14s = 0x%08x," % (k, out[k]))
+        print("    .code_lo = 0x00000000, .code_hi = 0x%08x," % segs[0]["len"])
+        print("    .tok_stride = 6, .tok_state_off = 0, .tok_state_w = 1,")
+        print("    .tok_handler_off = 1, .tok_handler_w = 2,")
+        print("    .tok_next_off = 5, .tok_next_w = 1,")
+        print("    .lts_index_stride = 3, .rule_stride = 7, .rule_prio_w = 1,")
+        print("    .trie_st_off = 1, .trie_li_off = 5, .trie_base_off = 9,")
+        print("    .trie_max_off = 11, .trie_po_off = 13,")
+        print("    .silence_f0 = 0xD1, .unvoiced_dur = 0x6E, .unvoiced_reps = 8,")
+        print("    .vowel_dur_shift = 1, .trn_round = 0,")
+        if "modmap" in found:
+            print("    .s = {")
+            for nm in sorted(STRINGS):
+                print("        [BST_S_%s] = 0x%08x," %
+                      (nm, (dg << 16) | ((STRINGS[nm] + found["modmap"]) & 0xFFFF)))
+            print("    },")
         if "_buckets" in out:
             print("    .bucket_index = { %s }," %
                   " ".join("0x%08x," % b[0] for b in out["_buckets"]))
