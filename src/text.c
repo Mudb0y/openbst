@@ -308,6 +308,11 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .trn_kind       = 4,
+    .punct_s8       = { 5, 3, 9, 1, 9, 3, 9, 5, 9 },
+    .punct_s9       = { 0, 0x4C, 0x4C, 0, 0x4C, 0x4C, 0x48, 0, 0x4C },
+    .acc_kind       = 1,
+    .stress_rule    = 4,
     .pair_class = {
         0, 7, 7, 7, 2, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7, 7,
         7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -360,7 +365,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
     .silence_f0 = 0xD1, .unvoiced_dur = 0x6E, .unvoiced_reps = 8,
     .voice_span = 250,
     .vowel_dur_shift = 1, .trn_round = 0, .code_shift = -8,
-    .cmd_code = 0x6E,
+    .cmd_code = 0x76,
     .s = {
         [BST_S_AND] = 0x000a211c,
         [BST_S_CENTS] = 0x000a2128,
