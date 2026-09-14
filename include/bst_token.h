@@ -62,6 +62,7 @@ typedef struct {
     int      money;      /* a currency sign is in force */
     int      ord, ordlast, ordprev;
     int      lastend;    /* the character that ended the last sentence */
+    int      queued;   /* the second character of a build's expansion */
 } bst_tok;
 
 /* The reader, shared with the exception engine's lookahead. */

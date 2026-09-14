@@ -29,9 +29,14 @@ static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
    the tail, because the lookahead must not read into the tail. */
 static int source(bst_tok *t, int *real) {
     *real = 1;
+    if (t->queued) { int c = t->queued; t->queued = 0; return c; }
     if (t->tp < t->tn) {
         int c = t->text[t->tp++];
-        return t->img->t.in_map[1] ? t->img->t.in_map[c] : c;
+        if (t->img->t.in_map[1]) {
+            t->queued = t->img->t.in_map2[c];
+            c = t->img->t.in_map[c];
+        }
+        return c;
     }
     *real = 0;
     if (t->tail < (int)(sizeof TAIL)) return TAIL[t->tail++];

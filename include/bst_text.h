@@ -169,6 +169,10 @@ typedef struct {
        it stands. */
     uint8_t  in_map[0x100];
 
+    /* The second character, for the few a build turns into two: German reads
+       every h as ch. Zero means the one character stands alone. */
+    uint8_t  in_map2[0x100];
+
     /* What each character in a rule pattern tests. A build that spells its
        patterns as plain letter-attribute bits -- Polish does, with no run or
        suffix operators at all -- gives the bit here and the matcher takes one
