@@ -214,6 +214,32 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 4) {
+            /* The Dutch rules: a voiced stop hardens where the sound before
+               it allows, and a vowel that opens a group after another sound
+               takes a glottal stop in front. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x30 + img->t.code_shift) continue;
+            int at = a1(img, c);
+            if (at & 0x46) {
+                int nv = next.val;
+                if (nv == 0 || at_edge || nv == 0x2F || (a1(img, nv) & 0x42)) {
+                    if (mc == 4)      s[i] = 1;
+                    else if (mc == 5) s[i] = 2;
+                }
+            }
+            if ((a1(img, s[i]) & 0x80) && after_seg && len + 1 <= cap) {
+                for (int k = len; k > i; k--) s[k] = s[k - 1];
+                s[i] = 7;
+                len++; lim++;
+                if (i <= last) last++;
+                inserted = 1;
+                inserted_total++;
+            }
+            pend.val = s[i];
+            continue;
+        }
+
         if (c == 0x4F && stress.val < 5 && eight.val < 0x4E)      latch_o = 1;
         else if (c == 0x50 && stress.val < 5 && eight.val < 0x4E) latch_p = 1;
         else if (a2(img, c) & 8)                                  latch_o = latch_p = 0;

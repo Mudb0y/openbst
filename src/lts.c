@@ -98,7 +98,10 @@ static int match(const bst_image *img, const char *pat, int pi,
 }
 
 static int chain_head(const bst_image *img, int key) {
-    int bucket = key % 0xED;
+    /* The key is a signed sixteen-bit value, so a letter above 0x7F in the
+       high byte makes it negative, but the bucket comes from the unsigned
+       form. */
+    int bucket = (key & 0xFFFF) % 0xED;
     uint32_t o = img->t.lts_index +
                  (uint32_t)bucket * img->t.lts_index_stride;
     int entry_off = rs16(img, o);
@@ -132,7 +135,8 @@ static int try_at(const bst_image *img, const unsigned char *t, int len, int pos
     for (int span = 2; span >= 1; span--) {
         if (pos + span > len) continue;
         if (span == 2 && !(is_letter(img, t[pos + 1]) || t[pos + 1] == 0x60)) continue;
-        int key = span == 1 ? t[pos] : (t[pos] | (t[pos + 1] << 8));
+        int key = span == 1 ? t[pos]
+                            : (int16_t)(t[pos] | (t[pos + 1] << 8));
 
         for (int ridx = chain_head(img, key); ridx >= 0;) {
             int prio, next, patoff, outoff;
