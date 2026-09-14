@@ -56,6 +56,7 @@ run ger Dies ist ein Test.
 run gre "$(printf '\364\357 \363\360\337\364\351.')"
 run heb ze mivchan.
 run ita Questo e un test.
+run jpn kore wa tesuto desu.
 run pol To jest test.
 run por Isto e um teste.
 run spa Esto es una prueba.

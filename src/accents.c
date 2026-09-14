@@ -303,6 +303,162 @@ static int accents_french(const bst_image *img, uint8_t *s, int len,
     return n;
 }
 
+/* The Japanese build's accent pass, which is again its own algorithm.
+ *
+ * It keeps three landmarks rather than a classification: the first accent
+ * whose sound carries a formant target, the next one after it, and the first
+ * whose mark is anything but the reduced one. The contour is written on the
+ * first two of those and, for a long phrase, on one more chosen by how far
+ * apart the first two sit. */
+static int accents_japanese(const bst_image *img, uint8_t *s, int len,
+                            bst_accent_state *st) {
+    short pos[ACC_MAX];
+    int n = 0, first = 0, l14 = 0, l24 = 0;
+    int flagA = 0, flagB = 0, flagT = 0, emph = 0;
+    int type, shape = 0x48;
+
+    memset(pos, 0, sizeof pos);
+    st->emphasis = 0;
+
+    if (st->flags & 8) {
+        int c = st->level + 0x3D;
+        if (s[4] == 0) s[4] = (uint8_t)c;
+        if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
+            s[st->tail] = (uint8_t)c;
+        return 0;
+    }
+
+    if (s[6] != 'I') { type = 0x12; shape = 0x48; }
+    else             { type = s[8] + 0x0E; shape = s[9]; }
+
+    bst_cur lastseg;
+    scan_back_seg(img, s, len - 6, &lastseg);
+    int voiced = lastseg.val != 0x2F;
+
+    for (int i = 12; i < len; i++) {
+        int b = s[i];
+        if (b == 0x7C) {
+            if (s[i + 1] == 'D') emph = cmd16(s, i) >= 1;
+            else if (s[i + 1] == '~' && cmd16(s, i) == 0x21)
+                flagT = ((s[i + 4] << 8) | s[i + 5]) == 0x48;
+            i += 6;
+            if (bst_ph_attr2(img, s[i + 1]) & 8) i++;
+            continue;
+        }
+        int a2b = bst_ph_attr2(img, b);
+        if (a2b & 0x10) {
+            if (b == 0x51)      emph |= 1;
+            else if (b == 0x52) emph |= 6;
+            continue;
+        }
+        if (a2b & 8) { emph = 0; continue; }
+        if (!(bst_ph_attr1(img, b) & 0x80)) continue;
+        if (n + 1 >= ACC_MAX) break;
+        n++;
+        i++;
+        pos[n] = (short)i;
+        int mark = s[i];
+        if (!(emph & 1)) {
+            int open = s[i - 1];
+            if (first == 0 && (bst_ph_attr1(img, open) & 4)) first = n;
+            if (l24 == 0 && first != 0 && n > 1) {
+                if (!(bst_ph_attr1(img, open) & 4)) continue;
+                if (i - pos[first] == 4)
+                    { if (s[pos[first] - 1] == open) flagA = 1; else flagB = 1; }
+                l24 = n;
+            }
+            if (l14 == 0 && mark >= 0x33) l14 = n;
+        }
+        if (l24 == 0 && l14 != 0) l24 = l14;
+    }
+
+    if (n == 0) {
+        int c = st->carried ? st->carried : st->level + 0x3D;
+        if (s[4] == 0) s[4] = (uint8_t)c;
+        if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
+            s[st->tail] = (uint8_t)c;
+        return 0;
+    }
+
+    bst_cur back;
+    scan_back_seg(img, s, pos[n], &back);
+    int carry = st->carried ? st->carried : 0x3D;
+
+    int hi = 0, lo = 0, route;
+    if (l24 == 0) {
+        route = l14 != 0;
+    } else if (l24 < l14 || l14 == 0) {
+        if (shape == 0x48 && l14 == 0) { hi = 0x43; route = 0; }
+        else {
+            if (shape == 0x48)      hi = (flagT ? 1 : 0) + 0x44;
+            else if (shape == 0x4D) hi = (flagT ? 1 : 0) + 0x40;
+            else                    hi = flagT ? 0x3D : 0x3F;
+            route = l14 != 0;
+        }
+    } else {
+        route = 1;
+    }
+    if (route) {
+        if (shape == 0x48)      lo = 0x44;
+        else if (shape == 0x4D) lo = (flagT ? 0 : 1) + 0x3F;
+        else                    lo = 0x3D;
+    }
+
+    int out, tailcode;
+    first = l14;
+    if (type == 0x0F) {
+        tailcode = (hi != 0 && first == 0) ? hi : 0x44;
+    } else if (type == 0x12 || type == 0x14) {
+        int edge = back.val == 0 || back.val == 0x2F;
+        if (first == n && edge)                 tailcode = lo;
+        else if (l24 == n && edge)              tailcode = hi;
+        else if (type == 0x14)                  tailcode = (!flagT && first == 0)
+                                                           ? 0x40 : 0x3F;
+        else                                    tailcode = voiced ? 0x3D : 0x3A;
+    } else {
+        tailcode = 0x3A;
+    }
+    out = tailcode;
+
+    if (s[4] == 0) s[4] = (uint8_t)carry;
+
+    if (l24 > 1 && !flagA) {
+        int p = pos[l24 - 1];
+        int a = s[p];
+        if (a != 0x17 && a != 0x18) {
+            int v = carry > 0x40 ? 0x40 : carry;
+            s[p + (flagB ? 1 : 2)] = (uint8_t)v;
+        }
+    }
+    if (hi) s[pos[l24] + 1] = (uint8_t)hi;
+    if (lo) s[pos[first] + 1] = (uint8_t)lo;
+
+    if (first != 0 && first < n) {
+        if (shape != 0x4C) {
+            int k;
+            if (first + 2 > n)                            k = first + 1;
+            else if (first == 1)                          k = first + 2;
+            else if (pos[first + 1] - pos[first] > 4)      k = first + 1;
+            else                                          k = first + 2;
+            while (k <= n && !(bst_ph_attr1(img, s[pos[k] - 1]) & 4)) k++;
+            if (k <= n && (bst_ph_attr1(img, s[pos[k] - 1]) & 4))
+                s[pos[k] + 1] = 0x3D;
+        }
+        if (type != 0x12 && (bst_ph_attr1(img, s[pos[n] - 1]) & 4))
+            s[pos[n] + 1] = 0x3D;
+    }
+
+    if (bst_trace)
+        fprintf(stderr, "acc n=%d first=%d l14=%d l24=%d shape=%02x type=%02x"
+                        " hi=%02x lo=%02x out=%02x\n",
+                n, first, l14, l24, shape, type, hi, lo, out);
+
+    if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
+        s[st->tail] = (uint8_t)tailcode;
+    st->carried = voiced ? out : 0;
+    return n;
+}
+
 int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st) {
     acc e[ACC_MAX];
     short bcmd[16];
@@ -317,6 +473,7 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
     int codeA = 0, codeB = 0;
 
     if (img->t.acc_kind == 1) return accents_french(img, s, len, st);
+    if (img->t.acc_kind == 3) return accents_japanese(img, s, len, st);
 
     memset(e, 0, sizeof e);
     st->emphasis = 0;

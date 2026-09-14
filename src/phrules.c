@@ -358,6 +358,39 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             continue;
         }
 
+        if (img->t.ph_kind == 9) {
+            /* Japanese: three sounds take their palatal form before one
+               vowel, the moraic nasal takes the place of what follows it,
+               and two long vowels absorb the mark that follows them. */
+            int mc = bst_code(img, c);
+            if (mc < 1 || mc > 0x22) continue;
+            int nv = bst_code(img, next.val);
+            int to = 0;
+            if (mc == 2 && nv == 0x1C)      to = 0x0E;
+            else if (mc == 8 && nv == 0x1C) to = 0x09;
+            else if (mc == 0x0D && nv == 0x1C) to = 0x0F;
+            else if (mc == 0x1A) {
+                if (nv == 1 || nv == 4 || nv == 0x10) to = 0x19;
+                else if (nv == 3 || nv == 6 || nv == 0x16 || nv == 0x12 ||
+                         nv == 0x0A || nv == 0x21 || nv == 0x22 ||
+                         (a1(img, next.val) & 0x80)) to = 0x1B;
+            }
+            if (to) {
+                c = bst_uncode(img, to);
+                s[i] = (uint8_t)c;
+            } else if (mc == 0x1C || mc == 0x20) {
+                if (prev.val != 0 && nv != 0x21 &&
+                    s[i + 1] < 0x36 && !(a1(img, next.val) & 4) &&
+                    !(a1(img, prev.val) & 4)) {
+                    c = bst_uncode(img, mc == 0x1C ? 0x17 : 0x18);
+                    s[i] = (uint8_t)c;
+                    if (i + 1 < lim) s[i + 1] = 0;
+                }
+            }
+            pend.val = (uint8_t)c;
+            continue;
+        }
+
         if (img->t.ph_kind == 1) {
             /* The Romance rules: no aspiration, no glottal stop, no vowel
                reduction; the voiced stops soften between sounds, the sibilant
