@@ -117,7 +117,7 @@ SCALARS = ("tok_stride tok_state_off tok_state_w tok_handler_off tok_handler_w "
            "unvoiced_chunk no_breath_break no_closing_phrase dur_mult "
            "nearest_round pitch_rate slope_mult inton_dur_mult "
            "inton_slope_shift stress_shift voice_span voice_stride "
-           "vowel_dur_shift trn_round code_shift ph_single_n ph_pair_n "
+           "vowel_dur_shift trn_round ph_single_n ph_pair_n "
            "code_lo code_hi").split()
 
 ADDRS = ("chattr letterattr casemap symmap phattr1 phattr2 classtab exctab "
@@ -167,6 +167,65 @@ def carry_handlers(a, b, aref, bref, want):
     return out
 
 
+MD = None
+
+
+def instrs(text, drange, start, stop):
+    """One function, as (address, shape, immediates)."""
+    global MD
+    if MD is None:
+        import capstone
+        MD = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+        MD.detail = True
+    import capstone
+    va, t = text
+    lo, hi = drange
+    out = []
+    for ins in MD.disasm(t[start - va:stop - va], start):
+        shape = [ins.mnemonic]
+        imms = []
+        for op in ins.operands:
+            if op.type == capstone.x86.X86_OP_REG:
+                shape.append("r%d" % op.reg)
+            elif op.type == capstone.x86.X86_OP_IMM:
+                v = op.imm & 0xFFFFFFFF
+                shape.append("A" if lo <= v < hi else "i")
+                if not (lo <= v < hi):
+                    imms.append(op.imm)
+            else:
+                v = op.mem.disp & 0xFFFFFFFF
+                shape.append("m%d:%d:%s" % (op.mem.base, op.mem.index,
+                                            "A" if lo <= v < hi else "d"))
+                if not (lo <= v < hi):
+                    imms.append(op.mem.disp)
+        out.append((ins.address, " ".join(shape), imms))
+    return out
+
+
+def carry_immediate(ta, ra, tb, rb, fa, fb, matches, site, want):
+    """The value the other build has where this one has `want` at `site`."""
+    import difflib
+    owner = max((f for f in fa if f <= site), default=None)
+    if owner is None or owner not in matches:
+        return None
+    other = matches[owner]
+    ea = min([f for f in fa if f > owner], default=ta[0] + len(ta[1]))
+    eb = min([f for f in fb if f > other], default=tb[0] + len(tb[1]))
+    ia = instrs(ta, ra, owner, min(ea, owner + 0x1000))
+    ib = instrs(tb, rb, other, min(eb, other + 0x1000))
+    k = next((i for i, x in enumerate(ia) if x[0] == site), None)
+    if k is None:
+        return None
+    sm = difflib.SequenceMatcher(a=[x[1] for x in ia], b=[x[1] for x in ib],
+                                 autojunk=False)
+    for i, j, n in sm.get_matching_blocks():
+        if i <= k < i + n:
+            for v in ib[j + (k - i)][2]:
+                if 0 <= v < 0x100:
+                    return v
+    return None
+
+
 def main():
     if len(sys.argv) < 3:
         print("usage: mkmap06.py ENGLISH_DLL DLL [DLL...]", file=sys.stderr)
@@ -184,6 +243,11 @@ def main():
         sig = xmap.match_signatures(fa, fb)
         known = xmap.pairs_from_matches(fa, fb, sig)
         known = xmap.propagate(fa, fb, known)
+        # A build with extra code of its own pairs fewer functions outright,
+        # so a second pass accepts a function that shares only one address
+        # with its candidate.
+        if len(known) < 2000:
+            known = xmap.propagate(fa, fb, known, minshared=1)
         print("/* %s: %d functions matched, %d addresses carried */" % (name, len(sig), len(known)))
 
         gaps = []
@@ -259,10 +323,10 @@ def main():
         still = []
         for k in list(gaps):
             if k.startswith("s."):
-                name = k[2:]
-                delta = nearest(ref["s"][name])
+                slot = k[2:]
+                delta = nearest(ref["s"][slot])
                 if delta is not None:
-                    out["s"][name] = ref["s"][name] + delta
+                    out["s"][slot] = ref["s"][slot] + delta
                     continue
             elif not k.startswith("h.") and k in ADDRS:
                 delta = nearest(ref[k])
@@ -272,7 +336,22 @@ def main():
             still.append(k)
         gaps = still
 
+        # The separator mark is written by the assembler as a literal, so the
+        # difference between the two builds' literals is the whole shift.
+        pairfn = {f: known[f] for f in fa if f in known}
+        sep = carry_immediate(ta, ra, tb, rb, fa, fb, pairfn, 0x10002B36, 0x4C)
+        shift = (sep - 0x4C) if sep is not None else None
+        cmd = carry_immediate(ta, ra, tb, rb, fa, fb, pairfn, 0x1000302B, 0x7C)
+
         print("const bst_tabmap BST_MAP_2006_%s = {" % name)
+        if shift is not None:
+            print("    .%-17s = %d," % ("code_shift", shift))
+        else:
+            gaps.append("code_shift")
+        if cmd is None:
+            gaps.append("cmd_code")
+        elif shift is None or cmd != ((0x7C + shift) & 0xFF):
+            print("    .%-17s = 0x%02X," % ("cmd_code", cmd))
         for k in ADDRS:
             if k in out:
                 print("    .%-17s = 0x%08X," % (k, out[k]))

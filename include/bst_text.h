@@ -159,6 +159,12 @@ typedef struct {
        engine's own tables by a code. */
     int8_t   code_shift;
 
+    /* The command byte, which the 2006 builds do not always number with the
+       rest of the marks: it sits at the top of the mark set, so a language
+       with fewer marks puts it lower than its inventory alone would say.
+       Zero means the shift applies to it like anything else. */
+    uint8_t  cmd_code;
+
     /* Targets per voice. The diphone segment holds every voice's targets
        before the records, so this says where the records start as well as how
        to reach a voice above the first. */
@@ -202,6 +208,18 @@ extern const bst_tabmap BST_MAP_1998_GRM;
 extern const bst_tabmap BST_MAP_1998_ITL;
 extern const bst_tabmap BST_MAP_1998_SPN;
 extern const bst_tabmap BST_MAP_2006_ENG;
+extern const bst_tabmap BST_MAP_2006_ARA;
+extern const bst_tabmap BST_MAP_2006_DUT;
+extern const bst_tabmap BST_MAP_2006_FRE;
+extern const bst_tabmap BST_MAP_2006_GER;
+extern const bst_tabmap BST_MAP_2006_GRE;
+extern const bst_tabmap BST_MAP_2006_HEB;
+extern const bst_tabmap BST_MAP_2006_ITA;
+extern const bst_tabmap BST_MAP_2006_JPN;
+extern const bst_tabmap BST_MAP_2006_POL;
+extern const bst_tabmap BST_MAP_2006_POR;
+extern const bst_tabmap BST_MAP_2006_RUS;
+extern const bst_tabmap BST_MAP_2006_SPA;
 
 /* Fills names with the entries the map has not been given and returns how
    many there were, so an incomplete build can say so rather than misbehave. */
@@ -407,6 +425,7 @@ static inline int bst_code(const bst_image *img, int c) {
     /* English's inventory is forty-eight sounds, 0x00 to 0x2F, and the last
        of them is the pause. A language with more sounds puts its pause and
        every mark above it further up, so the boundary is the pause itself. */
+    if (c == 0x7C && img->t.cmd_code) return img->t.cmd_code;
     return c >= 0x2F ? (c + img->t.code_shift) & 0xFF : c;
 }
 
