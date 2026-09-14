@@ -70,6 +70,37 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
         s[slot[k]] = (uint8_t)(img->t.stress_rule == 4 || k == at ? hi : lo);
 }
 
+
+/* Russian reduces every vowel that does not carry the accent. Which grade it
+   takes depends on how far the accent is and on what stands before it: a soft
+   consonant pulls the reduction to the front pair. */
+static void ru_reduce(const bst_image *img, uint8_t *s, int v, int before, int strong) {
+    int c = s[v];
+    if (c < 0x27 || c > 0x2B) return;
+    int prev = v > 0 ? s[v - 1] : 0;
+    if (c == 0x27 || c == 0x28) {
+        if ((a1(img, prev) & 8) || prev == 0x26 || prev == 0x1C ||
+            prev == 0x1B || prev == 0x1D)
+            s[v] = (uint8_t)bst_uncode(img, 0x2F);
+        return;
+    }
+    if (c == 0x2A) return;
+    if (c == 0x29) {
+        if (before && (a1(img, prev) & 8)) {
+            s[v] = (uint8_t)bst_uncode(img, 0x2F);
+            return;
+        }
+        if (prev == 0x1E) {
+            int nx = s[v + 1];
+            if (nx != bst_uncode(img, 0x33) && nx != 0) {
+                s[v] = (uint8_t)bst_uncode(img, 0x2F);
+                return;
+            }
+        }
+    }
+    s[v] = (uint8_t)bst_uncode(img, strong == 2 ? 0x31 : 0x32);
+}
+
 void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mode) {
     uint8_t flags[SYL_MAX + 4];
     int16_t slot[SYL_MAX + 4];
@@ -238,6 +269,37 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
         fprintf(stderr, " marks");
         for (int k = 1; k <= tail; k++) fprintf(stderr, " %02x", s[slot[k]]);
         fprintf(stderr, "\n");
+    }
+
+    /* Russian: the accent takes the strong mark, the syllable just before it
+       a middle one, and the rest the weak one, with the vowel reduced to the
+       grade its distance from the accent allows. */
+    if (img->t.stress_kind == 3) {
+        int at = 0, before = 1;
+        for (int k = 1; k <= tail; k++)
+            if ((flags[k] & F_MARKED) || s[slot[k]] == 0x36 || s[slot[k]] == 0x37)
+                at = k;
+        for (int k = 1; k <= tail; k++) {
+            int m = slot[k], v = m - 1;
+            if (k == at) { before = 0; continue; }
+            if (k == at - 1) {
+                ru_reduce(img, s, v, before, 2);
+                if (s[m] == 0 || is_mark(s[m])) s[m] = 0x33;
+                continue;
+            }
+            int c = s[v], prev = v > 0 ? s[v - 1] : 0;
+            if (c == 0x29 && k == tail && !(a1(img, prev) & 8))
+                ru_reduce(img, s, v, before, 2);
+            else if (c == 0x2C && k != tail && (a1(img, prev) & 8) &&
+                     (a1(img, s[m + 3]) & 8))
+                s[v] = 0x2D;
+            else if (c == 0x28 && k == tail)
+                s[v] = (uint8_t)bst_uncode(img, 0x30);
+            else
+                ru_reduce(img, s, v, before, 1);
+            if (s[m] == 0 || is_mark(s[m])) s[m] = 0x32;
+        }
+        return;
     }
 
     /* Everything else reduces, and an empty slot becomes the reduced mark. */
