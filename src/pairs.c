@@ -312,10 +312,49 @@ static int vowel_german(scan *z, int pos, int which) {
     return (int16_t)d;
 }
 
+/* French's, which lengthens a stressed vowel by a quarter before one set of
+   sounds instead of adding the English build's phrase terms, and reads its
+   per-sound offset two entries into the table. */
+static int vowel_french(scan *z, int pos, int which) {
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int nc = bst_code(z->img, z->next.val);
+    int base = (uint16_t)s16at(z->img, z->img->t.vowel_dur,
+                               (unsigned)(mc * 3 + which) * 2);
+    int mode = rate_mode(z);
+    int scale = bst_u8(z->img, z->img->t.stress_num, (unsigned)z->stress.val);
+    int d = (int16_t)((int16_t)(scale * base) >> 5);
+
+    if (z->edge) {
+        d += 0x32;
+    } else if (z->stress.val > 5 &&
+               (nc == 0x12 || nc == 0x13 || nc == 0x0E || nc == 0x0F ||
+                nc == 0x10 || mc == 0x22 || mc == 0x23 || mc == 0x24 ||
+                mc == 0x25)) {
+        d = (int16_t)(d + ((int16_t)d >> 2));
+    } else {
+        int at = a1(z, z->next.val);
+        if (at & 4)    d += 0x14;
+        if (at & 0x40) d += 0x19;
+    }
+    if (mode == 2)      d += 0x41;
+    else if (mode == 0) d += 0x14;
+    d = (int16_t)(d + (int16_t)(s16at(z->img, z->img->t.sound_add + 4,
+                                      (unsigned)mc * 2) - 0x3C));
+    if ((int16_t)d < 0x1E) d = 0x1E;
+    if (bst_trace)
+        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                        " edge=%d -> %02x\n",
+                ph, which, base, z->stress.val, mode, z->edge,
+                (unsigned)d & 0xFF);
+    return (int16_t)d;
+}
+
 static int vowel_duration(scan *z, int pos, int which) {
     if (z->img->t.vdur_kind == 1) return vowel_simple(z, pos, which);
     if (z->img->t.vdur_kind == 2) return vowel_italian(z, pos, which);
     if (z->img->t.vdur_kind == 3) return vowel_german(z, pos, which);
+    if (z->img->t.vdur_kind == 4) return vowel_french(z, pos, which);
     int nv = z->next.val;
     int ph = z->s[pos];
     int mc = bst_code(z->img, ph);
@@ -563,9 +602,68 @@ static void trans_german(scan *z, int dur, int pos, int which) {
     emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
 }
 
+/* French's glide run, which excludes two sounds of its own. */
+static int glide_run_french(scan *z) {
+    int nc = bst_code(z->img, z->next.val);
+    int an = a1(z, z->next.val);
+    if (!(an & 1) || nc == 0x18 || nc == 0x16 || !(an & 4)) return 0;
+    for (int p = z->next.pos; p <= z->eight.pos; p++) {
+        int a = a1(z, z->s[p]);
+        if (((a & 1) && !(a & 4)) || (a & 0x80)) return 1;
+    }
+    return 0;
+}
+
+/* French's transition routine: three independent scalings rather than the
+   English build's chain of exclusive cases, and a fifth taken off the
+   duration at the end instead of a sixteenth. */
+static void trans_french(scan *z, int dur, int pos, int which) {
+    z->pending = (z->pending + 1) & 0xFF;
+    int ph = z->s[pos];
+    int mc = bst_code(z->img, ph);
+    int at = a1(z, ph);
+
+    if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
+
+    if (between_vowels(z, pos) &&
+        (((at & 2) && which == 0) || (!(at & 2) && which == 1)))
+        dur = (int16_t)(((int16_t)dur * 11) >> 4);
+
+    if (flanked_simple(z, pos)) {
+        int h = (int16_t)dur >> 1;
+        dur = (int16_t)(h + ((int16_t)h >> 2));
+    }
+
+    if (which == 2 && glide_run_french(z))
+        dur = (int16_t)(((int16_t)dur * 11) >> 4);
+
+    unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
+    int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
+    int c7 = s8at(z->img, z->img->t.trans_pitch + 3, k * 6 + (unsigned)which);
+
+    if (at & 0x80) {
+        int prev_open = (a1(z, z->prev.val) & 0x80) && z->prev.val != 0;
+        int next_open = (a1(z, z->next.val) & 0x80) != 0;
+        if (!prev_open && which == 0) {
+            c8 -= 5;
+        } else if ((!next_open || z->prev.val == 0) && which == 2) {
+            c8 = 0x7F; c7 -= 5;
+        } else if (which == 0 || which == 2) {
+            c7 = 0x7F; c8 = 0x7F;
+        } else {
+            c8 = 0x7F;
+        }
+    }
+
+    int thin = (int16_t)(dur - (int16_t)dur / 5);
+    int d = (int16_t)(thin + 1) >> 1;
+    emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
+}
+
 /* One transition event. Position 0 falls before the sound, 1 and 2 after. */
 static void trans(scan *z, int dur, int pos, int which) {
     if (z->img->t.trn_kind == 3) { trans_german(z, dur, pos, which); return; }
+    if (z->img->t.trn_kind == 4) { trans_french(z, dur, pos, which); return; }
     if (z->img->t.trn_kind) { trans_simple(z, dur, pos, which); return; }
     z->pending = (z->pending + 1) & 0xFF;
     int ph = z->s[pos];
