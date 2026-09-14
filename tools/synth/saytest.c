@@ -145,6 +145,18 @@ int main(int argc, char **argv) {
             }
         }
 
+        if (bst_trace) {
+            fprintf(stderr, "stream");
+            for (int i = 0; i < len; i++) fprintf(stderr, " %02x", stream[i]);
+            fprintf(stderr, "\ntrn");
+            for (int i = 0; i < nt; i++)
+                fprintf(stderr, " %02x/%02x", trn[i].index, trn[i].dur);
+            fprintf(stderr, "\nseg");
+            for (int i = 0; i < ns; i++)
+                fprintf(stderr, " %u:%d", seg[i].index, seg[i].count);
+            fprintf(stderr, "\n");
+        }
+
         if (!have_voice) {
             voice.base = voice.voicebase = base;
             voice.top = top;
