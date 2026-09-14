@@ -61,6 +61,7 @@ typedef struct {
     int      eat;        /* the exception entry swallows the stop after it */
     int      money;      /* a currency sign is in force */
     int      ord, ordlast, ordprev;
+    int      lastend;    /* the character that ended the last sentence */
 } bst_tok;
 
 /* The reader, shared with the exception engine's lookahead. */

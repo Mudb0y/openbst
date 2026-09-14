@@ -157,7 +157,9 @@ int main(int argc, char **argv) {
             int spoken = 0;
             for (int i = 12; i < len; i++)
                 if (stream[i] && stream[i] < 0x2F) { spoken = 1; break; }
-            if (!spoken) break;
+            /* The build says the phrase the closing brace opens only when
+               the sentence ended on something other than a full stop. */
+            if (!spoken && (tk.lastend == '.' || tk.lastend == 0)) break;
         }
 
         if (bst_trace) {

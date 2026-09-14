@@ -169,12 +169,14 @@ static void punct_out(bst_tok *t, int c) {
     t->quote = (b == '"' || b == 0xAE || b == '\'' || b == '{' ||
                 b == '[' || b == '(' || b == '`');
     t->sentence = !closes(b);
+    if (b == '.' || b == '?' || b == '!' || b == ',' || b == ';') t->lastend = b;
     if (t->literal) return;
     if (b == ':' && is_digit(t, t->prevch) && is_digit(t, c)) { emit(t, ','); return; }
     if (b == ',' && t->img->t.comma_ends_text) {
         /* The build stops here: nothing after the comma reaches the machine,
            and the comma is said the way a full stop is. */
         t->tp = t->tn;
+        t->lastend = '.';
         emit(t, '.');
         return;
     }
@@ -187,6 +189,7 @@ static void punct_out(bst_tok *t, int c) {
 static void dot_out(bst_tok *t, int c) {
     (void)c;
     t->sentence = 0;
+    t->lastend = '.';
     t->prevkind = t->kind;
     t->kind = 3;
     unread(t, 1);
