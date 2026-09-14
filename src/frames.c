@@ -348,11 +348,16 @@ static void emit(bst_gen *g) {
 }
 
 static int gain_value(bst_gen *g) {
-    int v = g->gain_base + (g->gain_acc >> 8);
+    /* The accumulator's high byte is taken unsigned. It is a signed quantity
+       everywhere else, and an arithmetic shift here agrees with the original
+       for as long as it stays positive, which is nearly always; the engine
+       uses a logical one. */
+    int acc = (uint16_t)g->gain_acc >> 8;
+    int v = g->gain_base + acc;
     if (g->exc == 0x20)      v += g->gain_adj;
     else if (g->exc == 0x10) v += g->gain_adj + 8;
 
-    int diff = g->gain_target - (g->gain_acc >> 8);
+    int diff = g->gain_target - acc;
     if (diff != 0 && !g->fresh) {
         int mag = diff < 0 ? -diff : diff;
         int step = alg(g, lg(g, mag) - lg(g, ((uint16_t)(g->gclock + g->dur) >> 4) + 1)
