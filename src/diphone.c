@@ -10,8 +10,6 @@
  * sub-sequence. The three-byte forms carry one nine-bit target index and the
  * five-byte form carries two, naming both ends of a glide. */
 
-#define VOICE_SPAN  0x19Au        /* targets per voice */
-
 static const int RECLEN[8] = { 1, 3, 1, 3, 3, 5, 1, 1 };
 
 int bst_diphone_count(const bst_image *img) {
@@ -56,7 +54,7 @@ int bst_diphone(const bst_image *img, int index, int positions,
    wants. */
 void bst_target_coeffs(const bst_image *img, int voice, int target, int16_t k[10]) {
     uint32_t base = img->t.voices +
-                    (uint32_t)(voice * (int)VOICE_SPAN + target) * 10;
+                    (uint32_t)(voice * (int)img->t.voice_span + target) * 10;
     for (int i = 0; i < 10; i++)
         k[i] = (int16_t)((int8_t)bst_u8(img, base, i) * 2);
 }

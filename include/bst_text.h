@@ -89,6 +89,11 @@ typedef struct {
        streams in English numbering and shifts only where it indexes one of the
        engine's own tables by a code. */
     int8_t   code_shift;
+
+    /* Targets per voice. The diphone segment holds every voice's targets
+       before the records, so this says where the records start as well as how
+       to reach a voice above the first. */
+    uint16_t voice_span;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;
@@ -317,9 +322,10 @@ typedef struct { int val, pos; } bst_cur;
 /* A stream code as this build's tables index it. Sounds are numbered the same
    everywhere; marks are not. */
 static inline int bst_code(const bst_image *img, int c) {
-    /* The pause is the last sound of the inventory, so it moves with the
-       marks above it rather than staying with the sounds below. */
-    return c >= 0x30 ? (c + img->t.code_shift) & 0xFF : c;
+    /* English's inventory is forty-eight sounds, 0x00 to 0x2F, and the last
+       of them is the pause. A language with more sounds puts its pause and
+       every mark above it further up, so the boundary is the pause itself. */
+    return c >= 0x2F ? (c + img->t.code_shift) & 0xFF : c;
 }
 
 /* The two phoneme attribute bytes. The first classifies the sound; the second
