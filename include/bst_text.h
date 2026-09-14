@@ -102,6 +102,9 @@ typedef struct {
        length the chunk actually spends. Dutch spends a hundred and ten and
        says a hundred and four. */
     uint8_t  silence_period;
+    /* The highest pitch level a build's accent codes reach. French tops
+       out four above the middle where the others climb ten. */
+    uint8_t  level_max;
     uint8_t  long_silence_f0;
     uint8_t  exc_two_way;
 
@@ -728,6 +731,7 @@ typedef struct {
     int   mid, hi;     /* the current middle and ceiling */
     int   round10;     /* half a step, added before the table's division */
     int   reach;       /* the ceiling a build reaches whatever the range says */
+    int   levmax;      /* the highest level its accent codes name */
     short table[14];
 } bst_voice;
 

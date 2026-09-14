@@ -318,6 +318,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .level_max      = 4,
     .inton_mode     = 3,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,

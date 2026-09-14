@@ -96,7 +96,7 @@ static void set_abs(bst_voice *p, int base, int mid, int level, int top) {
 }
 
 static int freq(const bst_voice *p, int code) {
-    return p->table[3 + clampi(code, -3, 10)];
+    return p->table[3 + clampi(code, -3, p->levmax)];
 }
 
 /* Narrows the range when an emphasis command is in force and the span is wide
@@ -188,6 +188,7 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
 
     p->round10 = img->t.contour_round ? 5 : 0;
     p->reach = img->t.voice_top;
+    p->levmax = img->t.level_max ? img->t.level_max : 10;
 
     memset(e, 0, sizeof e);
     p->emphasis = 0;
