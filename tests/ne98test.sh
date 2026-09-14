@@ -22,14 +22,16 @@
 # German, Italian and Spanish, and the library keeps its streams in English
 # numbering and shifts only where it indexes one of the engine's tables.
 #
-# German is the furthest along and says what is left. Its stream is two bytes
-# from the engine's -- the sentence type the assembler writes, 4 against 3, and
-# the last sound of the word, 0x04 against 0x08 -- and its frames run identical
-# for thirteen before ours snaps to a target the engine glides towards. So what
-# remains is the tables the transition durations and the contour are built
-# from, and those are the ones no method here has been able to place with
-# confidence: translating them through the matched code gives single-vote
-# answers that make every language worse when applied.
+# Each of the five reports three numbers: how many of its coefficient sets
+# agree, how many of its frames agree byte for byte, and how many it gets
+# through before the first difference. The set count is a run-length
+# comparison and desynchronises on a timing change, so the frame count is the
+# one to watch.
+#
+# German is the furthest along and says what is left. Its phoneme stream, its
+# transition records and its segment records now agree with the engine field
+# for field, and one of its three words comes out frame for frame. What is
+# left is in the frames themselves.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
@@ -59,10 +61,17 @@ def lead(x, y):
     return k
 
 
+def same(x, y):
+    p, q = open(x, "rb").read(), open(y, "rb").read()
+    n = min(len(p), len(q)) // 16
+    return sum(1 for i in range(n) if p[i * 16:i * 16 + 16] == q[i * 16:i * 16 + 16]), n
+
+
 a, b = runs(sys.argv[1]), runs(sys.argv[2])
 n = min(len(a), len(b))
 ok = sum(1 for i in range(n) if a[i] == b[i])
-print(ok, max(len(a), len(b)), lead(sys.argv[1], sys.argv[2]))
+fs, ft = same(sys.argv[1], sys.argv[2])
+print(ok, max(len(a), len(b)), lead(sys.argv[1], sys.argv[2]), fs, ft)
 PY
 
 # The log pair's file offset differs per module; pulse, noise and gain live in
@@ -71,7 +80,7 @@ run_lang() {
     local lang=$1 log=$2 alog=$3
     shift 3
     local dll="$root/dll/1998/KGM$lang.DLL"
-    local ok=0 tot=0 lead=0
+    local ok=0 tot=0 lead=0 fsame=0 ftot=0
     for w in "$@"; do
         "$root/build/neoracle" --eof -1 --limit 400000000 --lang "$dll" \
             --engine "$w.
@@ -83,9 +92,10 @@ run_lang() {
         [ -s "$work/theirs" ] || continue
         set -- $(python3 "$work/cmp.py" "$work/ours" "$work/theirs") "$@"
         ok=$((ok + $1)); tot=$((tot + $2)); lead=$((lead + $3))
-        shift 3
+        fsame=$((fsame + $4)); ftot=$((ftot + $5))
+        shift 5
     done
-    echo "$ok $tot $lead"
+    echo "$ok $tot $lead $fsame $ftot"
 }
 
 set -- $(run_lang ENG 7ad20 7af20 dog cat house water number people)
@@ -99,7 +109,7 @@ for spec in "DUT 26866 26a66 hond kat huis" \
             "ITL 210ce 212ce cane gatto casa" \
             "SPN 137ec 139ec perro gato casa"; do
     set -- $(run_lang $spec)
-    echo "          $(echo $spec | cut -d' ' -f1) $1 of $2, $3 frames (map not yet checked)"
+    echo "          $(echo $spec | cut -d' ' -f1) $1 of $2 sets, $4 of $5 frames, $3 identical from the start"
 done
 
 [ "$eng_ok" -gt 0 ] && [ "$eng_ok" -eq "$eng_tot" ]

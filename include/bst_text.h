@@ -165,6 +165,13 @@ typedef struct {
     /* Whether the German transition between two vowels keeps nineteen
        thirty-seconds of its duration rather than nine sixteenths. The 1998
        module does; the 2006 one does not. */
+    /* The top of the pitch range this build starts from. The 1995 and 1998
+       English builds reach a hundred and sixty-eight at the top of the
+       accent table; the other five 1998 modules reach a hundred and
+       fifty-three, which is what a top of a hundred and forty-six gives.
+       Zero leaves the host's. */
+    uint16_t voice_top;
+
     uint8_t  trn_between_wide;
 
     uint8_t  open_plain;

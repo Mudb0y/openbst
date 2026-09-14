@@ -230,7 +230,9 @@ int main(int argc, char **argv) {
 
         if (!have_voice) {
             voice.base = voice.voicebase = base;
-            voice.top = top;
+            /* The build's own top, where it has one: the harness's is a
+               stand-in for whatever the host would have chosen. */
+            voice.top = (map && map->voice_top) ? map->voice_top : top;
             voice.voice = vsel;
             have_voice = 1;
         }

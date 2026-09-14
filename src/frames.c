@@ -443,6 +443,10 @@ static void pitch_step(bst_gen *g) {
         g->pitch_acc = (uint16_t)(g->pitch_acc + (diff < 0 ? -step * scale : step * scale));
     }
     g->pitch_period = (int16_t)(g->pitch_acc >> 8);
+    if (bst_trace)
+        fprintf(stderr, "pitch n=%d dur=%04x pclock=%04x acc=%04x target=%04x -> %d\n",
+                g->nout, (uint16_t)g->dur, (uint16_t)g->pclock,
+                (uint16_t)g->pitch_acc, (uint16_t)g->pitch_target, g->pitch_period);
 }
 
 /* Sixty-six in every build but the 2006 ones, which floor a period at
