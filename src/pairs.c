@@ -288,7 +288,7 @@ static void trans(scan *z, int dur, int pos, int which) {
         }
     }
 
-    int d = (int16_t)((int16_t)(dur - (dur >> 4)) + 1) >> 1;
+    int d = (int16_t)((int16_t)(dur - (dur >> 4)) + z->img->t.trn_round) >> 1;
     emit(z, BST_EMIT_TRANS, (unsigned)((ph - 1) * 3 + which), (unsigned)d, c8, c7);
 }
 

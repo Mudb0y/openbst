@@ -77,8 +77,9 @@ typedef struct {
     uint8_t  silence_f0, unvoiced_dur, unvoiced_reps;
 
     /* The 1998 build halves a vowel's duration on the way out of the pair
-       scan, after the floors rather than before them. */
-    uint8_t  vowel_dur_shift;
+       scan, after the floors rather than before them, and rounds the
+       transition's own halving down where the 1995 build rounds it up. */
+    uint8_t  vowel_dur_shift, trn_round;
     /* the dictionary */
     uint32_t code_medial, code_initial;
     uint32_t ph_single, ph_single_max, ph_pair, ph_pair_max;

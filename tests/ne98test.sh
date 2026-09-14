@@ -12,14 +12,12 @@
 # What is compared is therefore what the dictionary, the rules, the diphone
 # inventory and the interpolator decide between them.
 #
-# The prosody is not compared, and the reason is worth writing down. The
-# phoneme stream is not the problem: read out of the engine's data segment at
-# the point its own pair scan reads it, it is byte for byte ours, accents and
-# lead byte and all. What differs is the transition duration the pair scan then
-# computes for two positions of one sound -- 0x24 and 0x1d against the engine's
-# 0x11 and 0x1c -- from tables that are byte-identical to the ones our code
-# already reads. So it is the formula around them, in this build, and 0x11 is
-# below the floor our version of it will return.
+# The frames themselves are identical too, for as long as there is anything to
+# say: forty-eight of them for "dog." before the first difference, which is in
+# the silence after the word. This build spends that silence on repeated
+# single-period frames where the 1995 one spends it on eight-period frames of
+# an eighth the length. Both are silent -- the gain is zero either way -- so
+# the count is reported rather than required.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
 lang=${DLL:-$root/dll/1998/KGMENG.DLL}
@@ -52,7 +50,7 @@ ok = sum(1 for i in range(n) if a[i] == b[i])
 print(ok, max(len(a), len(b)) - ok, len(a), len(b))
 PY
 
-ok=0 bad=0 words=0
+ok=0 bad=0 words=0 fok=0 fn=0
 for w in dog cat house water number people; do
     "$root/build/neoracle" --eof -1 --limit 400000000 --lang "$lang" \
         --engine "$w.
@@ -64,7 +62,20 @@ for w in dog cat house water number people; do
     set -- $(python3 "$work/cmp.py" "$work/ours" "$work/theirs")
     ok=$((ok + $1)); bad=$((bad + $2))
     [ "$2" -ne 0 ] && echo "  $w: $1 of $(( $1 + $2 )) agree ($3 ours, $4 theirs)"
+    lead=$(python3 - "$work/ours" "$work/theirs" <<'PY2'
+import sys
+a = open(sys.argv[1], "rb").read()
+b = open(sys.argv[2], "rb").read()
+n = min(len(a), len(b)) // 16
+k = 0
+while k < n and a[k * 16:k * 16 + 16] == b[k * 16:k * 16 + 16]:
+    k += 1
+print(k)
+PY2
+)
+    fok=$((fok + lead)); fn=$((fn + 1))
 done
 
 echo "ne98test: $words words, $ok coefficient sets identical, $bad differing"
+echo "          $fok frames identical before the first difference, over $fn words"
 [ "$words" -gt 0 ] && [ "$bad" -eq 0 ]
