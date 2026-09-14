@@ -99,21 +99,24 @@ static void close_phrase(bst_assembler *z, uint8_t *rec) {
    record at the head of the stream rather than variables, because that is
    where the later stages read them. */
 static void punctuation(bst_assembler *z, int c) {
-    int pause, tmpl;
+    int pause, tmpl, slot;
     switch (c) {
-    case 0x2A: pause = 0; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; break;
-    case 0x2C: pause = 3; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; break;
-    case 0x2E: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 4; break;
-    case 0x3F: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 1; break;
-    case 0x40: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 3; break;
-    case 0x5D: pause = 1; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; break;
-    case 0x7B: pause = 7; tmpl = 0x4E; z->punct = 5; z->s[8] = 4; z->s[9] = 0x48; break;
-    case 0x7C: pause = 1; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; break;
+    case 0x2A: pause = 0; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; slot = 0; break;
+    case 0x2C: pause = 3; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; slot = 1; break;
+    case 0x2E: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 4; slot = 2; break;
+    case 0x3F: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 1; slot = 3; break;
+    case 0x40: pause = 7; tmpl = 0x4E; z->punct = 2; z->s[8] = 3; slot = 4; break;
+    case 0x5D: pause = 1; tmpl = 0x4E; z->punct = 1; z->s[8] = 3; slot = 5; break;
+    case 0x7B: pause = 7; tmpl = 0x4E; z->punct = 5; z->s[8] = 4; z->s[9] = 0x48;
+               slot = 6; break;
+    case 0x7C: pause = 1; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; slot = 7; break;
     case 0x7D:
         pause = z->img->t.close_pause ? z->img->t.close_pause : 1;
-        tmpl = 0x4E; z->punct = 2; z->s[8] = 4; break;
+        tmpl = 0x4E; z->punct = 2; z->s[8] = 4; slot = 8; break;
     default: return;
     }
+    if (z->img->t.punct_s8[slot]) z->s[8] = z->img->t.punct_s8[slot];
+    if (z->img->t.punct_s9[slot]) z->s[9] = z->img->t.punct_s9[slot];
     uint8_t rec[6] = { (uint8_t)tmpl, 0, 0, (uint8_t)c, 0, 0 };
     while (pause--) put(z, 0x2F);
     close_phrase(z, rec);

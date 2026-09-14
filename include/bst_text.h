@@ -133,6 +133,8 @@ typedef struct {
     /* The contour shape the phrase header carries in its tenth byte, which
        the accent pass reads back. Most builds put 0x4C there; a few do not.
        Zero means 0x4C. */
+    uint8_t  punct_s8[9];        /* phrase type per punctuation mark, 0 = English */
+    uint8_t  punct_s9[9];        /* contour shape it forces, 0 = leave alone */
     uint8_t  hdr_shape;
 
     /* The shape the accent pass works from. Most builds read it back out of

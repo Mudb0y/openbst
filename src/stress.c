@@ -40,7 +40,8 @@ static void mark(uint8_t *p, int emph) {
 
 /* The Romance rule: one syllable takes the accent and the rest are flat.
    Which one is the last but one, unless the word ends in a consonant the
-   build does not except, in which case it is the last. */
+   build does not except, in which case it is the last. Rule four is French,
+   which has no word accent to place and marks every syllable alike. */
 static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
     int16_t slot[SYL_MAX + 4];
     int n = 0;
@@ -62,10 +63,11 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
         if (img->t.stress_keep[k] && fin == img->t.stress_keep[k]) keep = 1;
 
     int at = keep && n > 1 ? n - 1 : n;
-    int hi = (emph & 1) ? (img->t.stress_rule == 2 ? 0x35 : 0x33) : 0x36;
+    int hi = (emph & 1) && img->t.stress_rule != 4
+                 ? (img->t.stress_rule == 2 ? 0x35 : 0x33) : 0x36;
     int lo = (emph & 1) ? (img->t.stress_rule == 2 ? 0x33 : 0x31) : 0x32;
     for (int k = 1; k <= n; k++)
-        s[slot[k]] = (uint8_t)(k == at ? hi : lo);
+        s[slot[k]] = (uint8_t)(img->t.stress_rule == 4 || k == at ? hi : lo);
 }
 
 void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mode) {
