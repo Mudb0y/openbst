@@ -65,4 +65,9 @@ run pol To jest test.
 run por Isto e um teste.
 run spa Esto es una prueba.
 
+# A digit is silent in these two, where the others read it.
+form=str run ara "$(printf '\312\307\310 5.')"
+form=wstr
+run jpn kore wa 12 desu.
+
 echo "lang2006: $same identical, $diff differing"

@@ -972,6 +972,7 @@ const bst_tabmap BST_MAP_2006_ENG = {
 
 /* ARA: 184 functions matched, 2824 addresses carried */
 const bst_tabmap BST_MAP_2006_ARA = {
+    .num_silent        = 1,
     .pair_prescan      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
@@ -2248,6 +2249,7 @@ const bst_tabmap BST_MAP_2006_ITA = {
 };
 /* JPN: 182 functions matched, 2642 addresses carried */
 const bst_tabmap BST_MAP_2006_JPN = {
+    .num_silent        = 1,
     .pair_prescan      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,

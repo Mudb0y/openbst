@@ -431,6 +431,13 @@ static int number_out(bst_tok *t) {
     for (int i = 0; i < n; i++)
         if (!is_digit(t, t->ring[t->start + i])) return 0;
     if (t->img->t.num_one_digit && n > 1) return 0;
+    /* The Arabic and Japanese builds have the tables for a number and never
+       reach them: a run of digits leaves no sound at all. */
+    if (t->img->t.num_silent) {
+        t->prevkind = t->kind;
+        t->kind = 6;
+        return 1;
+    }
     bst_say_number(t, t->ring + t->start, n);
     if (t->money) say_currency(t, t->ring + t->start, n);
     t->prevkind = t->kind;
