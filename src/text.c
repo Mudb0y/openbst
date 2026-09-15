@@ -2065,6 +2065,8 @@ const bst_tabmap BST_MAP_2006_HEB = {
 };
 /* ITA: 189 functions matched, 2859 addresses carried */
 const bst_tabmap BST_MAP_2006_ITA = {
+    .num_kind          = 1,
+    .num_group_kind    = 3,
     .pair_prescan      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
@@ -2238,7 +2240,7 @@ const bst_tabmap BST_MAP_2006_ITA = {
         [BST_S_ORD_TIETH] = 0x1001F8C8,
         [BST_S_PLURAL] = 0x1001F8C4,
         [BST_S_POINT] = 0x1001F888,
-        [BST_S_SCALES] = 0x10026770,
+        [BST_S_SCALES] = 0x10026798,
         [BST_S_TEENS] = 0x10026688,
         [BST_S_TENS] = 0x10026660,
         [BST_S_ZERO] = 0x100266F8,
