@@ -24,7 +24,12 @@ static int a1(const bst_image *img, int c) { return bst_ph_attr1(img, c); }
 static int a2(const bst_image *img, int c) { return bst_ph_attr2(img, c); }
 
 /* What an opener's own code says about taking the stress. */
-static int syl_flags(int c) {
+static int syl_flags(const bst_image *img, int c) {
+    if (img->t.syl_weak[0] || img->t.syl_flat[0]) {
+        for (int i = 0; i < 4; i++) if (img->t.syl_weak[i] == c) return 6;
+        for (int i = 0; i < 4; i++) if (img->t.syl_flat[i] == c) return 4;
+        return 0;
+    }
     if (c == '$' || c == '%') return 6;
     if (c == '.' || c == ')' || c == '#') return 4;
     return 0;
@@ -151,7 +156,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
         int m = i + 1;
         flags[n + 1] = 0;
         slot[n] = (int16_t)m;
-        flags[n] |= (uint8_t)syl_flags(c);
+        flags[n] |= (uint8_t)syl_flags(img, c);
         int v = s[m];
         if (is_mark(v)) {
             soft = 1;

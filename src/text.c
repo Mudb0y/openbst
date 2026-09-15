@@ -458,6 +458,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .syl_weak       = { 0x80, 0x81 },
     .suffix_n       = 19, .suffix_max = 6,
     .near_ptrs    = 1,
     .strip_kind     = 1,

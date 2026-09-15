@@ -621,7 +621,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 if (!(a & 8) || (a & 1)) s[i] = 0x12;
             } else if (m2 == 0x1B) {
                 int a = a1(img, pv);
-                if (!after_seg && (a & 0x80)) {
+                if (!after_seg) {
                     if (!(a1(img, nv) & 0x80) || at_edge) s[i] = 0x1C;
                     else if (!(a & 4))                    s[i] = 0x1A;
                 }

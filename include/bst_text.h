@@ -384,6 +384,9 @@ typedef struct {
        table's own segment with the fixup word beside it, rather than whole
        addresses. */
     uint8_t  near_ptrs;
+    /* The sounds a syllable is built on that refuse the accent: the first
+       set refuses it outright, the second only in the reduction. */
+    uint8_t  syl_weak[4], syl_flat[4];
     /* How many suffixes the pattern's run of letters is tried against, and
        how long that run may be. */
     uint8_t  suffix_n, suffix_max;
