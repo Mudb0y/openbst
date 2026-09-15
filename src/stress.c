@@ -71,7 +71,8 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
        Dutch build, the first. */
     int at = img->t.stress_rule == 5 ? 1 : keep && n > 1 ? n - 1 : n;
     int hi = (emph & 1) && img->t.stress_rule != 4
-                 ? (img->t.stress_rule == 2 ? 0x35 : 0x33) : 0x36;
+                 ? (img->t.stress_rule == 2 || img->t.stress_rule == 5 ? 0x35 : 0x33)
+                 : 0x36;
     int lo = (emph & 1) ? (img->t.stress_rule == 2 ? 0x33 : 0x31) : 0x32;
     for (int k = 1; k <= n; k++)
         s[slot[k]] = (uint8_t)(img->t.stress_rule == 4 || k == at ? hi : lo);
