@@ -1160,6 +1160,7 @@ const bst_tabmap BST_MAP_2006_ARA = {
 /* DUT: 191 functions matched, 2878 addresses carried */
 const bst_tabmap BST_MAP_2006_DUT = {
     .pair_prescan      = 1,
+    .no_weak_mark      = 1,
     .num_kind          = 3,
     .num_group_kind    = 3,
     .num_two_kind      = 1,
@@ -1536,6 +1537,7 @@ const bst_tabmap BST_MAP_2006_FRE = {
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
     .pair_prescan      = 1,
+    .no_weak_mark      = 1,
     .num_kind          = 2,
     .num_spell_fives   = 1,
     .num_group_kind    = 2,

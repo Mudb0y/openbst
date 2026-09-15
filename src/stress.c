@@ -349,7 +349,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
         return;
     }
     for (int k = tail; k > 0; k--) {
-        if (unstressed && k != 0) {
+        if (unstressed && k != 0 && !img->t.no_weak_mark) {
             int f = flags[k];
             if (!(f & (F_MARKED | F_LONG | 4)) && (!(f & F_NEXT) || (f & F_VOWEL)) &&
                 (!(mode & 8) || s[slot[k]] == 0))

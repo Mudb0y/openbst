@@ -208,6 +208,7 @@ typedef struct {
     uint8_t  num_one_digit;    /* only a lone digit is read as a number */
     uint8_t  num_silent;       /* the build says nothing at all for a digit */
     uint8_t  pair_prescan;     /* the scan opens by stepping the group cursor */
+    uint8_t  no_weak_mark;     /* an unstressed syllable is not given the weak mark */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
