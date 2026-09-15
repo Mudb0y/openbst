@@ -255,6 +255,9 @@ typedef struct {
     /* Whether a transition's duration is halved whole. The English builds
        take a sixteenth off it first; the 2006 language builds do not. */
     uint8_t  trn_whole;
+    /* The 1998 language builds scale a flanked or a between-sounds
+       transition by tenths where the others use sixteenths. */
+    uint8_t  trn_flank_tenths, trn_between_tenths;
 
     /* How much of a transition's duration is taken off before it is halved:
        a shift, defaulting to four. Italian takes a quarter. */

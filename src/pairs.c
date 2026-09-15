@@ -507,19 +507,31 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
 
     if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
     if (z->img->t.trn_kind == 1) {
-        if (between_simple(z, pos) && (!(at & 2) || which == 0))
-            dur = (int16_t)((int16_t)(dur * 9) >> 4);
+        if (between_simple(z, pos) && (!(at & 2) || which == 0)) {
+            int t = z->img->t.trn_between_tenths;
+            dur = t ? (int16_t)((int16_t)(dur * t) / 10)
+                    : (int16_t)((int16_t)(dur * 9) >> 4);
+        }
         if (between_simple(z, pos) && (at & 0x80) && (which == 0 || which == 2)) {
-            int scale = bst_u8(z->img, z->img->t.stress_num,
-                               (unsigned)z->stress.val);
-            dur = (int16_t)((int16_t)(scale * dur) >> 5);
+            if (z->img->t.stress_shift) {
+                int scale = bst_u8(z->img, z->img->t.stress_num,
+                                   (unsigned)z->stress.val);
+                dur = (int16_t)((int16_t)(scale * dur) >> 5);
+            } else {
+                /* The 1998 build scales by a stored fraction. */
+                int num = s16at(z->img, z->img->t.stress_num,
+                                (unsigned)z->stress.val * 4);
+                int den = s16at(z->img, z->img->t.stress_num + 2,
+                                (unsigned)z->stress.val * 4);
+                dur = den ? (int16_t)((int16_t)(num * dur) / den) : 0;
+            }
         }
     }
-    /* Kind six, the Dutch one, takes seven tenths where the others take
-       eleven sixteenths. */
-    if (flanked_simple(z, pos))
-        dur = z->img->t.trn_kind == 6 ? (int16_t)((int16_t)(dur * 7) / 10)
-                                      : (int16_t)((int16_t)(dur * 11) >> 4);
+    if (flanked_simple(z, pos)) {
+        int t = z->img->t.trn_flank_tenths;
+        dur = t ? (int16_t)((int16_t)(dur * t) / 10)
+                : (int16_t)((int16_t)(dur * 11) >> 4);
+    }
 
     unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
     int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);

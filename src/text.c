@@ -195,6 +195,7 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .trn_flank_tenths = 7,
     .no_suffix      = 1,
     .stress_rule    = 5,
     .ph_kind        = 4,
@@ -581,6 +582,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .trn_flank_tenths = 7,
     .suffix_n       = 0, .suffix_max = 6,
     .suffix_near    = 1,
     .unvoiced_no_frac = 1,
@@ -705,6 +707,8 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .trn_between_tenths = 6,
+    .trn_flank_tenths = 7,
     .ph_kind        = 1,
     .suffix_n       = 0, .suffix_max = 6,
     .suffix_near    = 1,
