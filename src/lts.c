@@ -102,12 +102,13 @@ static int match(const bst_image *img, const char *pat, int pi,
             if (!(tc && is_letter(img, tc) && (lattr(img, tc) & 2))) return 0;
             pi += step; ti += step; continue;
         case '%': {
-            /* Up to three consecutive letters, matched exactly against one of
-               the three stored suffixes. They live in .data, not .rdata. */
+            /* As many consecutive letters as the build's longest suffix,
+               matched whole against one of its stored suffixes. They live in
+               .data, not .rdata. A build with no suffixes of its own keeps a
+               single empty one, which every position matches. */
             char got[8];
-            int cap = img->t.suffix_max ? img->t.suffix_max : 3;
-            int n = img->t.suffix_n ? img->t.suffix_n
-                                    : (img->t.near_ptrs ? 0 : 3);
+            int cap = img->t.suffix_max;
+            int n = img->t.suffix_n;
             int g = 0, k = ti;
             while (g < cap && k >= 0 && k < len && is_letter(img, t[k])) got[g++] = (char)t[k++];
             got[g] = 0;
