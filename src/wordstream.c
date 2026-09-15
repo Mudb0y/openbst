@@ -28,7 +28,11 @@ static int modmap(const bst_image *img, int v) {
 static int variant(const bst_image *img, int sound, int mod) {
     const uint8_t *e = bst_at(img, img->t.modtab + (unsigned)(sound & 0xFF) * 4, 4);
     if (!e) return -1;
-    uint32_t va = (uint32_t)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
+    uint32_t rows = img->t.modtab_rows ? img->t.modtab_rows
+                                       : (img->t.modtab & 0xFFFF0000u);
+    uint32_t va = img->t.near_ptrs
+                ? (rows | (unsigned)(e[0] | (e[1] << 8)))
+                : (uint32_t)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
     if (!va) return -1;
     const uint8_t *p = bst_at(img, va + (unsigned)(mod & 0xFF), 1);
     if (!p) return -1;

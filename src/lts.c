@@ -107,14 +107,14 @@ static int match(const bst_image *img, const char *pat, int pi,
             char got[8];
             int cap = img->t.suffix_max ? img->t.suffix_max : 3;
             int n = img->t.suffix_n ? img->t.suffix_n
-                                    : (img->t.suffix_near ? 0 : 3);
+                                    : (img->t.near_ptrs ? 0 : 3);
             int g = 0, k = ti;
             while (g < cap && k >= 0 && k < len && is_letter(img, t[k])) got[g++] = (char)t[k++];
             got[g] = 0;
             int hit = 0;
             for (int s = 0; s < n && !hit; s++) {
                 uint32_t e = img->t.suffix_ptrs + (uint32_t)s * 4;
-                uint32_t a = img->t.suffix_near
+                uint32_t a = img->t.near_ptrs
                            ? (img->t.suffix_ptrs & 0xFFFF0000u) | (unsigned)ru16(img, e)
                            : ru32(img, e);
                 if (strcmp(got, dstr(img, a)) == 0) hit = 1;

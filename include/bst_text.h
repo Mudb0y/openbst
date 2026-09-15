@@ -380,9 +380,10 @@ typedef struct {
     uint32_t bucket_index[BST_BUCKETS], bucket_data[BST_BUCKETS];
     /* letter to sound */
     uint32_t suffix_ptrs, lts_index, dispatch, rules, patterns, outputs;
-    /* The suffix table holds near pointers, an offset into the table's own
-       segment with the fixup word beside it, rather than whole addresses. */
-    uint8_t  suffix_near;
+    /* This build's pointer tables hold near pointers, an offset into the
+       table's own segment with the fixup word beside it, rather than whole
+       addresses. */
+    uint8_t  near_ptrs;
     /* How many suffixes the pattern's run of letters is tried against, and
        how long that run may be. */
     uint8_t  suffix_n, suffix_max;
@@ -390,6 +391,9 @@ typedef struct {
     uint32_t trie_desc;
     /* the record-to-stream conversion */
     uint32_t modmap, modtab;
+    /* Where the rows the modifier table points at live, when that is not the
+       segment the table itself is in. */
+    uint32_t modtab_rows;
     /* the pair scan */
     uint32_t trans_pitch, vowel_dur, stress_num, stress_add, sound_add;
     /* diphones and voices */
