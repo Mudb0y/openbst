@@ -41,6 +41,26 @@ static void scan_back_seg(const bst_image *img, const uint8_t *s, int from, bst_
     }
 }
 
+/* Forward to the next sound that opens a group. The end of the stream and a
+   phrase marker both count as nothing at all. */
+static void scan_fwd_seg(const bst_image *img, const uint8_t *s, int len,
+                         int from, bst_cur *c) {
+    int p = from;
+    for (;;) {
+        int b;
+        do {
+            p++;
+            if (p >= len) { c->val = 0; c->pos = 0; return; }
+            b = s[p];
+        } while (b == 0);
+        if (bst_ph_attr2(img, b) & 1) { c->val = b; c->pos = p; return; }
+        if (b == 0x7C) { p += 6; continue; }
+        if (p >= len - 1 || b == 0x4D || b == 0x4E) {
+            c->val = 0; c->pos = 0; return;
+        }
+    }
+}
+
 /* Backward to the previous group marker, the companion of scan_back_seg that
    the French build uses to decide whether a landmark sits inside a group. */
 static void scan_back_grp(const bst_image *img, const uint8_t *s, int from,
@@ -380,8 +400,9 @@ static int accents_japanese(const bst_image *img, uint8_t *s, int len,
         return 0;
     }
 
+    /* What stands after the last accent, not before it. */
     bst_cur back;
-    scan_back_seg(img, s, pos[n], &back);
+    scan_fwd_seg(img, s, len, pos[n], &back);
     int carry = st->carried ? st->carried : 0x3D;
 
     int hi = 0, lo = 0, route;
