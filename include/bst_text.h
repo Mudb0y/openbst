@@ -513,6 +513,10 @@ int bst_map_gaps(const bst_tabmap *m, const char **names, int max);
 const bst_tabmap *bst_map_named(const char *name);
 
 
+/* One section of the image: where it lands in memory and where its bytes are
+   in the file. */
+typedef struct { uint32_t va, vsize, raw, rawsize; } bst_section;
+
 typedef struct {
     const uint8_t *image;
     size_t         len;
@@ -521,7 +525,7 @@ typedef struct {
        a table of pointers into .data. */
     uint32_t base;
     int      nsec;
-    struct { uint32_t va, vsize, raw, rawsize; } sec[BST_SECTIONS];
+    bst_section sec[BST_SECTIONS];
     bst_tabmap t;
     /* Set when the image is one the library built rather than one the caller
        handed over: a 16-bit module has to be laid out and relocated before
@@ -537,6 +541,11 @@ extern int bst_trace;
 
 /* Returns a pointer to `need` bytes at a virtual address, or NULL. */
 const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need);
+
+/* Set to watch every read that resolves, by the offset into the image it
+   landed on. This is how the lifted tables are worked out: run the corpus
+   with it set and what it saw is what the build needs. */
+extern void (*bst_read_hook)(const bst_image *img, size_t off, size_t need);
 
 /* The three accessors every table read goes through. An address outside the
    image reads as zero, which is what the original does when a table index runs
@@ -598,6 +607,33 @@ int  bst_image_init_map(bst_image *img, const void *data, size_t len,
 int  bst_image_init_ne(bst_image *img, const void *data, size_t len,
                        const bst_tabmap *map);
 void bst_image_free(bst_image *img);
+
+/* The tables a build needs, taken out of its binary and compiled in. Only the
+   bytes the engine ever reads are kept, so the image is put back as a run of
+   chunks at the offsets they came from and nothing else. Reading it is the
+   same as reading the original: the section map and the base are the ones the
+   binary had, so every address in the map still lands where it did. */
+typedef struct { uint32_t off, len; const uint8_t *bytes; } bst_chunk;
+
+typedef struct {
+    uint32_t           base;
+    uint32_t           size;      /* how much of the image the chunks reach */
+    int                nsec;
+    const bst_section *sec;
+    int                nchunk;
+    const bst_chunk   *chunk;
+    /* The lattice tables, already unpacked, because a 16-bit module's are at
+       file offsets and the laid-out image is not the file. */
+    const void        *lat;
+} bst_lifted;
+
+/* Lays the chunks out and points the image at them. Needs bst_image_free. */
+int  bst_image_init_lifted(bst_image *img, const bst_lifted *d,
+                           const bst_tabmap *map);
+
+/* The lifted tables for a build, or NULL if this library was built without
+   them. Written by tools/lift. */
+const bst_lifted *bst_lifted_for(const char *build);
 
 /* A phoneme record: a type letter and two operands, which is the form the
    rest of the engine consumes. */

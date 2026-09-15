@@ -31,13 +31,39 @@ nedump_MODS     := text
 
 BINS := synth interptest prosodytest durtest normtest curtest phtest pairtest acctest contest frametest pipetest stresstest asmtest fulltest toktest saytest say nedump
 
-all: $(addprefix $(BUILD)/,$(BINS))
+# The library proper: every module, the front end over them, and the tables
+# tools/lift wrote. A caller needs libbst and include/bst.h, nothing else.
+LIBMODS := text dict lts cursors wordstream stress assemble tokenise translit            except numbers phrules accents pairs contour diphone frames interp            synth speak
+DATA    := $(wildcard $(SRC)/data/*.c)
+DATAOBJ := $(patsubst $(SRC)/data/%.c,$(BUILD)/data_%.o,$(DATA))
+LIBOBJ  := $(addprefix $(BUILD)/lib_,$(addsuffix .o,$(LIBMODS))) $(DATAOBJ)
 
-$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h
+all: $(addprefix $(BUILD)/,$(BINS)) $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak $(BUILD)/lift $(BUILD)/lifttest
+
+$(BUILD)/data_%.o: $(SRC)/data/%.c $(INC)/bst_text.h
 	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
-$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h
+$(BUILD)/libbst.a: $(LIBOBJ)
+	$(AR) rcs $@ $^
+
+$(BUILD)/libbst.so: $(LIBOBJ)
+	$(CC) -shared -o $@ $^
+
+$(BUILD)/bstspeak: $(BUILD)/drv_bstspeak.o $(LIBOBJ)
+	$(CC) $^ -o $@
+
+$(BUILD)/lift: $(BUILD)/drv_lift.o $(LIBOBJ)
+	$(CC) $^ -o $@
+
+$(BUILD)/lifttest: $(BUILD)/drv_lifttest.o $(LIBOBJ)
+	$(CC) $^ -o $@
+
+$(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h $(INC)/bst.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -fPIC -c $< -o $@
+
+$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h $(INC)/bst.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -53,6 +79,8 @@ endef
 $(foreach b,$(filter-out synth,$(BINS)),$(eval $(call BINRULE,$(b))))
 
 clean:
-	rm -f $(BUILD)/lib_*.o $(BUILD)/drv_*.o $(addprefix $(BUILD)/,$(BINS))
+	rm -f $(BUILD)/lib_*.o $(BUILD)/drv_*.o $(BUILD)/data_*.o \
+	      $(addprefix $(BUILD)/,$(BINS)) \
+	      $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak $(BUILD)/lift
 
 .PHONY: all clean

@@ -3403,6 +3403,8 @@ int bst_image_init_map(bst_image *img, const void *data, size_t len,
     return 0;
 }
 
+void (*bst_read_hook)(const bst_image *img, size_t off, size_t need);
+
 const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need) {
     if (!img->nsec) return NULL;
     uint32_t rva = va - img->base;
@@ -3412,6 +3414,7 @@ const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need) {
         if (rva < img->sec[i].va || rva >= img->sec[i].va + sz) continue;
         size_t off = img->sec[i].raw + (rva - img->sec[i].va);
         if (off + need > img->len) return NULL;
+        if (bst_read_hook) bst_read_hook(img, off, need);
         return img->image + off;
     }
     return NULL;
@@ -3928,6 +3931,29 @@ int bst_image_init_ne(bst_image *img, const void *data, size_t len,
                 cur = next;
             }
         }
+    }
+    return 0;
+}
+
+int bst_image_init_lifted(bst_image *img, const bst_lifted *d,
+                          const bst_tabmap *map) {
+    if (!d || !map || d->nsec > BST_SECTIONS) return -1;
+    uint8_t *flat = calloc(d->size ? d->size : 1, 1);
+    if (!flat) return -1;
+
+    memset(img, 0, sizeof *img);
+    img->own = flat;
+    img->image = flat;
+    img->len = d->size;
+    img->base = d->base;
+    img->nsec = d->nsec;
+    for (int i = 0; i < d->nsec; i++) img->sec[i] = d->sec[i];
+    img->t = *map;
+
+    for (int i = 0; i < d->nchunk; i++) {
+        const bst_chunk *c = &d->chunk[i];
+        if ((size_t)c->off + c->len > d->size) continue;
+        memcpy(flat + c->off, c->bytes, c->len);
     }
     return 0;
 }
