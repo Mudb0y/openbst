@@ -154,6 +154,7 @@ static int row(const bst_tok *t, int i, int *state, unsigned *handler, int *next
 static void word_out(bst_tok *t);
 static int dotted_out(bst_tok *t);
 static int number_out(bst_tok *t);
+static int one_digit_out(bst_tok *t);
 static int groups_out(bst_tok *t);
 static int sepnum_out(bst_tok *t);
 static int ordinal_seen(bst_tok *t, int c);
@@ -251,6 +252,7 @@ static int handler(bst_tok *t, unsigned h, int c) {
     case BST_H_EAT3:     unread(t, 3); return 1;
     case BST_H_PUNCTOUT: punct_out(t, c); return 1;
     case BST_H_DOTOUT:   dot_out(t, c); return 1;
+    case BST_H_ONEDIGIT: return one_digit_out(t);
     case BST_H_WORD:     unread(t, 1); word_out(t); return 1;
     case BST_H_NUMBER:   return number_out(t);
     case BST_H_DOTTED:   return dotted_out(t);
@@ -409,6 +411,18 @@ static void say_currency(bst_tok *t, const uint8_t *d, int n) {
     t->money = 0;
 }
 
+/* The Polish build reads a lone digit as a number and hands a longer run
+   back, a digit at a time, to the state after it. */
+static int one_digit_out(bst_tok *t) {
+    int p = t->start;
+    if (t->cur > p) unread(t, t->cur - p);
+    if (!is_digit(t, t->ring[p])) { say_char(t, t->ring[p]); }
+    else                          { bst_say_number(t, t->ring + p, 1); emit(t, ','); }
+    t->prevkind = t->kind;
+    t->kind = 6;
+    return 1;
+}
+
 static int number_out(bst_tok *t) {
     unread(t, 1);
     while (t->cur >= t->start && !is_digit(t, t->ring[t->cur])) unread(t, 1);
@@ -416,6 +430,7 @@ static int number_out(bst_tok *t) {
     if (n <= 0) return 0;
     for (int i = 0; i < n; i++)
         if (!is_digit(t, t->ring[t->start + i])) return 0;
+    if (t->img->t.num_one_digit && n > 1) return 0;
     bst_say_number(t, t->ring + t->start, n);
     if (t->money) say_currency(t, t->ring + t->start, n);
     t->prevkind = t->kind;

@@ -28,7 +28,7 @@ enum {
     BST_H_APOS, BST_H_POSSESS, BST_H_EAT2, BST_H_EAT3, BST_H_WORD,
     BST_H_NUMBER, BST_H_DOTTED, BST_H_SEP, BST_H_GROUPS, BST_H_SEPNUM,
     BST_H_MONEY, BST_H_DASH2, BST_H_ORDINAL, BST_H_ORDEMIT, BST_H_PUNCTOUT,
-    BST_H_DOTOUT,
+    BST_H_DOTOUT, BST_H_ONEDIGIT,
     BST_H_COUNT
 };
 
@@ -204,6 +204,8 @@ typedef struct {
     uint8_t  num_group_kind;   /* 1 = a hundreds table, and a comma between groups */
     uint8_t  num_kind;         /* 1 = the Russian split by digit count, 2 = the German */
     uint8_t  num_spell_fives;  /* a long spelled run breaks into fives */
+    uint8_t  no_edge_reduce;   /* the reduced vowel keeps its shape at a phrase edge */
+    uint8_t  num_one_digit;    /* only a lone digit is read as a number */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the

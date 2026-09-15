@@ -722,8 +722,11 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 prev = next;
                 changed++;
             }
-            if (prev.val == 0 || next.val == 0 ||
-                prev.val == 0x2F || next.val == 0x2F) {
+            /* The Polish build has no edge variant: its stream keeps the
+               reduced vowel where the others swap it. */
+            if (!img->t.no_edge_reduce &&
+                (prev.val == 0 || next.val == 0 ||
+                 prev.val == 0x2F || next.val == 0x2F)) {
                 c = 0x2B; s[i] = 0x2B; changed++;
             }
         }

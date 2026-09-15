@@ -2405,6 +2405,8 @@ const bst_tabmap BST_MAP_2006_JPN = {
 };
 /* POL: 183 functions matched, 2739 addresses carried */
 const bst_tabmap BST_MAP_2006_POL = {
+    .no_edge_reduce    = 1,
+    .num_one_digit     = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
     .init_level    = 2,
@@ -2542,6 +2544,7 @@ const bst_tabmap BST_MAP_2006_POL = {
         [BST_H_MODE2] = 0x1000CF20,
         [BST_H_MONEY] = 0x10002980,
         [BST_H_NUMBER] = 0x10007B20,
+        [BST_H_ONEDIGIT] = 0x10007F70,
         [BST_H_OPENER] = 0x1000CF60,
         [BST_H_ORDEMIT] = 0x1000CED0,
         [BST_H_ORDINAL] = 0x1000CED0,
