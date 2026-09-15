@@ -1156,6 +1156,7 @@ const bst_tabmap BST_MAP_2006_ARA = {
 };
 /* DUT: 191 functions matched, 2878 addresses carried */
 const bst_tabmap BST_MAP_2006_DUT = {
+    .num_two_kind      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
     .vdur_kind     = 1,
@@ -1319,6 +1320,7 @@ const bst_tabmap BST_MAP_2006_DUT = {
         [BST_S_DOLLARS] = 0x1002EF60, [BST_S_DOLLAR] = 0x1002EF5C,
         [BST_S_GRPSEP] = 0x1002EFCC,
         [BST_S_HUNDRED] = 0x1002EF74,
+        [BST_S_ONE_ALT] = 0x1002EF78,
         [BST_S_OH] = 0x1002EF7C,
         [BST_S_ORD_FIFTH] = 0x1002EFB8,
         [BST_S_ORD_FIRST] = 0x1002EFBC,
@@ -1523,6 +1525,7 @@ const bst_tabmap BST_MAP_2006_FRE = {
 };
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
+    .num_two_kind      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
     .ph_kind       = 5,
@@ -1687,6 +1690,7 @@ const bst_tabmap BST_MAP_2006_GER = {
         [BST_S_DOLLARS] = 0x1002CE4C, [BST_S_DOLLAR] = 0x1002CE48,
         [BST_S_GRPSEP] = 0x1002CEB8,
         [BST_S_HUNDRED] = 0x1002CE60,
+        [BST_S_ONE_ALT] = 0x1002CE64,
         [BST_S_OH] = 0x1002CE68,
         [BST_S_ORD_FIFTH] = 0x1002CEA4,
         [BST_S_ORD_FIRST] = 0x1002CEA8,

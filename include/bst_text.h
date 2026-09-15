@@ -37,7 +37,7 @@ enum {
     BST_S_ORD_ST, BST_S_ORD_ND, BST_S_ORD_RD, BST_S_ORD_TIETH,
     BST_S_ORD_FIFTH, BST_S_ORD_FIRST, BST_S_ORD_TH, BST_S_GRPSEP,
     BST_S_PLURAL, BST_S_DIGITS, BST_S_TENS, BST_S_TEENS, BST_S_SCALES,
-    BST_S_OH, BST_S_HUNDRED, BST_S_ZERO,
+    BST_S_OH, BST_S_HUNDRED, BST_S_ZERO, BST_S_ONE_ALT,
     BST_S_COUNT
 };
 
@@ -200,6 +200,7 @@ typedef struct {
     uint8_t  acc_shape;
     uint8_t  acc_shape_keep;    /* a single accent does not collapse the shape */
     uint8_t  run_stop_kind;    /* 1 = the run before an accent stops on its own test */
+    uint8_t  num_two_kind;     /* 1 = units, a joiner, then tens */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the

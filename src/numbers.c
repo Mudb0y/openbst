@@ -20,7 +20,24 @@ static void one(bst_tok *t, int c)  { bst_tok_say(t, STR(t, BST_S_DIGITS) + (uns
 static void teen(bst_tok *t, int c) { bst_tok_say(t, STR(t, BST_S_TEENS)  + (unsigned)c * 4); }
 static void ten(bst_tok *t, int c)  { bst_tok_say(t, STR(t, BST_S_TENS)   + (unsigned)c * 4); }
 
+/* German and Dutch say the units first, joined to the tens by "und" or "en",
+   and the unit one takes a shorter form there than it does alone. */
+static void two_germanic(bst_tok *t, const uint8_t *d) {
+    if (d[0] == '0') {
+        if (d[1] != '0') one(t, d[1]);
+        return;
+    }
+    if (d[0] == '1') { teen(t, d[1]); return; }
+    if (d[1] != '0') {
+        if (d[1] == '1') bst_tok_say(t, STR(t, BST_S_ONE_ALT));
+        else             one(t, d[1]);
+        bst_tok_say(t, STR(t, BST_S_AND));
+    }
+    ten(t, d[0]);
+}
+
 static void two(bst_tok *t, const uint8_t *d) {
+    if (t->img->t.num_two_kind == 1) { two_germanic(t, d); return; }
     if (d[0] == '0') {
         if (d[1] != '0') { bst_tok_say(t, STR(t, BST_S_OH)); one(t, d[1]); }
     } else if (d[0] == '1') {
