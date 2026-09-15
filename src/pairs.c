@@ -901,7 +901,11 @@ int bst_pairs(const bst_image *img, const uint8_t *stream, int len,
     bst_scan_eight_back(img, stream, len, &z->prev8);
     z->last = z->prev8.pos;
     z->prev8.val = z->prev8.pos = 0;
-    z->strong.pos = 0;
+    /* The 2006 builds open by stepping the group cursor from the head of the
+       stream, so the pending cursor keeps the nothing it starts with; the
+       1995 one leaves the cursor where the pass before it stood. */
+    if (img->t.pair_prescan) bst_scan_strong(img, stream, len, 0, &z->strong);
+    else                     z->strong.pos = 0;
     z->stress.pos = 0;
 
     bst_scan_eight(img, stream, len, -1, &z->eight);

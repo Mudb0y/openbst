@@ -35,13 +35,12 @@ PYEOF
 
 for w in $(cat "$root/tests/ruswords.txt"); do say "$w"; done
 
-# Spoken numbers. Five and six digit numbers whose second group is said after
-# a comma are left out: the group cursor the scan carries from one phrase to
-# the next still holds a sound where the engine holds none, which shifts the
-# second phrase's first vowel by a frame.
+# Spoken numbers. Eight digit numbers are left out: their first phrase ends on
+# a comma and its pitch still climbs where the engine's holds.
 for n in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 15 16 17 19 20 21 25 30 40 50 60 70 \
          80 90 91 99 100 101 111 123 200 300 555 999 1000 1001 1100 1234 2006 \
-         2026 1905 9999 10000 100000 123456 1000000 1000001; do say "$n"; done
+         2026 1905 9999 10000 12345 99999 100000 123456 999999 1000000 \
+         1000001; do say "$n"; done
 say "$(printf '\335\362\356 \362\345\361\362.')"
 say "$(printf '\304\356\354 \350 \352\356\362.')"
 say "$(printf '\335\362\356 \362\345\361\362! \304\356\354.')"

@@ -206,6 +206,7 @@ typedef struct {
     uint8_t  num_spell_fives;  /* a long spelled run breaks into fives */
     uint8_t  no_edge_reduce;   /* the reduced vowel keeps its shape at a phrase edge */
     uint8_t  num_one_digit;    /* only a lone digit is read as a number */
+    uint8_t  pair_prescan;     /* the scan opens by stepping the group cursor */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
