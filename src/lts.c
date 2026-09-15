@@ -217,14 +217,18 @@ static int try_at(const bst_image *img, const unsigned char *t, int len, int pos
 /* The rule pass on its own, into a builder the caller owns. A dictionary
    entry is a set of corrections to this rather than a replacement for it, so
    both paths start here unless the entry says to throw it away. */
-void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp) {
+void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp,
+                   int indict) {
     const unsigned char *t = (const unsigned char *)w->buf;
     int len = w->len;
     bst_builder b = *bp;
 
     int pos = 1;
     while (pos < len && t[pos] != '_' && t[pos]) {
-        if (img->t.lts_lit_char && t[pos] == img->t.lts_lit_char) {
+        /* The shortcut is the rule table's stand-in for a letter it has no
+           chain for, and a dictionary entry speaks for the whole word, so the
+           engine turns it off for the words it knows. */
+        if (img->t.lts_lit_char && !indict && t[pos] == img->t.lts_lit_char) {
             bst_build_emit(img, &b, bst_uncode(img, img->t.lts_lit_code));
             pos++;
             continue;
@@ -258,7 +262,7 @@ static void build_out(const bst_builder *b, bst_stream *out) {
 void bst_lts(const bst_image *img, const bst_word *w, bst_stream *out) {
     bst_builder b;
     bst_build_init(&b);
-    bst_lts_build(img, w, &b);
+    bst_lts_build(img, w, &b, 0);
     if (w->flags) bst_build_suffix(img, &b, w->flags, w->y_from_i);
     build_out(&b, out);
 }
@@ -288,7 +292,7 @@ int bst_word_pronounce(const bst_image *img, const char *word,
         /* Unless the entry opens by throwing it away, the records correct
            what the rules produce rather than replacing it. */
         if (recs->n == 0 || recs->rec[0].type != 'T')
-            bst_lts_build(img, &w, &b);
+            bst_lts_build(img, &w, &b, 1);
         int stress = 0, accent = 0;
         bst_recs_to_stream(img, recs->rec, recs->n, &b, 0, &stress, &accent);
         if (w.flags) {

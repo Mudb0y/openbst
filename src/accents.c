@@ -580,7 +580,7 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
 
     /* A phrase with one accent falls back to the plain shape unless the
        header's tenth byte has its top bit set. */
-    if (first == last && !(s[9] & 0x80)) shape = 0x4C;
+    if (first == last && !(s[9] & 0x80) && !img->t.acc_shape_keep) shape = 0x4C;
 
     int kind = e[first].kind;
     int nextkind = 0;

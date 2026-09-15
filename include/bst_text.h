@@ -198,6 +198,7 @@ typedef struct {
     uint32_t xlat_first, xlat_second;
     uint8_t  acc_kind;           /* 1 = the French accent pass */
     uint8_t  acc_shape;
+    uint8_t  acc_shape_keep;    /* a single accent does not collapse the shape */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
@@ -572,7 +573,8 @@ typedef struct {
 void bst_build_init(bst_builder *b);
 void bst_build_emit(const bst_image *img, bst_builder *b, int code);
 void bst_build_suffix(const bst_image *img, bst_builder *b, int flags, int y_from_i);
-void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *b);
+void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *b,
+                   int indict);
 
 /* ---- sentence assembly --------------------------------------------------
 
