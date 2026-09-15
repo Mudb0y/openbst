@@ -670,8 +670,9 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             }
         }
 
-        /* A glottal stop between two vowels of the listed kinds. */
-        if (after_seg && (a1(img, prev.val) & 1) &&
+        /* A glottal stop between two vowels of the listed kinds. Only the
+           English builds have the rule. */
+        if (after_seg && !img->t.no_glottal && (a1(img, prev.val) & 1) &&
             prev.val != 0x12 && prev.val != 0x11 && prev.val != 8 && prev.val != 9 &&
             (c == 0x12 || c == 0x11 || c == 8 || c == 9)) {
             if (len + 1 <= cap) {

@@ -211,6 +211,7 @@ typedef struct {
     uint8_t  pair_prescan;     /* the scan opens by stepping the group cursor */
     uint8_t  no_weak_mark;     /* an unstressed syllable is not given the weak mark */
     uint8_t  no_unrelease;     /* a stop between two vowels keeps its release */
+    uint8_t  no_glottal;       /* no glottal stop between the two words */
     uint8_t  num_scale_kind;   /* 1 = the Italian plural thousand and its lone one */
 
     /* Which syllable of a word carries the accent. Zero is the English rule

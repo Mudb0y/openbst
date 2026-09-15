@@ -36,32 +36,46 @@ static void build(bst_voice *p, int base, int mid, int top) {
     p->mid = mid;
     p->hi = top;
     p->table[0] = (short)base;
-    short d = (short)((mid - base) / 3);
+    /* A third of the way from the base to the middle. The 2006 builds reach
+       it as five sixteenths rounded, which is a shade over. */
+    short d = p->round10 ? (short)((5 * (mid - base) + 8) >> 4)
+                         : (short)((mid - base) / 3);
     p->table[1] = (short)(base + d);
     p->table[2] = (short)(mid - d);
     p->table[3] = (short)mid;
-    for (int u = 4; u < 14; u++)
-        p->table[u] = (short)(p->table[3] +
-                              ((u - 3) * (short)(top - mid) + p->round10) / 10);
+    /* The ten steps from the middle to the top. A tenth in the earlier
+       builds; thirteen over a hundred and twenty-eight, rounded, in the
+       2006 ones, which is not the same number. */
+    if (p->round10) {
+        short step = (short)(13 * (short)(top - mid));
+        short acc = (short)(step + 64);
+        for (int u = 4; u < 14; u++) {
+            p->table[u] = (short)(p->table[3] + (acc >> 7));
+            acc = (short)(acc + step);
+        }
+    } else {
+        for (int u = 4; u < 14; u++)
+            p->table[u] = (short)(p->table[3] +
+                                  ((u - 3) * (short)(top - mid)) / 10);
+    }
 }
 
 /* The proportional form: a percentage above the base for the middle and above
    the stored top for the top. */
 static void set_range(bst_voice *p, int a, int b) {
     short s1 = (short)(p->base + (p->base >> 2));
-    /* The 2006 builds reach the percentage by a shift, and take it of the
-       base rather than the middle, so it is five over five hundred and twelve
-       of the base and not one hundredth of the middle. */
-    int mid = p->round10 ? s1 + ((p->base * a * 5) >> 9)
+    /* The 2006 builds reach the percentage by a shift of seven, so what the
+       earlier ones write as four in a hundred is five in a hundred and
+       twenty-eight here, and ten is thirteen. */
+    int mid = p->round10 ? s1 + (short)((short)(s1 * a) >> 7)
                          : s1 + (s1 * a) / 100;
     if (mid < p->base) mid = p->base;
     if (mid > 600) mid = 600;
-    /* The builds that round the middle by a shift add the percentage to the
-       top; the others multiply by a hundred plus it and divide once, so a
-       negative percentage truncates the other way. */
-    short s2 = p->round10 ? (short)((p->top * a) / 100 + p->top)
+    short s2 = p->round10 ? (short)(p->top + (short)((short)(p->top * a) >> 7))
                           : (short)((p->top * (100 + a)) / 100);
-    int top = p->reach ? p->reach : s2 + (s2 * b) / 100;
+    int top = p->reach ? p->reach
+            : p->round10 ? s2 + (short)((short)(s2 * b) >> 7)
+                         : s2 + (s2 * b) / 100;
     if (top < mid) top = mid;
     if (top > 600) top = 600;
     build(p, p->base, mid, top);
@@ -204,14 +218,16 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
     int mode = img->t.inton_mode ? img->t.inton_mode
                                  : ((s[6] == 'I') ? s[10] : 3);
     int a, b;
+    int wide = img->t.contour_round ? 13 : 10;
+    int step = img->t.contour_round ? 5 : 4;
     switch (mode) {
-    case 1: b = 4;  a = 0;   break;
-    case 2: b = 0;  a = 0;   break;
-    case 3: b = -4; a = 0;   break;
-    case 4: b = -4; a = 10;  break;
-    case 5: b = 4;  a = 10;  break;
-    case 6: b = 0;  a = -10; break;
-    case 7: b = 0;  a = 10;  break;
+    case 1: b = step;  a = 0;     break;
+    case 2: b = 0;     a = 0;     break;
+    case 3: b = -step; a = 0;     break;
+    case 4: b = -step; a = wide;  break;
+    case 5: b = step;  a = wide;  break;
+    case 6: b = 0;     a = -wide; break;
+    case 7: b = 0;     a = wide;  break;
     default: b = 0; a = 0;   break;
     }
     set_range(p, b, a);
