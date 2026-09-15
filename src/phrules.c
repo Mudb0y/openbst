@@ -625,7 +625,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             if (m2 == 0x13) {
                 int a = a1(img, pv);
                 if (!(a & 8) || (a & 1)) s[i] = 0x12;
-            } else if (m2 == 0x1B) {
+            } else if (m2 == 0x1B && !after_seg) {
                 /* What stands before decides which of the two forms the
                    vowel takes. */
                 int a = a1(img, pv);

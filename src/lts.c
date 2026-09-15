@@ -124,6 +124,43 @@ static int match(const bst_image *img, const char *pat, int pi,
             pi += step;
             continue;
         }
+        case '{': {
+            /* Nothing but the build's own prefixes stands between here and
+               the head of the word. They are taken off one at a time. */
+            if (!img->t.prefixes) return 0;
+            int lim = img->t.prefix_max ? img->t.prefix_max : 8;
+            for (;;) {
+                unsigned char run[16];
+                int k = 0, p = ti;
+                while (k < lim && p >= 0) {
+                    int ch = p < len ? t[p] : 0;
+                    if (!ch || !is_letter(img, ch)) break;
+                    run[k++] = (unsigned char)ch;
+                    p--;
+                }
+                int hit = 0;
+                for (int q = 0; q < img->t.prefix_n && !hit; q++) {
+                    const uint8_t *e = bst_at(img, img->t.prefixes +
+                                              (uint32_t)q * 4, 4);
+                    if (!e) continue;
+                    uint32_t va = (uint32_t)(e[0] | (e[1] << 8) |
+                                             (e[2] << 16) | (e[3] << 24));
+                    const uint8_t *w = va ? bst_at(img, va, 1) : NULL;
+                    if (!w || !*w) continue;
+                    int n = 0;
+                    while (w[n]) n++;
+                    if (n > k) continue;
+                    int same = 1;
+                    for (int j = 0; j < n && same; j++)
+                        if (w[j] != run[n - 1 - j]) same = 0;
+                    if (same) { ti -= n; hit = 1; }
+                }
+                if (!hit) return 0;
+                if (ti <= 0) break;
+            }
+            pi += step;
+            continue;
+        }
         case '@':
             if (tc == 'h') {
                 int prev = ti > 0 ? t[ti - 1] : 0;

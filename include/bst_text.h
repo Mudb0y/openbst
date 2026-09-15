@@ -236,6 +236,11 @@ typedef struct {
     /* The accent is looked for forward from the first syllable, and falls
        back on it when every one of them refuses. */
     uint8_t  place_forward;
+    /* The letters in front of a focus, when the rules ask for them: a list of
+       the build's own prefixes, how many there are, and how far back the
+       walk that collects them will go. */
+    uint32_t prefixes;
+    uint8_t  prefix_n, prefix_max;
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
