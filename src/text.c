@@ -329,6 +329,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .no_suffix      = 1,
     .ph_kind        = 6,
     .suffix_n       = 6, .suffix_max = 6,
     .near_ptrs    = 1,
@@ -586,6 +587,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .no_suffix      = 1,
     .trn_flank_tenths = 7,
     .suffix_n       = 0, .suffix_max = 6,
     .near_ptrs    = 1,
@@ -712,6 +714,7 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .no_suffix      = 1,
     .trn_between_tenths = 6,
     .trn_flank_tenths = 7,
     .ph_kind        = 1,
