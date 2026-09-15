@@ -626,11 +626,13 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 int a = a1(img, pv);
                 if (!(a & 8) || (a & 1)) s[i] = 0x12;
             } else if (m2 == 0x1B) {
+                /* What stands before decides which of the two forms the
+                   vowel takes. */
                 int a = a1(img, pv);
-                if (!after_seg) {
-                    if (!(a1(img, nv) & 0x80) || at_edge) s[i] = 0x1C;
-                    else if (!(a & 4))                    s[i] = 0x1A;
-                }
+                if ((a & 0x80) && (!(a1(img, nv) & 0x80) || at_edge))
+                    s[i] = 0x1C;
+                else if (!(a & 4))
+                    s[i] = 0x1A;
             }
             /* The stop written in front of a vowel takes the vowel's place
                in the stream, but the vowel is still what stands behind the

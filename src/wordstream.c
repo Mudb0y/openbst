@@ -26,7 +26,9 @@ static int modmap(const bst_image *img, int v) {
 /* The variant of a sound a modifier selects, or -1 when there is none, which
    means the record deletes rather than rewrites. */
 static int variant(const bst_image *img, int sound, int mod) {
-    const uint8_t *e = bst_at(img, img->t.modtab + (unsigned)(sound & 0xFF) * 4, 4);
+    /* The table is indexed in the module's own numbering, not the library's. */
+    const uint8_t *e = bst_at(img,
+                              img->t.modtab + (unsigned)bst_code(img, sound) * 4, 4);
     if (!e) return -1;
     uint32_t rows = img->t.modtab_rows ? img->t.modtab_rows
                                        : (img->t.modtab & 0xFFFF0000u);

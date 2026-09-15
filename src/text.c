@@ -868,6 +868,7 @@ const bst_tabmap BST_MAP_1998_SPN = {
 const bst_tabmap BST_MAP_2006_ENG = {
     .pair_prescan      = 1,
     .trn_dur_wide  = 1,
+    .schwa_after   = 1,
     .pair_class = {
         0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 1, 1,
         1, 7, 7, 2, 2, 2, 7, 2, 7, 3, 3, 2, 7, 2, 6, 6,

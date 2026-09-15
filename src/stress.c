@@ -438,5 +438,12 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
         if (v == 0 || is_mark(v))
             s[slot[k]] = (uint8_t)(img->t.stress_rule && (emph & 1) ? 0x31
                                                                    : 0x32);
+        if (img->t.schwa_after && k > 1 && s[slot[k]] == 0x32 &&
+            s[slot[k - 1]] >= 0x36) {
+            int c = s[slot[k] - 1];
+            if (c != 0x24 && c != 0x2E && c != 0x23 &&
+                c != 0x29 && c != 0x22 && c != 0x2C)
+                s[slot[k] - 1] = 0x24;
+        }
     }
 }

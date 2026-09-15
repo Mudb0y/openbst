@@ -230,6 +230,9 @@ typedef struct {
     /* The backward walk over the marks stops once a syllable has taken the
        accent, rather than running to the head of the word. */
     uint8_t  walk_stop;
+    /* A reduced syllable standing behind an accented one has its vowel
+       written over with the neutral one. */
+    uint8_t  schwa_after;
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
