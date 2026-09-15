@@ -202,7 +202,8 @@ typedef struct {
     uint8_t  run_stop_kind;    /* 1 = the run before an accent stops on its own test */
     uint8_t  num_two_kind;     /* 1 = units, a joiner, then tens; 2 = no leading oh */
     uint8_t  num_group_kind;   /* 1 = a hundreds table, and a comma between groups */
-    uint8_t  num_kind;         /* 1 = the Russian split by digit count */
+    uint8_t  num_kind;         /* 1 = the Russian split by digit count, 2 = the German */
+    uint8_t  num_spell_fives;  /* a long spelled run breaks into fives */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the

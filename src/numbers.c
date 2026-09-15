@@ -96,8 +96,14 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
     }
 }
 
+/* Spelled out, some builds break a run longer than seven into fives with a
+   comma, so the pause falls where the eye would put it. */
 static void spell(bst_tok *t, const uint8_t *d, int n) {
-    for (int i = 0; i < n; i++) one(t, d[i]);
+    int split = t->img->t.num_spell_fives && n > 7;
+    for (int i = 0, left = n - 1; i < n; i++, left--) {
+        one(t, d[i]);
+        if (split && left != 0 && left % 5 == 0) bst_tok_put(t, ',');
+    }
 }
 
 void bst_say_digits(bst_tok *t, const uint8_t *d, int n) { spell(t, d, n); }
@@ -113,16 +119,6 @@ void bst_say_grouped(bst_tok *t, const uint8_t *d, int n) {
     memcpy(buf + pad, d, (size_t)n);
     buf[g * 3] = 0;
     groups(t, buf, g);
-}
-
-/* Spelled out, Russian breaks a run longer than seven into fives with a
-   comma, so the pause falls where the eye would put it. */
-static void spell_russian(bst_tok *t, const uint8_t *d, int n) {
-    int split = n > 7;
-    for (int i = 0, left = n - 1; i < n; i++, left--) {
-        one(t, d[i]);
-        if (split && left != 0 && left % 5 == 0) bst_tok_put(t, ',');
-    }
 }
 
 /* Russian splits by how many digits there are rather than by whether the
@@ -147,12 +143,40 @@ static void say_number_russian(bst_tok *t, const uint8_t *d, int n) {
         groups(t, pad, 2);
         return;
     case 6: groups(t, d, 2); return;
-    default: spell_russian(t, d, n); return;
+    default: spell(t, d, n); return;
+    }
+}
+
+/* German reads four digits as hundreds only when the thousands place is a one
+   or nothing and the hundreds place is not a zero; Dutch asks only about the
+   hundreds place. Anything else is padded out to two whole groups. */
+static void say_number_german(bst_tok *t, const uint8_t *d, int n) {
+    uint8_t pad[10];
+    if (n > 4 || d[0] == '0') { spell(t, d, n); return; }
+    switch (n) {
+    case 1: one(t, d[0]); return;
+    case 2: two(t, d); return;
+    case 3: groups(t, d, 1); return;
+    default:
+        if (d[1] != '0' && (d[0] <= '1' || t->img->t.num_kind == 3)) {
+            two(t, d);
+            bst_tok_say(t, STR(t, BST_S_HUNDRED));
+            two(t, d + 2);
+            return;
+        }
+        pad[0] = '0'; pad[1] = '0'; pad[2] = d[0]; pad[3] = ',';
+        memcpy(pad + 4, d + 1, 3);
+        pad[7] = 0;
+        groups(t, pad, 2);
+        return;
     }
 }
 
 void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
-    if (t->img->t.num_kind == 1 && n > 0) { say_number_russian(t, d, n); return; }
+    if (n < 1) return;
+    if (t->img->t.num_kind == 1) { say_number_russian(t, d, n); return; }
+    if (t->img->t.num_kind == 2 || t->img->t.num_kind == 3)
+        { say_number_german(t, d, n); return; }
     if (n < 5 && n > 0 && d[0] != '0') {
         uint8_t pad[8];
         switch (n) {

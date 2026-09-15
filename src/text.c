@@ -1156,6 +1156,7 @@ const bst_tabmap BST_MAP_2006_ARA = {
 };
 /* DUT: 191 functions matched, 2878 addresses carried */
 const bst_tabmap BST_MAP_2006_DUT = {
+    .num_kind          = 3,
     .num_group_kind    = 3,
     .num_two_kind      = 1,
     .open_plain    = 1,
@@ -1526,6 +1527,8 @@ const bst_tabmap BST_MAP_2006_FRE = {
 };
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
+    .num_kind          = 2,
+    .num_spell_fives   = 1,
     .num_group_kind    = 2,
     .num_two_kind      = 1,
     .open_plain    = 1,
@@ -2760,6 +2763,7 @@ const bst_tabmap BST_MAP_2006_POR = {
 };
 /* RUS: 100 functions matched, 920 addresses carried */
 const bst_tabmap BST_MAP_2006_RUS = {
+    .num_spell_fives   = 1,
     .num_kind          = 1,
     .num_two_kind      = 2,
     .num_group_kind    = 1,
