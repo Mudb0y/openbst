@@ -104,6 +104,7 @@ const bst_tabmap BST_MAP_1995 = {
 
    A zero means not yet settled, not absent. bst_map_gaps reports them. */
 const bst_tabmap BST_MAP_1998_ENG = {
+    .dict_silent    = 'e',
     .trie_ent       = 3,
     .suffix_n       = 3, .suffix_max = 3,
     .near_ptrs    = 1,
@@ -196,6 +197,7 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .dict_silent    = 'o',
     .trie_ent       = 3,
     .trn_flank_tenths = 7,
     .no_suffix      = 1,
@@ -331,6 +333,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .dict_silent    = 's',
     .trie_ent       = 3,
     .no_suffix      = 1,
     .ph_kind        = 6,
@@ -462,6 +465,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .dict_silent    = 'n',
     .trie_ent       = 3,
     .syl_weak       = { 0x80, 0x81 },
     .suffix_n       = 19, .suffix_max = 6,
@@ -591,6 +595,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .dict_silent    = 'o',
     .trie_ent       = 3,
     .no_suffix      = 1,
     .trn_flank_tenths = 7,
@@ -719,6 +724,7 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .dict_silent    = 'o',
     .trie_ent       = 3,
     .no_suffix      = 1,
     .trn_between_tenths = 6,

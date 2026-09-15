@@ -26,7 +26,8 @@ static int encode(const bst_image *img, const char *stem, uint8_t *out, int max)
     w[n] = 0;
 
     int flag = 0;
-    if (n > 0 && w[n - 1] == 'e') { n--; flag = 1; }
+    int silent = img->t.dict_silent ? img->t.dict_silent : 'e';
+    if (n > 0 && w[n - 1] == silent) { n--; flag = 1; }
 
     uint8_t nb[BST_WORD_MAX * 3];
     int k = 0;

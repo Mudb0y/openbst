@@ -387,6 +387,9 @@ typedef struct {
        table's own segment with the fixup word beside it, rather than whole
        addresses. */
     uint8_t  near_ptrs;
+    /* The letter a dictionary key drops from the end and records in its
+       flag: 'e' in English, and its own in each of the others. */
+    uint8_t  dict_silent;
     /* The sounds a syllable is built on that refuse the accent: the first
        set refuses it outright, the second only in the reduction. */
     uint8_t  syl_weak[4], syl_flat[4];
