@@ -233,6 +233,9 @@ typedef struct {
     /* A reduced syllable standing behind an accented one has its vowel
        written over with the neutral one. */
     uint8_t  schwa_after;
+    /* The accent is looked for forward from the first syllable, and falls
+       back on it when every one of them refuses. */
+    uint8_t  place_forward;
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the

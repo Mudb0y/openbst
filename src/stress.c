@@ -349,6 +349,16 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 /* Hebrew has no search: what is left unchosen takes the
                    accent on its last syllable. */
                 s[slot[last]] = 0x36;
+            } else if (chosen == 0 && img->t.place_forward) {
+                /* Dutch and German look forward from the first syllable and
+                   fall back on it when every one of them refuses. */
+                int k = first;
+                while (k <= n && (flags[k] & F_LONG)) k++;
+                if (k > n) k = first;
+                if (!(a2(img, s[slot[k]]) & 2)) {
+                    flags[k] |= F_MARKED;
+                    mark(img, &s[slot[k]], emph);
+                }
             } else if (chosen == 0) {
                 /* The accent falls on the last syllable but two. Russian
                    takes the last but one instead unless the word is longer
