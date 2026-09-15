@@ -131,6 +131,22 @@ static void emit_ptr(bst_tok *t, unsigned ptrva) {
 
 void bst_tok_say(bst_tok *t, unsigned ptrva) { emit_ptr(t, ptrva); }
 
+/* The French build says a word that stands on its own with a marker joined to
+   the front of it, which is what lets the rules decide the sound it ends on. */
+void bst_tok_say_marked(bst_tok *t, int lead, unsigned ptrva) {
+    uint8_t buf[160];
+    const uint8_t *e = bst_at(t->img, ptrva, 4);
+    if (!e) return;
+    unsigned va = (unsigned)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
+    const uint8_t *p = va ? bst_at(t->img, va, 1) : NULL;
+    if (!p || !*p) return;
+    size_t n = 0;
+    buf[n++] = (uint8_t)bst_code(t->img, lead);
+    for (size_t k = 0; p[k] && n + 1 < sizeof buf; k++) buf[n++] = p[k];
+    buf[n] = 0;
+    emit_bytes(t, buf);
+}
+
 /* The Italian build runs one word into the next by copying it out and cutting
    the sound it ends on off the copy. */
 void bst_tok_say_clip(bst_tok *t, unsigned ptrva) {

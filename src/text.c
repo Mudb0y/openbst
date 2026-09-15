@@ -1358,6 +1358,7 @@ const bst_tabmap BST_MAP_2006_FRE = {
     .no_unrelease      = 1,
     .no_glottal        = 1,
     .num_scale_kind    = 3,
+    .num_liaison       = 0x59,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
     .trn_whole     = 1,

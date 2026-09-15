@@ -455,6 +455,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             int voiced = (a1(img, nv) & 4) && (a1(img, nv) & 1) &&
                          (a1(img, nv) & 0xFA);
             int flank = (a1(img, nv) & 0x80) || (a1(img, pv) & 0x80);
+            int said = -1;
             switch (mc) {
             case 4:
                 if (pv != 0 && pv != 0x0A) s[i] = 5;
@@ -472,10 +473,12 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                     s[i] = 0x0A;
                 break;
             case 0x0F:
-                if (voiced) s[i] = 0x10;
-                break;
             case 0x10:
-                s[i] = voiced ? 0x10 : 0x0F;
+                /* The sibilant takes the voicing of what follows, and one
+                   sibilant before another is struck out. */
+                if (voiced)          s[i] = 0x10;
+                else if (nv == 0x0F) { s[i] = 0; said = nv; }
+                else                 s[i] = 0x0F;
                 break;
             case 0x18:
                 if (stress.val < 5 && flank) s[i] = 0x16;
@@ -488,7 +491,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 if (nv == mc && nstress.val < 5) {
                     s[i] = 0;
                     if (i + 1 < lim) s[i + 1] = 0;
-                    pend.val = nv;
+                    said = nv;
                 } else if (flank && stress.pos > 0) {
                     s[stress.pos] = 0x31;
                 }
@@ -496,7 +499,8 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             default:
                 break;
             }
-            pend.val = s[i];
+            /* A sound struck out leaves the one that swallowed it behind. */
+            pend.val = said >= 0 ? said : s[i];
             continue;
         }
 
@@ -628,6 +632,10 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                     else if (!(a & 4))                    s[i] = 0x1A;
                 }
             }
+            /* The stop written in front of a vowel takes the vowel's place
+               in the stream, but the vowel is still what stands behind the
+               sound that follows. */
+            int said = s[i];
             if ((a1(img, s[i]) & 0x80) && after_seg && len + 1 <= cap) {
                 for (int k = len; k > i; k--) s[k] = s[k - 1];
                 s[i] = 0x1F;
@@ -636,7 +644,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
                 inserted = 1;
                 inserted_total++;
             }
-            pend.val = s[i];
+            pend.val = said;
             continue;
         }
 

@@ -214,6 +214,7 @@ typedef struct {
     uint8_t  no_glottal;       /* no glottal stop between the two words */
     uint8_t  num_scale_kind;   /* 1 = the Italian plural thousand and its lone one */
     uint8_t  num_hundred_and;  /* a hundreds word joins what follows with "and" */
+    uint8_t  num_liaison;      /* the marker a lone tens word is said behind */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the

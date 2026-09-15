@@ -48,7 +48,14 @@ static void two_french(bst_tok *t, const uint8_t *d) {
         teen(t, d[1]);
         return;
     }
-    ten(t, d[0]);
+    /* Twenty and eighty with nothing after them, or with a one, are said
+       behind a marker joined to the front of the word: what the rules do with
+       the sound the word ends on turns on it. */
+    if ((d[0] == '2' || d[0] == '8') && d[1] < '2' && t->img->t.num_liaison)
+        bst_tok_say_marked(t, t->img->t.num_liaison,
+                           STR(t, BST_S_TENS) + (unsigned)d[0] * 4);
+    else
+        ten(t, d[0]);
     if (d[1] == '1') { if (d[0] != '8') bst_tok_say(t, STR(t, BST_S_AND)); }
     else if (d[1] == '0') return;
     one(t, d[1]);
