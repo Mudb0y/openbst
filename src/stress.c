@@ -21,6 +21,15 @@
 #define F_VOWEL  0x08   /* the word ends on a vowel */
 
 static int a1(const bst_image *img, int c) { return bst_ph_attr1(img, c); }
+
+/* Whether a word ending on this sound counts as open for the accent rule.
+   Spanish excepts two consonants, which behave as a vowel does. */
+static int ends_open(const bst_image *img, int c) {
+    if (!(bst_ph_attr1(img, c) & 1)) return 0;
+    for (int q = 0; q < (int)sizeof img->t.stress_keep; q++)
+        if (img->t.stress_keep[q] && c == img->t.stress_keep[q]) return 0;
+    return 1;
+}
 static int a2(const bst_image *img, int c) { return bst_ph_attr2(img, c); }
 
 /* What an opener's own code says about taking the stress. */
@@ -164,11 +173,12 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
             if (c == 0x49) {
                 tail = n;
                 s[i] = 0;
-                prev = a1(img, i > 0 ? s[i - 1] : 0);
+                prev = ends_open(img, i > 0 ? s[i - 1] : 0);
             } else if (c == 0x4C) {
-                prev = a1(img, i > 0 ? s[i - 1] : 0);
+                prev = ends_open(img, i > 0 ? s[i - 1] : 0);
             } else continue;
-            if (prev & 1) flags[n] |= F_VOWEL;
+            if (prev) flags[n] |= F_VOWEL;
+            else      flags[n] &= (uint8_t)~F_VOWEL;
             continue;
         }
 
@@ -209,11 +219,13 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
         }
     }
 
-    if ((a1(img, len > 0 ? s[len - 1] : 0) & 1) && tail == 0) flags[n] |= F_VOWEL;
+    if (ends_open(img, len > 0 ? s[len - 1] : 0) && tail == 0) flags[n] |= F_VOWEL;
     tail = n;
 
     if (chosen == 0 && n != 0) {
-        if (n == 1) {
+        /* A word of one syllable takes the accent, except in Japanese,
+           which places none of its own at all. */
+        if (n == 1 && img->t.stress_kind != 2) {
             unstressed = 0;
             if (!(a2(img, s[slot[1]]) & 2)) mark(img, &s[slot[1]], emph);
         } else {
