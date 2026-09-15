@@ -2592,6 +2592,9 @@ const bst_tabmap BST_MAP_2006_POL = {
 };
 /* POR: 188 functions matched, 2863 addresses carried */
 const bst_tabmap BST_MAP_2006_POR = {
+    .num_kind          = 1,
+    .num_group_kind    = 1,
+    .num_two_kind      = 2,
     .pair_prescan      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
@@ -2769,7 +2772,8 @@ const bst_tabmap BST_MAP_2006_POR = {
         [BST_S_ORD_TIETH] = 0x100221FC,
         [BST_S_PLURAL] = 0x100221F8,
         [BST_S_POINT] = 0x100221BC,
-        [BST_S_SCALES] = 0x10023908,
+        [BST_S_SCALES] = 0x10023930,
+        [BST_S_HUNDREDS] = 0x10023848,
         [BST_S_TEENS] = 0x10023820,
         [BST_S_TENS] = 0x100237F8,
         [BST_S_ZERO] = 0x10023890,
@@ -2970,6 +2974,9 @@ const bst_tabmap BST_MAP_2006_RUS = {
 /* not placed: lts_index dispatch rules outputs trie_desc trans_pitch vowel_dur stress_num stress_add sound_add diph_records diph_offsets voices h.BST_H_LETTER h.BST_H_DIGIT h.BST_H_EAT1 h.BST_H_SPACE h.BST_H_DOT h.BST_H_CURRENCY h.BST_H_PUNCT h.BST_H_DASH h.BST_H_EXPONENT h.BST_H_MODE1 h.BST_H_MODE2 h.BST_H_DEL h.BST_H_OPENER h.BST_H_TILDE h.BST_H_APOSDOT h.BST_H_APOS h.BST_H_POSSESS h.BST_H_EAT2 h.BST_H_EAT3 h.BST_H_WORD h.BST_H_NUMBER h.BST_H_DOTTED h.BST_H_SEP h.BST_H_GROUPS h.BST_H_SEPNUM h.BST_H_MONEY h.BST_H_DASH2 h.BST_H_ORDINAL h.BST_H_ORDEMIT h.BST_H_PUNCTOUT h.BST_H_DOTOUT s.BST_S_POINT s.BST_S_DOLLARS s.BST_S_AND s.BST_S_CENTS s.BST_S_ORD_ST s.BST_S_ORD_ND s.BST_S_ORD_RD s.BST_S_ORD_TIETH s.BST_S_ORD_FIFTH s.BST_S_ORD_FIRST s.BST_S_ORD_TH s.BST_S_GRPSEP s.BST_S_PLURAL s.BST_S_OH s.BST_S_HUNDRED bucket_index bucket_data code_shift cmd_code */
 /* SPA: 189 functions matched, 2873 addresses carried */
 const bst_tabmap BST_MAP_2006_SPA = {
+    .num_two_kind      = 2,
+    .num_kind          = 1,
+    .num_group_kind    = 1,
     .pair_prescan      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
@@ -3128,7 +3135,8 @@ const bst_tabmap BST_MAP_2006_SPA = {
         [BST_S_ORD_TIETH] = 0x10018980,
         [BST_S_PLURAL] = 0x1001897C,
         [BST_S_POINT] = 0x10018940,
-        [BST_S_SCALES] = 0x1001A4DC,
+        [BST_S_SCALES] = 0x1001A504,
+        [BST_S_HUNDREDS] = 0x1001A41C,
         [BST_S_TEENS] = 0x1001A3F4,
         [BST_S_TENS] = 0x1001A3CC,
         [BST_S_ZERO] = 0x1001A464,

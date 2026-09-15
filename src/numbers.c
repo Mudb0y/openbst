@@ -40,17 +40,26 @@ static void two(bst_tok *t, const uint8_t *d) {
     if (t->img->t.num_two_kind == 1) { two_germanic(t, d); return; }
     if (d[0] == '0') {
         if (d[1] == '0') return;
-        /* Russian has no word for the empty tens place. */
+        /* Russian and the Romance builds have no word for the empty tens
+           place, where English says "oh". */
         if (t->img->t.num_two_kind != 2) bst_tok_say(t, STR(t, BST_S_OH));
         one(t, d[1]);
         return;
     }
-    if (d[0] == '1') {
-        teen(t, d[1]);
-    } else {
+    if (d[0] == '1') { teen(t, d[1]); return; }
+    if (t->img->t.num_two_kind == 2) {
+        /* The twenties take a form of their own and join the unit straight
+           on; the rest join it with the build's own word for "and". */
+        if (d[0] == '2' && d[1] != '0') { ten(t, '0'); one(t, d[1]); return; }
         ten(t, d[0]);
-        if (d[1] != '0') one(t, d[1]);
+        if (d[1] != '0') {
+            if (STR(t, BST_S_AND)) bst_tok_say(t, STR(t, BST_S_AND));
+            one(t, d[1]);
+        }
+        return;
     }
+    ten(t, d[0]);
+    if (d[1] != '0') one(t, d[1]);
 }
 
 /* Groups of three, most significant first, each followed by its scale. */
