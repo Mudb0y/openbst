@@ -26,16 +26,23 @@ static int cond_hi(const bst_image *img) { return (0x72 + img->t.code_shift) & 0
 typedef struct {
     const bst_image *img;
     const uint8_t   *states, *links, *pool;
-    int              base, max;
+    int              base, max, ent;
 } trie;
 
 static int load_trie(const bst_image *img, trie *w) {
     const bst_tabmap *m = &img->t;
     if (!bst_at(img, m->trie_desc, 20)) return 0;
-    uint32_t st = bst_u32(img, m->trie_desc + m->trie_st_off, 0);
-    uint32_t li = bst_u32(img, m->trie_desc + m->trie_li_off, 0);
-    uint32_t po = bst_u32(img, m->trie_desc + m->trie_po_off, 0);
+    /* The 16-bit modules keep the three pointers as offsets into the
+       descriptor's own segment. */
+    uint32_t seg = m->trie_desc & 0xFFFF0000u;
+    uint32_t st = m->near_ptrs ? (seg | (unsigned)bst_u16(img, m->trie_desc + m->trie_st_off, 0))
+                               : bst_u32(img, m->trie_desc + m->trie_st_off, 0);
+    uint32_t li = m->near_ptrs ? (seg | (unsigned)bst_u16(img, m->trie_desc + m->trie_li_off, 0))
+                               : bst_u32(img, m->trie_desc + m->trie_li_off, 0);
+    uint32_t po = m->near_ptrs ? (seg | (unsigned)bst_u16(img, m->trie_desc + m->trie_po_off, 0))
+                               : bst_u32(img, m->trie_desc + m->trie_po_off, 0);
     w->img = img;
+    w->ent = m->trie_ent ? m->trie_ent : 4;
     w->base = bst_u16(img, m->trie_desc + m->trie_base_off, 0);
     w->max  = bst_u16(img, m->trie_desc + m->trie_max_off, 0);
     w->states = bst_at(img, st, 4);
@@ -61,7 +68,7 @@ static int step(const trie *w, int *cur, int c, int *more) {
     int st;
     if (*cur < 0) st = w->base;
     else {
-        const uint8_t *e = w->states + (size_t)*cur * 4;
+        const uint8_t *e = w->states + (size_t)*cur * w->ent;
         int v = u16at(e);
         if (v & 0x8000) {
             int sv = v - 0x10000;
@@ -73,7 +80,7 @@ static int step(const trie *w, int *cur, int c, int *more) {
     }
     int n = st + sym;
     if (n < 0 || n > w->max) return -1;
-    const uint8_t *e = w->states + (size_t)n * 4;
+    const uint8_t *e = w->states + (size_t)n * w->ent;
     if ((e[2] & 0x7F) != sym) return -1;
     *cur = n;
     if (e[1] & 0x80) {

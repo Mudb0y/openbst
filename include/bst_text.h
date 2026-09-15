@@ -68,6 +68,9 @@ typedef struct {
     uint8_t  lts_index_stride;
     uint8_t  rule_stride, rule_prio_w;
     uint8_t  trie_st_off, trie_li_off, trie_base_off, trie_max_off, trie_po_off;
+    /* How wide a trie state is. Four in the 1995 and 2006 builds, three in
+       the 1998 ones. */
+    uint8_t  trie_ent;
 
     /* Three constants the frame builder holds rather than reads. A silent
        frame's first byte, and how an unvoiced frame is chunked: the 1995 build
