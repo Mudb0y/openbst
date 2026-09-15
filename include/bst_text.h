@@ -230,6 +230,9 @@ typedef struct {
     /* The mark the last accent of a statement takes, where it is not the
        usual one. */
     uint8_t  acc_fin;
+    /* The fall a statement's last accent takes when it is also the last
+       group of the phrase. */
+    uint8_t  fall_code_last;
 
     /* Which events the pair scan emits for each of the module's own sound
        codes. Every build compiles a different switch here, because the same

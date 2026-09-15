@@ -720,7 +720,9 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
     int done = 0;
     if (type == 0x11 || type == 0x13 || type == 0x12) {
         if (kind == 3) {
-            int fc = img->t.fall_code ? img->t.fall_code : 0x3D;
+            int fc = (n == cur && img->t.fall_code_last)
+                   ? img->t.fall_code_last
+                   : img->t.fall_code ? img->t.fall_code : 0x3D;
             if (img->t.fall_on_next && n - cur > 0) s[e[cur + 1].pos + 1] = (uint8_t)fc;
             else                                    s[e[cur].pos + 2] = (uint8_t)fc;
             done = 1;
