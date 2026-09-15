@@ -70,6 +70,8 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
     /* Where the accent falls: the last vowel, the one before it, or, in the
        Dutch build, the first. */
     int at = img->t.stress_rule == 5 ? 1 : keep && n > 1 ? n - 1 : n;
+    /* A syllable the rules marked as refusing the accent passes it back. */
+    while (at > 1 && is_mark(s[slot[at]])) at--;
     int hi = (emph & 1) && img->t.stress_rule != 4
                  ? (img->t.stress_rule == 2 || img->t.stress_rule == 5 ? 0x35 : 0x33)
                  : 0x36;
