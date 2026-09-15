@@ -685,8 +685,8 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             }
         }
 
-        /* An unreleased stop. */
-        if ((c == 0x18 || c == 0x14) && !after_seg &&
+        /* An unreleased stop. Only the English builds have the rule. */
+        if ((c == 0x18 || c == 0x14) && !img->t.no_unrelease && !after_seg &&
             (stress.val < 3 || at_edge) &&
             ((a1(img, prev.val) & 0x80) || prev.val == 0x12) &&
             (a1(img, next.val) & 0x80) && level >= 0) {
