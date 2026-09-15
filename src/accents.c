@@ -698,7 +698,8 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
         codeA = (type == 0x0F || type == 0x11) ? 0x42 : 0x3C;
     } else {
         if (emph || type == 0x0F)      fin = 0x42;
-        else                           fin = (type == 0x10) ? 0x42 : 0x43;
+        else                           fin = (type == 0x10) ? 0x42
+                                           : img->t.acc_fin ? img->t.acc_fin : 0x43;
         switch (type) {
         case 0x0F: codeB = 0;                 codeA = 0x45; break;
         case 0x10: codeB = 0;                 codeA = 0x42; break;

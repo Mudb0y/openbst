@@ -227,6 +227,9 @@ typedef struct {
     /* The code the accent pass writes for the closing fall. Zero means the
        usual 0x3D; the German build writes 0x3C. */
     uint8_t  fall_code;
+    /* The mark the last accent of a statement takes, where it is not the
+       usual one. */
+    uint8_t  acc_fin;
 
     /* Which events the pair scan emits for each of the module's own sound
        codes. Every build compiles a different switch here, because the same

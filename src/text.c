@@ -2754,6 +2754,7 @@ const bst_tabmap BST_MAP_2006_POR = {
 };
 /* RUS: 100 functions matched, 920 addresses carried */
 const bst_tabmap BST_MAP_2006_RUS = {
+    .acc_fin           = 0x42,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
     .pat_bit = {
