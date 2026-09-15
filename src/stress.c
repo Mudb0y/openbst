@@ -38,9 +38,10 @@ static int syl_flags(const bst_image *img, int c) {
 static int is_mark(int c) { return c > 0x75 && c < 0x7C; }
 
 /* Writes the accent mark, in the form the emphasis flags select. */
-static void mark(uint8_t *p, int emph) {
-    if (!(emph & 1)) *p = (emph & 4) ? 0x37 : 0x36;
-    else             *p = (emph & 4) ? 0x32 : 0x35;
+static void mark(const bst_image *img, uint8_t *p, int emph) {
+    int hi = img->t.mark_emph ? img->t.mark_emph : 0x35;
+    if (!(emph & 1)) *p = (uint8_t)((emph & 4) ? 0x37 : 0x36);
+    else             *p = (uint8_t)((emph & 4) ? 0x32 : hi);
 }
 
 /* The Romance rule: one syllable takes the accent and the rest are flat.
@@ -132,13 +133,13 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     uint8_t flags[SYL_MAX + 4];
     int16_t slot[SYL_MAX + 4];
     int n = 0, first = 1, chosen = 0, tail = 0;
-    int soft = 0, unstressed = 1;
+    int soft = 0, soft77 = 0, unstressed = 1;
 
     memset(flags, 0, sizeof flags);
     memset(slot, 0, sizeof slot);
     flags[1] = 0;
 
-    if (img->t.stress_rule) {
+    if (img->t.stress_rule >= 3) {
         for (int i = 0; i < len; i++) {
             int c = s[i];
             if (!(a2(img, c) & 0x10)) continue;
@@ -180,18 +181,20 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
         int v = s[m];
         if (is_mark(v)) {
             soft = 1;
+            if (v == 0x77) soft77 = 1;
             i += 3;
             continue;
         }
+        int hi = img->t.mark_emph ? img->t.mark_emph : 0x35;
         if (v == 0x36) {
-            if (emph & 1) s[m] = 0x35;
+            if (emph & 1) s[m] = (uint8_t)hi;
             flags[n] |= F_MARKED;
             flags[n - 1] |= F_NEXT;
             flags[n + 1] |= F_NEXT;
             chosen = n;
             i += 3;
         } else if (v == 0x35) {
-            if (emph & 1) s[m] = 0x33;
+            if (emph & 1) s[m] = (uint8_t)(hi - 2);
             flags[n] |= F_WEAK;
             unstressed = 0;
             i += 3;
@@ -212,7 +215,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     if (chosen == 0 && n != 0) {
         if (n == 1) {
             unstressed = 0;
-            if (!(a2(img, s[slot[1]]) & 2)) mark(&s[slot[1]], emph);
+            if (!(a2(img, s[slot[1]]) & 2)) mark(img, &s[slot[1]], emph);
         } else {
             int last = n;
             if (n > 1) {
@@ -233,7 +236,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                         if (gap == 2) gap = 1;
                     } else if (v == 0x77) {
                         if (!(flags[k] & (F_LONG | F_WEAK))) {
-                            mark(&s[slot[k]], emph);
+                            mark(img, &s[slot[k]], emph);
                             gap = 4;
                             flags[k] |= F_MARKED;
                             flags[k - 1] |= F_NEXT;
@@ -241,21 +244,44 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                             chosen = k;
                         }
                     } else if (v == 0x78) {
-                        gap = 1;
+                        if (!img->t.mark_78_take) gap = 1;
+                        else if (!soft77 && !(flags[k] & (F_LONG | F_WEAK))) {
+                            mark(img, &s[slot[k]], emph);
+                            gap = 4;
+                            flags[k] |= F_MARKED;
+                            flags[k - 1] |= F_NEXT;
+                            flags[k + 1] |= F_NEXT;
+                            chosen = k;
+                        }
                     } else if (v == 0x79) {
                         gap = 0;
                     } else if (v == 0x7A) {
-                        if (unstressed && !(flags[k] & F_LONG)) {
-                            s[slot[k]] = (emph & 1) ? 0x33 : 0x35;
+                        switch (img->t.mark_kind) {
+                        case 1:
+                            s[slot[k]] = 0x35; gap = 0; last = k; break;
+                        case 2:
+                            gap = 0; last = k; break;
+                        case 3:
+                            gap = 0; break;
+                        case 4:
+                            if (!(flags[k] & F_LONG)) s[slot[k]] = 0x33;
+                            break;
+                        case 5:
+                            if (!(flags[k] & F_LONG)) s[slot[k]] = 0x35;
+                            break;
+                        default:
+                            if (unstressed && !(flags[k] & F_LONG))
+                                s[slot[k]] = (emph & 1) ? 0x33 : 0x35;
+                            gap = 0; last = k; break;
                         }
-                        gap = 0;
-                        last = k;
                     } else if (v == 0x7B) {
                         s[slot[k]] = 0x33;
-                        gap = 0;
-                        last = k;
+                        if (img->t.mark_kind != 4 && img->t.mark_kind != 5) {
+                            gap = 0;
+                            if (img->t.mark_kind != 3) last = k;
+                        }
                     } else if (gap == 2 && !(flags[k] & (F_LONG | F_WEAK))) {
-                        mark(&s[slot[k]], emph);
+                        mark(img, &s[slot[k]], emph);
                         flags[k] |= F_MARKED;
                         flags[k - 1] |= F_NEXT;
                         flags[k + 1] |= F_NEXT;
@@ -265,7 +291,28 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 }
             }
 
-            if (chosen == 0 && img->t.stress_kind == 2) {
+            if (chosen == 0 && img->t.stress_rule == 2) {
+                /* Portuguese: the syllable before last, and only when the
+                   rules marked nothing at all. */
+                int k = n - 1;
+                if (!soft && k >= 1 && flags[k - 1] == 0 &&
+                    !(a2(img, s[slot[k]]) & 2))
+                    s[slot[k]] = 0x36;
+            } else if (chosen == 0 && img->t.stress_rule) {
+                /* Italian and Spanish: the last syllable when the word ends
+                   on a consonant, the one before it otherwise, and forward
+                   from there over anything that refuses the accent. */
+                int k = (flags[last] & F_VOWEL) ? last
+                      : (last > first + 1 ? last - 1 : first);
+                while (k < n && ((flags[k] & F_LONG) ||
+                                 (a2(img, s[slot[k]]) & 2))) k++;
+                if (!(flags[k] & F_LONG) && !(a2(img, s[slot[k]]) & 2)) {
+                    flags[k] |= F_MARKED;
+                    flags[k - 1] |= F_NEXT;
+                    flags[k + 1] |= F_NEXT;
+                    mark(img, &s[slot[k]], emph);
+                }
+            } else if (chosen == 0 && img->t.stress_kind == 2) {
                 /* Japanese chooses nothing: what the rules marked is all the
                    accent a word gets. */
             } else if (chosen == 0 && img->t.stress_kind == 4) {
@@ -282,7 +329,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 }
                 if (k == 0) k = first;
                 flags[k] |= F_MARKED;
-                mark(&s[slot[k]], emph);
+                mark(img, &s[slot[k]], emph);
                 chosen = k;
             } else if (chosen == 0 && img->t.stress_kind == 1) {
                 /* Hebrew has no search: what is left unchosen takes the
@@ -305,7 +352,7 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                     flags[k] |= F_MARKED;
                     flags[k - 1] |= F_NEXT;
                     flags[k + 1] |= F_NEXT;
-                    mark(&s[slot[k]], emph);
+                    mark(img, &s[slot[k]], emph);
                 }
             }
         }
@@ -357,7 +404,8 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     }
 
     /* Everything else reduces, and an empty slot becomes the reduced mark. */
-    if (img->t.stress_kind == 1 || img->t.stress_kind == 2) {
+    if (img->t.stress_kind == 1 || img->t.stress_kind == 2 ||
+        img->t.stress_rule == 2) {
         for (int k = tail; k > 0; k--) {
             if (s[slot[k]] == 0x35 && k < tail) s[slot[k + 1]] = 0x31;
             int v = s[slot[k]];
@@ -373,6 +421,8 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 s[slot[k]] = (emph & 1) ? 0x33 : 0x35;
         }
         int v = s[slot[k]];
-        if (v == 0 || is_mark(v)) s[slot[k]] = 0x32;
+        if (v == 0 || is_mark(v))
+            s[slot[k]] = (uint8_t)(img->t.stress_rule && (emph & 1) ? 0x31
+                                                                   : 0x32);
     }
 }

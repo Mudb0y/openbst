@@ -215,6 +215,15 @@ typedef struct {
     uint8_t  num_scale_kind;   /* 1 = the Italian plural thousand and its lone one */
     uint8_t  num_hundred_and;  /* a hundreds word joins what follows with "and" */
     uint8_t  num_liaison;      /* the marker a lone tens word is said behind */
+    /* What the two lower "not this one" marks do, which the builds do not
+       agree on: 0 the English way, 1 Russian, 2 the Romance and Greek and
+       Hebrew way, 3 Japanese, 4 Arabic, 5 Dutch and German. */
+    uint8_t  mark_kind;
+    /* A syllable marked 0x78 takes the accent rather than shortening the
+       run, unless another syllable asked for it outright. */
+    uint8_t  mark_78_take;
+    /* The accent mark an emphasised word takes, where it is not 0x35. */
+    uint8_t  mark_emph;
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
