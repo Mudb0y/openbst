@@ -13,8 +13,14 @@ oracle:
 lift: all
 	bash tools/lift.sh
 
+# Every test script, by its exit status rather than by what it prints: some
+# of them report a line per language and only fail on one of them.
 test: all oracle
-	@for t in tests/*.sh; do bash $$t; done
+	@fail=0; for t in tests/*.sh; do \
+	    if bash $$t; then :; else fail=$$((fail+1)); echo "FAILED: $$t"; fi; \
+	done; \
+	if [ $$fail -eq 0 ]; then echo "all tests passed"; \
+	else echo "$$fail test scripts failed"; exit 1; fi
 
 clean:
 	$(MAKE) -C tools/synth clean

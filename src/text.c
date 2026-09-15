@@ -597,6 +597,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .no_weak_mark   = 1,
     .dict_silent    = 'o',
     .trie_ent       = 3,
     .no_suffix      = 1,
