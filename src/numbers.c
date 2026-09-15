@@ -77,7 +77,12 @@ static void two(bst_tok *t, const uint8_t *d) {
         }
         return;
     }
-    ten(t, d[0]);
+    /* Italian runs the tens word into a one or an eight by cutting the vowel
+       it ends on. */
+    if (t->img->t.num_scale_kind == 1 && (d[1] == '1' || d[1] == '8'))
+        bst_tok_say_clip(t, STR(t, BST_S_TENS) + (unsigned)d[0] * 4);
+    else
+        ten(t, d[0]);
     if (d[1] != '0') one(t, d[1]);
 }
 
@@ -85,12 +90,17 @@ static void two(bst_tok *t, const uint8_t *d) {
 static void groups(bst_tok *t, const uint8_t *d, int n) {
     int all_zero = (n == 2 && d[0] == '0' && d[1] == '0');
     int empty = 0, said_scale = 0, first = 1;
+    /* Italian counts the thousands: nothing said below the scale since the
+       last scale word leaves the singular thousand, and anything at all in
+       front of it takes the plural. */
+    int ngroups = n, lone = 1;
     for (;;) {
         n--;
         if (n < 0) return;
-        /* Russian keeps a word of its own for each hundreds place, and puts a
-           comma between groups so the pause falls there. */
-        if (t->img->t.num_group_kind == 1 && !first && !all_zero &&
+        /* A comma stands between two groups, so the pause falls there. The
+           first group never takes one, and neither does a group of nothing
+           nor a number whose leading group is a single digit. */
+        if (!first && !all_zero &&
             !(d[0] == '0' && d[1] == '0' && d[2] == '0'))
             bst_tok_put(t, ',');
         first = 0;
@@ -109,11 +119,20 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
             /* The Hebrew build marks the group spoken and says nothing for a
                lone unit, so a hundred and six comes out as the hundred. */
             if (d[2] != '0') {
-                if (t->img->t.num_group_kind != 4) one(t, d[2]);
+                /* A lone one in the thousands group is the thousand word by
+                   itself: the build says no one in front of it. */
+                if (t->img->t.num_scale_kind == 1 && d[0] == '0' &&
+                    d[2] == '1' && lone) {
+                    if (n != 1) one(t, d[2]);
+                } else {
+                    if (t->img->t.num_group_kind != 4) one(t, d[2]);
+                    lone = 0;
+                }
                 empty = 0;
             }
         } else {
             two(t, d + 1);
+            lone = 0;
             empty = 0;
         }
         d += 3;
@@ -122,7 +141,12 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
             empty = 0;
             if (n == 0 && !said_scale) bst_tok_say(t, STR(t, BST_S_ZERO));
         } else {
-            bst_tok_say(t, STR(t, BST_S_SCALES) + (unsigned)n * 4);
+            if (t->img->t.num_scale_kind == 1 && !(lone && ngroups <= 2) &&
+                n == 1)
+                bst_tok_say(t, STR(t, BST_S_SCALE_PL));
+            else
+                bst_tok_say(t, STR(t, BST_S_SCALES) + (unsigned)n * 4);
+            lone = 1;
             said_scale = 1;
         }
         (void)all_zero;

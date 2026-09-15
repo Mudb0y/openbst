@@ -73,6 +73,7 @@ void bst_tok_unread(bst_tok *t, int n);
 
 /* Says a stored string of phoneme codes named by a pointer in the image. */
 void bst_tok_say(bst_tok *t, unsigned ptrva);
+void bst_tok_say_clip(bst_tok *t, unsigned ptrva);
 
 /* Puts one character into the scratch the machine reads back. */
 void bst_tok_put(bst_tok *t, int c);

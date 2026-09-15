@@ -100,8 +100,7 @@ static void emit(bst_tok *t, int c) {
 /* A run of phoneme codes, bracketed by the two mode markers. */
 void bst_tok_put(bst_tok *t, int c) { emit(t, c); }
 
-static void emit_codes(bst_tok *t, unsigned va) {
-    const uint8_t *p = bst_at(t->img, va, 1);
+static void emit_bytes(bst_tok *t, const uint8_t *p) {
     if (!p || !*p) return;
     emit(t, ' ');
     emit(t, 0xFE);
@@ -116,6 +115,10 @@ static void emit_codes(bst_tok *t, unsigned va) {
     emit(t, ' ');
 }
 
+static void emit_codes(bst_tok *t, unsigned va) {
+    emit_bytes(t, bst_at(t->img, va, 1));
+}
+
 /* Several handlers say something outright rather than spelling it: the
    pointer names a stored code string. Only the ones plain text reaches are
    wired up so far. */
@@ -127,6 +130,22 @@ static void emit_ptr(bst_tok *t, unsigned ptrva) {
 }
 
 void bst_tok_say(bst_tok *t, unsigned ptrva) { emit_ptr(t, ptrva); }
+
+/* The Italian build runs one word into the next by copying it out and cutting
+   the sound it ends on off the copy. */
+void bst_tok_say_clip(bst_tok *t, unsigned ptrva) {
+    uint8_t buf[160];
+    const uint8_t *e = bst_at(t->img, ptrva, 4);
+    if (!e) return;
+    unsigned va = (unsigned)(e[0] | (e[1] << 8) | (e[2] << 16) | (e[3] << 24));
+    const uint8_t *p = va ? bst_at(t->img, va, 1) : NULL;
+    if (!p || !*p) return;
+    size_t n = 0;
+    while (p[n] && n + 1 < sizeof buf) n++;
+    memcpy(buf, p, n);
+    buf[n - 1] = 0;
+    emit_bytes(t, buf);
+}
 
 /* ---- the transition table ---------------------------------------------- */
 

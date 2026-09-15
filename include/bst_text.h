@@ -38,6 +38,7 @@ enum {
     BST_S_ORD_FIFTH, BST_S_ORD_FIRST, BST_S_ORD_TH, BST_S_GRPSEP,
     BST_S_PLURAL, BST_S_DIGITS, BST_S_TENS, BST_S_TEENS, BST_S_SCALES,
     BST_S_OH, BST_S_HUNDRED, BST_S_ZERO, BST_S_ONE_ALT, BST_S_HUNDREDS,
+    BST_S_SCALE_PL,
     BST_S_COUNT
 };
 
@@ -210,6 +211,7 @@ typedef struct {
     uint8_t  pair_prescan;     /* the scan opens by stepping the group cursor */
     uint8_t  no_weak_mark;     /* an unstressed syllable is not given the weak mark */
     uint8_t  no_unrelease;     /* a stop between two vowels keeps its release */
+    uint8_t  num_scale_kind;   /* 1 = the Italian plural thousand and its lone one */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
