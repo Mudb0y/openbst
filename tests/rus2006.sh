@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# The 2006 Russian build word by word and sentence by sentence, through our
+# own front end and lattice against the engine's audio.
+#
+# The build reads its text as a wide string whose units are its own code page,
+# so the words are held in that code page and passed as bytes.
+set -uf
+root=$(cd "$(dirname "$0")/.." && pwd)
+dll=$root/dll/2006/dll_rus.dll
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+tables=$(python3 "$root/tools/analysis/tables2006.py" \
+         "$root/dll/1995/B32_TTS.DLL" "$dll") || exit 1
+
+same=0 diff=0
+say() {
+    local t=$1
+    timeout 120 "$root/build/oracle" --dll "$dll" --limit 800000000 \
+        --call Init_TTS --call "Say_TTS:wstr:$t" --raw --out "$work/e.pcm" \
+        >/dev/null 2>&1
+    "$root/build/saytest" --map 2006RUS --voice 0 \
+        --params 0x50,0xA0,3,0,0,0,0x30,0x10,-0x12,0 --tables "$tables" \
+        "$dll" "$t" > "$work/o.pcm" 2>/dev/null
+    if python3 - "$work/e.pcm" "$work/o.pcm" <<'PYEOF'
+import sys
+a = open(sys.argv[1], 'rb').read()
+b = open(sys.argv[2], 'rb').read()
+sys.exit(0 if a and len(a) == len(b) and a[:40] == b'\0' * 40 and a[40:] == b[40:] else 1)
+PYEOF
+    then same=$((same + 1))
+    else diff=$((diff + 1)); echo "  differs: $t"
+    fi
+}
+
+for w in $(cat "$root/tests/ruswords.txt"); do say "$w"; done
+say "$(printf '\335\362\356 \362\345\361\362.')"
+say "$(printf '\304\356\354 \350 \352\356\362.')"
+say "$(printf '\335\362\356 \362\345\361\362! \304\356\354.')"
+
+echo "rus2006: $same identical, $diff differing"
+[ "$diff" -eq 0 ]

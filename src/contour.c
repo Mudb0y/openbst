@@ -168,6 +168,14 @@ static void scan_back_seg(const bst_image *img, const uint8_t *s, int from, bst_
 }
 
 /* How far back the last sound with a target of its own lies. */
+/* What counts as the sound the run stops at. The Russian build asks its own
+   question of the attribute byte rather than reading the open-sound bit. */
+static int run_stop(const bst_image *img, int c) {
+    int a = bst_ph_attr1(img, c);
+    if (img->t.run_stop_kind == 1) return (a & 4) && !(a & 0x42);
+    return a & 0x80;
+}
+
 static int run_before(const bst_image *img, const uint8_t *s, int p) {
     int n = 0;
     for (;;) {
@@ -175,7 +183,7 @@ static int run_before(const bst_image *img, const uint8_t *s, int p) {
         scan_back_seg(img, s, p, &c);
         p = c.pos;
         if (c.val == 0) return 0;
-        if (bst_ph_attr1(img, s[c.pos]) & 0x80) return n;
+        if (run_stop(img, s[c.pos])) return n;
         n++;
     }
 }

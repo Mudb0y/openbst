@@ -183,11 +183,12 @@ static void punct_out(bst_tok *t, int c) {
     if (t->literal) return;
     if (b == ':' && is_digit(t, t->prevch) && is_digit(t, c)) { emit(t, ','); return; }
     if (b == ',' && t->img->t.comma_ends_text) {
-        /* The build stops here: nothing after the comma reaches the machine,
-           and the comma is said the way a full stop is. */
+        /* The build stops here: nothing after the comma reaches the machine.
+           Most builds then say the comma the way a full stop is said; the
+           Russian one says nothing at all. */
         t->tp = t->tn;
         t->lastend = '.';
-        emit(t, '.');
+        if (t->img->t.comma_ends_text != 2) emit(t, '.');
         return;
     }
     if (!t->sentence && b != '\'' && b != '`') { emit(t, b); return; }

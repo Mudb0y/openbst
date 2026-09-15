@@ -199,6 +199,7 @@ typedef struct {
     uint8_t  acc_kind;           /* 1 = the French accent pass */
     uint8_t  acc_shape;
     uint8_t  acc_shape_keep;    /* a single accent does not collapse the shape */
+    uint8_t  run_stop_kind;    /* 1 = the run before an accent stops on its own test */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the

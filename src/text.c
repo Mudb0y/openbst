@@ -2754,6 +2754,13 @@ const bst_tabmap BST_MAP_2006_POR = {
 };
 /* RUS: 100 functions matched, 920 addresses carried */
 const bst_tabmap BST_MAP_2006_RUS = {
+    .run_stop_kind     = 1,
+    .pair_class = {
+        0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1,
+        1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 1, 1, 1, 1, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
     .acc_shape_keep    = 1,
     .fall_code_last    = 0x3B,
     .acc_fin           = 0x42,
@@ -2847,7 +2854,7 @@ const bst_tabmap BST_MAP_2006_RUS = {
     .no_suffix     = 1,
     .close_pause   = 1,
     .hdr_shape     = 0x52,
-    .comma_ends_text = 1,
+    .comma_ends_text = 2,
     .contour_round = 1,
     .dur_frac_shift = 1,
     .possessive_is = 1,
@@ -2900,7 +2907,6 @@ const bst_tabmap BST_MAP_2006_RUS = {
     .exc_two_way       = 1,
     .unvoiced_chunk    = 1,
     .no_breath_break   = 1,
-    .no_closing_phrase = 1,
     .dur_mult          = 53,
     .nearest_round     = 1,
     .pitch_rate        = 10400,
