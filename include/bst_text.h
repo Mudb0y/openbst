@@ -242,6 +242,28 @@ typedef struct {
     uint32_t prefixes;
     uint8_t  prefix_n, prefix_max;
 
+    /* Where the compound splitter's five tries live. The word is cut where a
+       run of consonants can be read as the end of one part and the start of
+       the next, so the build carries, in one block, a limit, the roots of a
+       suffix, a prefix, a coda, an unsplittable-cluster and an onset trie,
+       and then the nodes themselves. Only German has one. */
+    uint32_t split_tab;
+
+    /* Letters this build writes doubled and reads single. The second of the
+       pair goes before anything else sees the text, so neither the rules nor
+       the dictionary ever meet it. */
+    uint8_t  squash[4];
+
+    /* The one sound a build shortens to a quarter when nothing but the phrase
+       header stands in front of it. Only Spanish has one. */
+    uint8_t  trn_lone;
+
+    /* What the reader supplies once the text runs out. The 1995 build ends a
+       text with a paragraph mark and two spaces; the 2006 builds put a full
+       stop there instead, which is how an abbreviation that ends a text can
+       still see a stop after it. Zero means the 1995 set. */
+    uint8_t  tail_chars[4];
+
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
        last when the word ends in a consonant that is not in stress_keep, and
@@ -680,6 +702,7 @@ int  bst_word_pronounce(const bst_image *img, const char *word,
    suffix. Mirrors the original exactly, including that the stem check can
    collapse a doubled consonant, restore a silent e, or refuse the strip. */
 void bst_normalise(const bst_image *img, const char *word, bst_word *out);
+int  bst_word_split(const bst_image *img, const char *word, int *cut, int max);
 
 /* ---- the sentence stream ------------------------------------------------
 

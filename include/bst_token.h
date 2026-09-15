@@ -32,7 +32,6 @@ typedef struct {
 
     uint8_t  ring[BST_TOK_RING];
     int      nring, cur, start, push;
-    int      realend;    /* the last ring position that came from the text */
 
     uint8_t  out[BST_TOK_OUT];
     int      nout, lastout, overflow;
@@ -61,6 +60,7 @@ typedef struct {
     int      eat;        /* the exception entry swallows the stop after it */
     int      money;      /* a currency sign is in force */
     int      ord, ordlast, ordprev;
+    int      textend;    /* the last ring position that came from the text */
     int      lastend;    /* the character that ended the last sentence */
     int      queued;   /* the second character of a build's expansion */
     char     xbuf[BST_XLAT_MAX];  /* the text after a build's own rewrite */

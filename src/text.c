@@ -867,6 +867,7 @@ const bst_tabmap BST_MAP_1998_SPN = {
    a denominator. And the variant tables the record pass reads were reordered,
    which is why they are this build's own and not the 1995 ones. */
 const bst_tabmap BST_MAP_2006_ENG = {
+    .tail_chars        = { '.', ' ', ' ' },
     .pair_prescan      = 1,
     .trn_dur_wide  = 1,
     .schwa_after   = 1,
@@ -976,6 +977,7 @@ const bst_tabmap BST_MAP_2006_ENG = {
 
 /* ARA: 184 functions matched, 2824 addresses carried */
 const bst_tabmap BST_MAP_2006_ARA = {
+    .tail_chars        = { '.', ' ', ' ' },
     .num_silent        = 1,
     .pair_prescan      = 1,
     .syl_free          = 1,
@@ -1170,6 +1172,7 @@ const bst_tabmap BST_MAP_2006_ARA = {
 };
 /* DUT: 191 functions matched, 2878 addresses carried */
 const bst_tabmap BST_MAP_2006_DUT = {
+    .tail_chars        = { '.', ' ', ' ' },
     .pair_prescan      = 1,
     .no_unrelease      = 1,
     .walk_stop         = 1,
@@ -1370,6 +1373,7 @@ const bst_tabmap BST_MAP_2006_DUT = {
 };
 /* FRE: 187 functions matched, 2752 addresses carried */
 const bst_tabmap BST_MAP_2006_FRE = {
+    .tail_chars        = { '.', ' ', ' ' },
     .num_kind          = 4,
     .num_group_kind    = 3,
     .syl_free          = 1,
@@ -1568,6 +1572,7 @@ const bst_tabmap BST_MAP_2006_FRE = {
 };
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
+    .tail_chars        = { '.', ' ', ' ' },
     .pair_prescan      = 1,
     .no_unrelease      = 1,
     .walk_stop         = 1,
@@ -1575,6 +1580,7 @@ const bst_tabmap BST_MAP_2006_GER = {
     .prefixes          = 0x1003E884,
     .prefix_n          = 30,
     .prefix_max        = 8,
+    .split_tab         = 0x1002103C,
     .syl_weak          = { 0x80, 0x81 },
     .mark_kind         = 5,
     .no_glottal        = 1,
@@ -1771,6 +1777,7 @@ const bst_tabmap BST_MAP_2006_GER = {
 };
 /* GRE: 190 functions matched, 2861 addresses carried */
 const bst_tabmap BST_MAP_2006_GRE = {
+    .tail_chars        = { '.', ' ', ' ' },
     .pair_prescan      = 1,
     .no_unrelease      = 1,
     .syl_free          = 1,
@@ -1961,6 +1968,7 @@ const bst_tabmap BST_MAP_2006_GRE = {
 };
 /* HEB: 190 functions matched, 2842 addresses carried */
 const bst_tabmap BST_MAP_2006_HEB = {
+    .tail_chars        = { '.', ' ', ' ' },
     .num_group_kind    = 4,
     .num_kind          = 1,
     .syl_free          = 1,
@@ -2136,6 +2144,8 @@ const bst_tabmap BST_MAP_2006_HEB = {
 };
 /* ITA: 189 functions matched, 2859 addresses carried */
 const bst_tabmap BST_MAP_2006_ITA = {
+    .tail_chars        = { '.', ' ', ' ' },
+    .squash            = { 'z', 'r' },
     .num_kind          = 1,
     .num_group_kind    = 3,
     .syl_free          = 1,
@@ -2330,6 +2340,7 @@ const bst_tabmap BST_MAP_2006_ITA = {
 };
 /* JPN: 182 functions matched, 2642 addresses carried */
 const bst_tabmap BST_MAP_2006_JPN = {
+    .tail_chars        = { '.', ' ', ' ' },
     .num_silent        = 1,
     .pair_prescan      = 1,
     .syl_free          = 1,
@@ -2507,6 +2518,7 @@ const bst_tabmap BST_MAP_2006_JPN = {
 };
 /* POL: 183 functions matched, 2739 addresses carried */
 const bst_tabmap BST_MAP_2006_POL = {
+    .tail_chars        = { '.', ' ', ' ' },
     .pair_prescan      = 1,
     .no_unrelease      = 1,
     .syl_free          = 1,
@@ -2692,6 +2704,7 @@ const bst_tabmap BST_MAP_2006_POL = {
 };
 /* POR: 188 functions matched, 2863 addresses carried */
 const bst_tabmap BST_MAP_2006_POR = {
+    .tail_chars        = { '.', ' ', ' ' },
     .num_kind          = 1,
     .num_group_kind    = 1,
     .syl_free          = 1,
@@ -3092,6 +3105,8 @@ const bst_tabmap BST_MAP_2006_RUS = {
 /* not placed: lts_index dispatch rules outputs trie_desc trans_pitch vowel_dur stress_num stress_add sound_add diph_records diph_offsets voices h.BST_H_LETTER h.BST_H_DIGIT h.BST_H_EAT1 h.BST_H_SPACE h.BST_H_DOT h.BST_H_CURRENCY h.BST_H_PUNCT h.BST_H_DASH h.BST_H_EXPONENT h.BST_H_MODE1 h.BST_H_MODE2 h.BST_H_DEL h.BST_H_OPENER h.BST_H_TILDE h.BST_H_APOSDOT h.BST_H_APOS h.BST_H_POSSESS h.BST_H_EAT2 h.BST_H_EAT3 h.BST_H_WORD h.BST_H_NUMBER h.BST_H_DOTTED h.BST_H_SEP h.BST_H_GROUPS h.BST_H_SEPNUM h.BST_H_MONEY h.BST_H_DASH2 h.BST_H_ORDINAL h.BST_H_ORDEMIT h.BST_H_PUNCTOUT h.BST_H_DOTOUT s.BST_S_POINT s.BST_S_DOLLARS s.BST_S_AND s.BST_S_CENTS s.BST_S_ORD_ST s.BST_S_ORD_ND s.BST_S_ORD_RD s.BST_S_ORD_TIETH s.BST_S_ORD_FIFTH s.BST_S_ORD_FIRST s.BST_S_ORD_TH s.BST_S_GRPSEP s.BST_S_PLURAL s.BST_S_OH s.BST_S_HUNDRED bucket_index bucket_data code_shift cmd_code */
 /* SPA: 189 functions matched, 2873 addresses carried */
 const bst_tabmap BST_MAP_2006_SPA = {
+    .tail_chars        = { '.', ' ', ' ' },
+    .trn_lone          = 0x16,
     .num_two_kind      = 2,
     .num_kind          = 1,
     .syl_free          = 1,
@@ -3507,6 +3522,162 @@ static int stem(const bst_image *img, char *w, int i, int vowels) {
         return i + 1;
     }
     return i;
+}
+
+/* ---- the compound splitter ----------------------------------------------
+
+   German is written with its compounds run together, so the build cuts a long
+   word where a run of consonants can be read as the end of one part and the
+   start of the next. Five tries decide it: which endings and beginnings are
+   the build's own, how common a cluster is at the end of a part and at the
+   start of one, and which clusters never take a cut at all. The score is the
+   two frequencies added, and the highest wins.
+
+   The word arrives as the rules will read it, with every h already written
+   ch, so the positions are the ones the caller cuts at. */
+
+struct split_trie {
+    uint32_t nodes;
+    unsigned limit, suffix, prefix, coda, nosplit, onset;
+};
+
+static void split_load(const bst_image *img, struct split_trie *k) {
+    uint32_t t = img->t.split_tab;
+    k->limit   = (unsigned)bst_u16(img, t, 0);
+    k->suffix  = (unsigned)bst_u16(img, t, 1);
+    k->prefix  = (unsigned)bst_u16(img, t, 2);
+    k->coda    = (unsigned)bst_u16(img, t, 3);
+    k->nosplit = (unsigned)bst_u16(img, t, 4);
+    k->onset   = (unsigned)bst_u16(img, t, 5);
+    k->nodes   = t + 12;
+}
+
+static int split_vowel(const bst_image *img, int c) {
+    return bst_u8(img, img->t.chattr, c & 0xFF) & 0x10;
+}
+
+/* One step down a trie. Returns the node reached, or -1. */
+static int split_step(const bst_image *img, const struct split_trie *k,
+                      unsigned base, int c) {
+    unsigned i = base + (unsigned)bst_u8(img, img->t.symmap, c & 0xFF);
+    if ((i & 0xFFFF) > k->limit) return -1;
+    if ((int)(int8_t)bst_u8(img, k->nodes, (int)(i * 4)) != c) return -1;
+    return (int)i;
+}
+
+/* The value the trie holds for s[from..to], or zero if it holds none. */
+static int split_value(const bst_image *img, const struct split_trie *k,
+                       const char *s, int from, int to, unsigned base) {
+    int node = -1;
+    for (int i = from; i <= to; i++) {
+        unsigned b = node < 0 ? base
+                   : (unsigned)bst_u16(img, k->nodes, node * 2 + 1);
+        node = split_step(img, k, b, (unsigned char)s[i]);
+        if (node < 0) return 0;
+    }
+    if (node < 0) return 0;
+    return bst_u8(img, k->nodes, node * 4 + 1);
+}
+
+/* Walks from `from` towards `to` while the trie follows, and answers the
+   position just past the longest entry it passed through. */
+static int split_longest(const bst_image *img, const struct split_trie *k,
+                         const char *s, int from, int to, unsigned base,
+                         int dir) {
+    int at = from, node = -1;
+    for (int i = from; dir > 0 ? i <= to : i >= to; i += dir) {
+        unsigned b = node < 0 ? base
+                   : (unsigned)bst_u16(img, k->nodes, node * 2 + 1);
+        node = split_step(img, k, b, (unsigned char)s[i]);
+        if (node < 0) break;
+        if (bst_u8(img, k->nodes, node * 4 + 1)) at = i + dir;
+    }
+    return at;
+}
+
+int bst_word_split(const bst_image *img, const char *word, int *cut, int max) {
+    if (!img->t.split_tab || !cut || max <= 0) return 0;
+
+    char s[BST_WORD_MAX * 2];
+    int n = 0;
+    for (; word[n] && n + 2 < (int)sizeof s; n++) {
+        int c = (unsigned char)word[n];
+        s[n] = (char)(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
+    }
+    s[n] = 0;
+    if (n < 3) return 0;
+
+    struct split_trie k;
+    split_load(img, &k);
+
+#define VOW(i) ((i) >= 0 && (i) < n && split_vowel(img, (unsigned char)s[i]))
+
+    /* The build's own prefixes come off the front and its own endings off the
+       back, so that neither is cut into. One only counts when the consonants
+       beside it could open or close a part on their own. */
+    int lo = 0, hi = n - 1;
+    for (;;) {
+        int at = split_longest(img, &k, s, lo, hi, k.prefix, 1);
+        if (at == lo || VOW(at)) break;
+        int e = at;
+        while (e + 1 < n && !VOW(e + 1)) e++;
+        if (e > at && !split_value(img, &k, s, at, e, k.onset)) break;
+        if (at >= hi) break;
+        lo = at;
+    }
+    for (;;) {
+        int at = split_longest(img, &k, s, hi, lo, k.suffix, -1);
+        if (at == hi || VOW(at)) break;
+        int e = at;
+        while (e > 0 && !VOW(e - 1)) e--;
+        if (e < at && !split_value(img, &k, s, e, at, k.coda)) break;
+        if (at <= lo) break;
+        hi = at;
+    }
+
+    /* Every run of two or more consonants between the first vowel and the
+       last is a candidate. */
+    int cs[10], ce[10], nc = 0;
+    int a, z;
+    if (VOW(lo)) a = lo + 1;
+    else { a = lo + 1; while (a < n && !VOW(a)) a++; a++; }
+    if (VOW(hi)) z = hi - 1;
+    else { z = hi - 1; while (z > 0 && !VOW(z)) z--; z--; }
+    while (a <= z && nc < 10) {
+        if (VOW(a) || VOW(a + 1)) { a++; continue; }
+        cs[nc] = a;
+        a += 2;
+        while (a < n && !VOW(a)) a++;
+        ce[nc] = a - 1;
+        nc++;
+        a++;
+    }
+
+    /* A candidate is taken where the two halves of the cluster score highest
+       together, and only if it leaves three letters on either side. */
+    int nsplit = 0, prev = lo - 1;
+    for (int i = 0; i < nc && nsplit < 5 && nsplit < max; i++) {
+        if (split_value(img, &k, s, cs[i], ce[i], k.nosplit)) continue;
+        int at;
+        if (ce[i] - cs[i] == 1) at = cs[i];
+        else {
+            unsigned best = 0;
+            at = -1;
+            for (int p = cs[i]; p < ce[i]; p++) {
+                int c1 = split_value(img, &k, s, cs[i], p, k.coda);
+                int c2 = split_value(img, &k, s, p + 1, ce[i], k.onset);
+                if (!c1 || !c2) continue;
+                unsigned sc = (unsigned)((c1 + c2) & 0xFFFF);
+                if (sc > best) { best = sc; at = p; }
+            }
+            if (!best) continue;
+        }
+        if (at - prev < 3 || hi - at < 3) continue;
+        cut[nsplit++] = at;
+        prev = at;
+    }
+#undef VOW
+    return nsplit;
 }
 
 void bst_normalise(const bst_image *img, const char *word, bst_word *out) {

@@ -148,7 +148,6 @@ int main(int argc, char **argv) {
             for (int i = 0; i < buf[0] + 2 && i < 128; i++) fprintf(stderr, " %02x", buf[i]);
             fprintf(stderr, "\n");
         }
-        z.emph = 0;
         z.mode = 0;
         int done = bst_assemble_token(&z, kind, buf);
         if (!done) { if (kind == 6) break; else continue; }

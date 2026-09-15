@@ -181,6 +181,34 @@ static int condition(bst_tok *t, int op, const uint8_t *word, int wlen) {
         }
         peek_done(&p);
         return 1;
+    case 4: {                                 /* the entry's own full stop, if
+                                                 what follows lets it have it */
+        peek_init(&p, t);
+        if (peek_next(&p) != '.') { peek_done(&p); return 0; }
+        c = peek_next(&p);
+        if (c == '.') {
+            int c2 = peek_next(&p);
+            peek_done(&p);
+            if (c2 == '.') return 0;
+            t->eat = 1;
+            return 1;
+        }
+        if (c == ' ') {
+            if (peek_next(&p) == '.' && peek_next(&p) == ' ' &&
+                peek_next(&p) == '.') { peek_done(&p); return 0; }
+        } else {
+            while (c == '"' || c == 0xAF || c == '\'' || c == '}' ||
+                   c == ']' || c == ')') c = peek_next(&p);
+        }
+        peek_done(&p);
+        if (c == ',' || c == ';' || c == ':' || c == '.' || c == '!' || c == '?') {
+            t->eat = 1;
+            return 1;
+        }
+        t->eat = 0;
+        condition(t, cond_lo(t->img) + 1, word, wlen);
+        return t->eat;
+    }
     case 5: {                                 /* an optional stop, then a capital */
         int dot;
         peek_init(&p, t);

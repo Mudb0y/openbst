@@ -507,11 +507,18 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
 
     if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
     if (z->img->t.trn_kind == 1) {
-        if (between_simple(z, pos) && (!(at & 2) || which == 0)) {
+        int stretched = between_simple(z, pos) && (!(at & 2) || which == 0);
+        if (stretched) {
             int t = z->img->t.trn_between_tenths;
             dur = t ? (int16_t)((int16_t)(dur * t) / 10)
                     : (int16_t)((int16_t)(dur * 9) >> 4);
         }
+        /* The one sound this build cuts to a quarter when nothing but the
+           phrase header stands in front of it. */
+        if (!stretched && z->img->t.trn_lone && mc == z->img->t.trn_lone &&
+            z->prev8.pos >= z->prev.pos &&
+            (z->prev8.val == 0x4D || z->prev8.val == 0x4E))
+            dur = (int16_t)dur >> 2;
         if (between_simple(z, pos) && (at & 0x80) && (which == 0 || which == 2)) {
             if (z->img->t.stress_shift) {
                 int scale = bst_u8(z->img, z->img->t.stress_num,

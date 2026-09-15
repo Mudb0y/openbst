@@ -7,8 +7,9 @@
    them. */
 
 /* The tail the reader adds after the text, which is what closes the last
-   sentence whether or not the text ends in a full stop. */
-static const uint8_t TAIL[4] = { ' ', '\n', '}', ' ' };
+   sentence whether or not the text ends in a full stop. This is the 1995
+   build's; a build that names its own in the map uses that instead. */
+static const uint8_t TAIL[4] = { '}', ' ', ' ', 0 };
 
 static int u8at(const bst_image *img, unsigned va, unsigned i) {
     const uint8_t *p = bst_at(img, va + i, 1);
@@ -26,8 +27,9 @@ static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
 
 /* ---- input ------------------------------------------------------------- */
 
-/* Returns the next character, and says whether it came from the text or from
-   the tail, because the lookahead must not read into the tail. */
+/* The next character, from the text while there is any and from the tail
+   after that. `real` says which, because the stop the tail carries closes the
+   last sentence without being the character the sentence ended on. */
 static int source(bst_tok *t, int *real) {
     *real = 1;
     if (t->queued) { int c = t->queued; t->queued = 0; return c; }
@@ -37,10 +39,14 @@ static int source(bst_tok *t, int *real) {
             t->queued = t->img->t.in_map2[c];
             c = t->img->t.in_map[c];
         }
+        for (int i = 0; i < 4 && t->img->t.squash[i]; i++)
+            if (c == t->img->t.squash[i] && t->tp < t->tn &&
+                t->text[t->tp] == c) { t->tp++; break; }
         return c;
     }
     *real = 0;
-    if (t->tail < (int)(sizeof TAIL)) return TAIL[t->tail++];
+    const uint8_t *tl = t->img->t.tail_chars[0] ? t->img->t.tail_chars : TAIL;
+    if (t->tail < 4 && tl[t->tail]) return tl[t->tail++];
     return 0xFFFF;
 }
 
@@ -64,18 +70,17 @@ static int rd(bst_tok *t) {
     }
     if (t->cur + 1 < BST_TOK_RING) t->ring[++t->cur] = (uint8_t)c;
     if (t->cur + 1 > t->nring) t->nring = t->cur + 1;
-    if (real && t->cur > t->realend) t->realend = t->cur;
+    if (real && t->cur > t->textend) t->textend = t->cur;
     return c;
 }
 
 int bst_tok_read(bst_tok *t) { return rd(t); }
 
-/* The lookahead stops at the end of the real text rather than running into
-   the tail the reader adds, which is why an abbreviation at the very end of a
-   text keeps its full stop and one in the middle does not. */
+/* The lookahead an exception entry's conditions read. It runs on through the
+   end of the text and into the tail the reader adds after it, which is how an
+   entry that wants the full stop after it can tell that one is there when the
+   text ends on it. */
 int bst_tok_peek_read(bst_tok *t) {
-    if (t->push) { if (t->cur + 1 > t->realend) return 0xFFFF; }
-    else if (t->tp >= t->tn) return 0xFFFF;
     return rd(t);
 }
 
@@ -238,7 +243,7 @@ static void punct_out(bst_tok *t, int c) {
 static void dot_out(bst_tok *t, int c) {
     (void)c;
     t->sentence = 0;
-    t->lastend = '.';
+    if (t->cur <= t->textend) t->lastend = '.';
     t->prevkind = t->kind;
     t->kind = 3;
     unread(t, 1);
@@ -394,10 +399,34 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
         return;
     }
 
-    for (int i = from; i <= to; i++) {
+    char w[128];
+    int wn = 0;
+    for (int i = from; i <= to && wn < 120; i++) {
         int c = t->ring[i];
-        emit(t, is_upper(t, c) ? lower(t, c) : c);
+        w[wn++] = (char)(is_upper(t, c) ? lower(t, c) : c);
     }
+    w[wn] = 0;
+
+    /* A build that writes its compounds run together cuts the word into the
+       parts the rules are to read, with a marker between them that keeps
+       them one word with one accent. */
+    int cut[8];
+    int nc = bst_word_split(t->img, w, cut, 8);
+    int p = 0;
+    for (int j = 0; j < nc; j++) {
+        for (; p <= cut[j] && p < wn; p++) emit(t, (unsigned char)w[p]);
+        emit(t, ' ');
+        emit(t, 0xFE);
+        emit(t, 0x7C);
+        emit(t, 0x7E);
+        emit(t, 0x00);
+        emit(t, 0x1C);
+        emit(t, 0x00);
+        emit(t, 0x00);
+        emit(t, 0xFF);
+        emit(t, ' ');
+    }
+    for (; p < wn; p++) emit(t, (unsigned char)w[p]);
     emit(t, ' ');
     t->prevkind = t->kind;
     t->kind = 5 - ((chattr(t, t->ring[from]) & 0x20) == 0);
@@ -918,8 +947,8 @@ void bst_tok_init(bst_tok *t, const bst_image *img, const char *text) {
     t->text = (const uint8_t *)text;
     t->tn = (int)strlen(text);
     t->cur = -1;
+    t->textend = -1;
     t->start = 0;
-    t->realend = -1;
     t->lastout = ' ';
     t->textmode = 1;
     t->breath = 0x3C;
@@ -984,10 +1013,11 @@ static int token(bst_tok *t, uint8_t *buf) {
             buf[0] = (uint8_t)b;
             return 5;
         case 0x189:
-            for (int i = 0; i < 6; i++) {
-                buf[i] = (uint8_t)b;
-                if (i < 5) b = classify(t, &cls);
-            }
+            /* A command: the marker, then the letter and four bytes. The
+               record the later passes read is one longer than that, and its
+               last byte is always missing from the text. */
+            memset(buf, 0, 6);
+            for (int i = 0; i < 5; i++) buf[i] = (uint8_t)classify(t, &cls);
             return 1;
         default:
             break;

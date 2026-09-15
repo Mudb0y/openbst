@@ -195,8 +195,12 @@ int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {
     switch (kind) {
     case 1: {
         /* A mode command. Anything that is not a tilde record goes into the
-           stream as a command for the later stages to read. */
+           stream as a command for the later stages to read. Tilde twenty-eight
+           is the one the compound splitter writes between the parts of a
+           word: the part after it opens the way an emphasised word does, so
+           it keeps the lesser of the two accent marks. */
         if (buf[0] != '~') command(z, buf);
+        else if (((buf[3] << 8) | buf[2]) == 0x1C) z->emph |= 1;
         break;
     }
     case 3:
