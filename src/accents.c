@@ -703,7 +703,9 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
         switch (type) {
         case 0x0F: codeB = 0;                 codeA = 0x45; break;
         case 0x10: codeB = 0;                 codeA = 0x42; break;
-        case 0x11: codeB = 0x3D;              codeA = 0x42; break;
+        case 0x11: codeB = 0x3D;
+                   codeA = img->t.acc_code11 ? img->t.acc_code11 : 0x42;
+                   break;
         case 0x16: codeA = 0x45;              codeB = st->level + 0x3D; break;
         case 0x14: codeB = 0;                 codeA = st->level + 0x3D; break;
         case 0x17: codeA = st->level + 0x3D;  codeB = codeA; break;

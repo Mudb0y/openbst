@@ -105,8 +105,19 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
             bst_tok_put(t, ',');
         first = 0;
         if (d[0] == '0') empty = 1;
-        else if (t->img->t.num_group_kind == 1)
-            bst_tok_say(t, STR(t, BST_S_HUNDREDS) + (unsigned)d[0] * 4);
+        else if (t->img->t.num_group_kind == 1) {
+            /* Spanish and Portuguese keep a short hundred word for a bare
+               hundred, in the slot the zero digit would have used. */
+            int bare = t->img->t.num_scale_kind == 2 && d[0] == '1' &&
+                       d[1] == '0' && d[2] == '0';
+            bst_tok_say(t, STR(t, BST_S_HUNDREDS) +
+                           (unsigned)(bare ? '0' : d[0]) * 4);
+            /* Portuguese joins a hundreds word to what follows with its word
+               for "and", but the word for a hundred itself stands alone. */
+            if (t->img->t.num_hundred_and && d[0] > '1' &&
+                !(d[1] == '0' && d[2] == '0'))
+                bst_tok_say(t, STR(t, BST_S_AND));
+        }
         else {
             /* German says the short one before its hundred word and Dutch
                says no one at all, where English says "one hundred". */
@@ -119,15 +130,26 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
             /* The Hebrew build marks the group spoken and says nothing for a
                lone unit, so a hundred and six comes out as the hundred. */
             if (d[2] != '0') {
-                /* A lone one in the thousands group is the thousand word by
-                   itself: the build says no one in front of it. */
-                if (t->img->t.num_scale_kind == 1 && d[0] == '0' &&
-                    d[2] == '1' && lone) {
-                    if (n != 1) one(t, d[2]);
-                } else {
-                    if (t->img->t.num_group_kind != 4) one(t, d[2]);
-                    lone = 0;
+                /* A lone one in front of a scale word. Most builds say the
+                   scale word by itself, some of them only while nothing has
+                   been said below a scale yet, and German gives the one a
+                   shorter form instead of dropping it. */
+                int k = t->img->t.num_scale_kind;
+                int pre1 = (d[0] == '0' && d[2] == '1');
+                int quiet = 0;
+                if (pre1) {
+                    if (k == 3)                  quiet = (n == 1);
+                    else if ((k == 1 || k == 2) && lone)
+                        quiet = (n == 1) || (k == 2 && n == 3);
                 }
+                if (!quiet) {
+                    if (k == 4 && d[2] == '1' && n > 0)
+                        bst_tok_say(t, STR(t, n == 1 ? BST_S_ONE_ALT
+                                                     : BST_S_ONE_BIG));
+                    else if (t->img->t.num_group_kind != 4)
+                        one(t, d[2]);
+                }
+                if (!pre1 || !k) lone = 0;
                 empty = 0;
             }
         } else {

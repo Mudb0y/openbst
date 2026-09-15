@@ -38,7 +38,7 @@ enum {
     BST_S_ORD_FIFTH, BST_S_ORD_FIRST, BST_S_ORD_TH, BST_S_GRPSEP,
     BST_S_PLURAL, BST_S_DIGITS, BST_S_TENS, BST_S_TEENS, BST_S_SCALES,
     BST_S_OH, BST_S_HUNDRED, BST_S_ZERO, BST_S_ONE_ALT, BST_S_HUNDREDS,
-    BST_S_SCALE_PL,
+    BST_S_SCALE_PL, BST_S_ONE_BIG,
     BST_S_COUNT
 };
 
@@ -213,6 +213,7 @@ typedef struct {
     uint8_t  no_unrelease;     /* a stop between two vowels keeps its release */
     uint8_t  no_glottal;       /* no glottal stop between the two words */
     uint8_t  num_scale_kind;   /* 1 = the Italian plural thousand and its lone one */
+    uint8_t  num_hundred_and;  /* a hundreds word joins what follows with "and" */
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
@@ -245,6 +246,9 @@ typedef struct {
     /* The mark the last accent of a statement takes, where it is not the
        usual one. */
     uint8_t  acc_fin;
+    /* What a phrase of the first kind leaves behind it, where it is not the
+       usual 0x42. */
+    uint8_t  acc_code11;
     /* The fall a statement's last accent takes when it is also the last
        group of the phrase. */
     uint8_t  fall_code_last;

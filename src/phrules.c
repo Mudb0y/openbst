@@ -468,6 +468,8 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             case 0x0B:
                 if ((nv == 3 || nv == 8 || nv == 0x11 || nv == 0x17) && !after_seg)
                     s[i] = 0x0D;
+                else if (nv == 1 || nv == 4 || nv == 0x0A)
+                    s[i] = 0x0A;
                 break;
             case 0x0F:
                 if (voiced) s[i] = 0x10;
@@ -534,7 +536,7 @@ int bst_phrules(const bst_image *img, uint8_t *s, int *lenp, int cap, int level)
             if (mc < 1 || mc > 0x30 + img->t.code_shift) continue;
             if (mc == 0x1B) {
                 int nv = bst_code(img, next.val);
-                int seg = (a2(img, next.val) & 1) != 0;
+                int seg = next.pos > 0 && opens_run(img, s, next.pos);
                 if ((nv == 0x0A || nv == 9) && !seg && stress.val == 6) {
                     s[i] = 0x22;
                 } else if (stress.val < 6) {
