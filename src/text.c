@@ -104,6 +104,8 @@ const bst_tabmap BST_MAP_1995 = {
 
    A zero means not yet settled, not absent. bst_map_gaps reports them. */
 const bst_tabmap BST_MAP_1998_ENG = {
+    .suffix_n       = 3, .suffix_max = 3,
+    .suffix_near    = 1,
     .unvoiced_no_frac = 1,
     .long_silence_chunk = 1,
     .long_silence_f0 = 0xD1,
@@ -193,6 +195,11 @@ const bst_tabmap BST_MAP_1998_ENG = {
    reproduces the English map above address for address. */
 /* KGMDUT. */
 const bst_tabmap BST_MAP_1998_DUT = {
+    .no_suffix      = 1,
+    .stress_rule    = 5,
+    .ph_kind        = 4,
+    .suffix_n       = 17, .suffix_max = 6,
+    .suffix_near    = 1,
     .unvoiced_no_frac = 1,
     .dur_mult       = 53,
     .pitch_rate     = 10400,
@@ -242,7 +249,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
     .sound_add      = 0x000a02e6,
     .stress_add     = 0x000a035a,
     .stress_num     = 0x000a036c,
-    .suffix_ptrs    = 0x000a0200,
+    .suffix_ptrs    = 0x000a00aa,
     .symmap         = 0x000a1a14,
     .tokstates      = 0x000a1474,
     .trans_pitch    = 0x000a0390,
@@ -320,6 +327,9 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .ph_kind        = 6,
+    .suffix_n       = 6, .suffix_max = 6,
+    .suffix_near    = 1,
     .unvoiced_no_frac = 1,
     .level_max      = 4,
     .inton_mode     = 3,
@@ -366,7 +376,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
     .sound_add      = 0x000a0176,
     .stress_add     = 0x000a01c8,
     .stress_num     = 0x000a01da,
-    .suffix_ptrs    = 0x000a0076,
+    .suffix_ptrs    = 0x000a0072,
     .symmap         = 0x000a16a2,
     .tokstates      = 0x000a10ea,
     .trans_pitch    = 0x000a01fe,
@@ -445,6 +455,8 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .suffix_n       = 19, .suffix_max = 6,
+    .suffix_near    = 1,
     .strip_kind     = 1,
     .suffix_tail    = { [0] = 0x10, [1] = 0x1B, [2] = 0x0C, [3] = 0x0A },
     .unvoiced_no_frac = 1,
@@ -491,7 +503,7 @@ const bst_tabmap BST_MAP_1998_GRM = {
     .sound_add      = 0x000a02e2,
     .stress_add     = 0x000a0354,
     .stress_num     = 0x000a0366,
-    .suffix_ptrs    = 0x000a01fa,
+    .suffix_ptrs    = 0x000a00aa,
     .symmap         = 0x000a19ea,
     .tokstates      = 0x000a144a,
     .trans_pitch    = 0x000a038a,
@@ -569,6 +581,8 @@ const bst_tabmap BST_MAP_1998_GRM = {
 
 /* KGMITL. */
 const bst_tabmap BST_MAP_1998_ITL = {
+    .suffix_n       = 0, .suffix_max = 6,
+    .suffix_near    = 1,
     .unvoiced_no_frac = 1,
     .ph_kind        = 2,
     .vdur_kind      = 2,
@@ -613,7 +627,7 @@ const bst_tabmap BST_MAP_1998_ITL = {
     .sound_add      = 0x000a0152,
     .stress_add     = 0x000a019c,
     .stress_num     = 0x000a01ae,
-    .suffix_ptrs    = 0x000a0bf8,
+    .suffix_ptrs    = 0x000a0053,
     .symmap         = 0x000a1624,
     .tokstates      = 0x000a1084,
     .trans_pitch    = 0x000a01d2,
@@ -691,6 +705,9 @@ const bst_tabmap BST_MAP_1998_ITL = {
 
 /* KGMSPN. */
 const bst_tabmap BST_MAP_1998_SPN = {
+    .ph_kind        = 1,
+    .suffix_n       = 0, .suffix_max = 6,
+    .suffix_near    = 1,
     .unvoiced_no_frac = 1,
     .trn_whole      = 1,
     .inton_mode     = 3,
@@ -736,7 +753,7 @@ const bst_tabmap BST_MAP_1998_SPN = {
     .sound_add      = 0x000a0144,
     .stress_add     = 0x000a018c,
     .stress_num     = 0x000a019e,
-    .suffix_ptrs    = 0x000a0032,
+    .suffix_ptrs    = 0x000a0053,
     .symmap         = 0x000a15fa,
     .tokstates      = 0x000a105a,
     .trans_pitch    = 0x000a01c2,

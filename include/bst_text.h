@@ -377,6 +377,12 @@ typedef struct {
     uint32_t bucket_index[BST_BUCKETS], bucket_data[BST_BUCKETS];
     /* letter to sound */
     uint32_t suffix_ptrs, lts_index, dispatch, rules, patterns, outputs;
+    /* The suffix table holds near pointers, an offset into the table's own
+       segment with the fixup word beside it, rather than whole addresses. */
+    uint8_t  suffix_near;
+    /* How many suffixes the pattern's run of letters is tried against, and
+       how long that run may be. */
+    uint8_t  suffix_n, suffix_max;
     /* the exception trie */
     uint32_t trie_desc;
     /* the record-to-stream conversion */

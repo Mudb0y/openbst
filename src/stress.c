@@ -62,7 +62,9 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
     for (int k = 0; !keep && k < (int)sizeof img->t.stress_keep; k++)
         if (img->t.stress_keep[k] && fin == img->t.stress_keep[k]) keep = 1;
 
-    int at = keep && n > 1 ? n - 1 : n;
+    /* Where the accent falls: the last vowel, the one before it, or, in the
+       Dutch build, the first. */
+    int at = img->t.stress_rule == 5 ? 1 : keep && n > 1 ? n - 1 : n;
     int hi = (emph & 1) && img->t.stress_rule != 4
                  ? (img->t.stress_rule == 2 ? 0x35 : 0x33) : 0x36;
     int lo = (emph & 1) ? (img->t.stress_rule == 2 ? 0x33 : 0x31) : 0x32;

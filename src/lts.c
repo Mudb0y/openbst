@@ -16,6 +16,7 @@
 static int ru8(const bst_image *img, uint32_t va)  { return bst_u8(img, va, 0); }
 static int rs16(const bst_image *img, uint32_t va) { return bst_s16(img, va, 0); }
 static uint32_t ru32(const bst_image *img, uint32_t va) { return bst_u32(img, va, 0); }
+static int ru16(const bst_image *img, uint32_t va) { return bst_u16(img, va, 0); }
 
 /* The suffix strings live in the writable section and the rule patterns in the
    read-only one, but both are just addresses to bst_at. */
@@ -103,13 +104,21 @@ static int match(const bst_image *img, const char *pat, int pi,
         case '%': {
             /* Up to three consecutive letters, matched exactly against one of
                the three stored suffixes. They live in .data, not .rdata. */
-            char got[4];
+            char got[8];
+            int cap = img->t.suffix_max ? img->t.suffix_max : 3;
+            int n = img->t.suffix_n ? img->t.suffix_n
+                                    : (img->t.suffix_near ? 0 : 3);
             int g = 0, k = ti;
-            while (g < 3 && k >= 0 && k < len && is_letter(img, t[k])) got[g++] = (char)t[k++];
+            while (g < cap && k >= 0 && k < len && is_letter(img, t[k])) got[g++] = (char)t[k++];
             got[g] = 0;
             int hit = 0;
-            for (int s = 0; s < 3 && !hit; s++)
-                if (strcmp(got, dstr(img, ru32(img, img->t.suffix_ptrs + (uint32_t)s * 4))) == 0) hit = 1;
+            for (int s = 0; s < n && !hit; s++) {
+                uint32_t e = img->t.suffix_ptrs + (uint32_t)s * 4;
+                uint32_t a = img->t.suffix_near
+                           ? (img->t.suffix_ptrs & 0xFFFF0000u) | (unsigned)ru16(img, e)
+                           : ru32(img, e);
+                if (strcmp(got, dstr(img, a)) == 0) hit = 1;
+            }
             if (!hit) return 0;
             ti += g - 1;
             pi += step;

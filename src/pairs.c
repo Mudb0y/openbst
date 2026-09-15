@@ -515,8 +515,11 @@ static void trans_simple(scan *z, int dur, int pos, int which) {
             dur = (int16_t)((int16_t)(scale * dur) >> 5);
         }
     }
-    if (z->img->t.trn_kind != 6 && flanked_simple(z, pos))
-        dur = (int16_t)((int16_t)(dur * 11) >> 4);
+    /* Kind six, the Dutch one, takes seven tenths where the others take
+       eleven sixteenths. */
+    if (flanked_simple(z, pos))
+        dur = z->img->t.trn_kind == 6 ? (int16_t)((int16_t)(dur * 7) / 10)
+                                      : (int16_t)((int16_t)(dur * 11) >> 4);
 
     unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
     int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
