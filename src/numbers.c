@@ -106,7 +106,12 @@ static void groups(bst_tok *t, const uint8_t *d, int n) {
             bst_tok_say(t, STR(t, BST_S_HUNDRED));
         }
         if (d[1] == '0') {
-            if (d[2] != '0') { one(t, d[2]); empty = 0; }
+            /* The Hebrew build marks the group spoken and says nothing for a
+               lone unit, so a hundred and six comes out as the hundred. */
+            if (d[2] != '0') {
+                if (t->img->t.num_group_kind != 4) one(t, d[2]);
+                empty = 0;
+            }
         } else {
             two(t, d + 1);
             empty = 0;
