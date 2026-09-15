@@ -313,6 +313,11 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
                 at = k;
         for (int k = 1; k <= tail; k++) {
             int m = slot[k], v = m - 1;
+            /* A sound written twice over on an unaccented syllable is said
+               once: the first of the pair is struck out. */
+            if (!(flags[k] & F_MARKED) && m + 4 < len &&
+                (a1(img, s[m + 3]) & 1) && s[m + 3] == s[m + 4])
+                s[m + 3] = 0;
             if (k == at) { before = 0; continue; }
             if (k == at - 1) {
                 ru_reduce(img, s, v, before, 2);

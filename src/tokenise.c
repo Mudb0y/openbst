@@ -98,6 +98,8 @@ static void emit(bst_tok *t, int c) {
 }
 
 /* A run of phoneme codes, bracketed by the two mode markers. */
+void bst_tok_put(bst_tok *t, int c) { emit(t, c); }
+
 static void emit_codes(bst_tok *t, unsigned va) {
     const uint8_t *p = bst_at(t->img, va, 1);
     if (!p || !*p) return;

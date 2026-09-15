@@ -1156,6 +1156,7 @@ const bst_tabmap BST_MAP_2006_ARA = {
 };
 /* DUT: 191 functions matched, 2878 addresses carried */
 const bst_tabmap BST_MAP_2006_DUT = {
+    .num_group_kind    = 3,
     .num_two_kind      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
@@ -1525,6 +1526,7 @@ const bst_tabmap BST_MAP_2006_FRE = {
 };
 /* GER: 192 functions matched, 2850 addresses carried */
 const bst_tabmap BST_MAP_2006_GER = {
+    .num_group_kind    = 2,
     .num_two_kind      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,
@@ -2758,6 +2760,9 @@ const bst_tabmap BST_MAP_2006_POR = {
 };
 /* RUS: 100 functions matched, 920 addresses carried */
 const bst_tabmap BST_MAP_2006_RUS = {
+    .num_kind          = 1,
+    .num_two_kind      = 2,
+    .num_group_kind    = 1,
     .run_stop_kind     = 1,
     .pair_class = {
         0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1,
@@ -2935,11 +2940,12 @@ const bst_tabmap BST_MAP_2006_RUS = {
         0x10064CE8, 0x10068AE8, 0x1006BBC0, 0x1006E61C, 0x100712A0,
     },
         .s = {
-        [BST_S_DIGITS] = 0x10025E10,
-        [BST_S_SCALES] = 0x10025F48,
-        [BST_S_TEENS] = 0x10025E60,
-        [BST_S_TENS] = 0x10025E38,
-        [BST_S_ZERO] = 0x10025ED0,
+        [BST_S_DIGITS] = 0x10079318,
+        [BST_S_SCALES] = 0x10079478,
+        [BST_S_TEENS] = 0x10079368,
+        [BST_S_TENS] = 0x10079340,
+        [BST_S_ZERO] = 0x100793D8,
+        [BST_S_HUNDREDS] = 0x10079390,
     },
 };
 /* not placed: lts_index dispatch rules outputs trie_desc trans_pitch vowel_dur stress_num stress_add sound_add diph_records diph_offsets voices h.BST_H_LETTER h.BST_H_DIGIT h.BST_H_EAT1 h.BST_H_SPACE h.BST_H_DOT h.BST_H_CURRENCY h.BST_H_PUNCT h.BST_H_DASH h.BST_H_EXPONENT h.BST_H_MODE1 h.BST_H_MODE2 h.BST_H_DEL h.BST_H_OPENER h.BST_H_TILDE h.BST_H_APOSDOT h.BST_H_APOS h.BST_H_POSSESS h.BST_H_EAT2 h.BST_H_EAT3 h.BST_H_WORD h.BST_H_NUMBER h.BST_H_DOTTED h.BST_H_SEP h.BST_H_GROUPS h.BST_H_SEPNUM h.BST_H_MONEY h.BST_H_DASH2 h.BST_H_ORDINAL h.BST_H_ORDEMIT h.BST_H_PUNCTOUT h.BST_H_DOTOUT s.BST_S_POINT s.BST_S_DOLLARS s.BST_S_AND s.BST_S_CENTS s.BST_S_ORD_ST s.BST_S_ORD_ND s.BST_S_ORD_RD s.BST_S_ORD_TIETH s.BST_S_ORD_FIFTH s.BST_S_ORD_FIRST s.BST_S_ORD_TH s.BST_S_GRPSEP s.BST_S_PLURAL s.BST_S_OH s.BST_S_HUNDRED bucket_index bucket_data code_shift cmd_code */

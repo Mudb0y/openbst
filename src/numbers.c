@@ -39,8 +39,13 @@ static void two_germanic(bst_tok *t, const uint8_t *d) {
 static void two(bst_tok *t, const uint8_t *d) {
     if (t->img->t.num_two_kind == 1) { two_germanic(t, d); return; }
     if (d[0] == '0') {
-        if (d[1] != '0') { bst_tok_say(t, STR(t, BST_S_OH)); one(t, d[1]); }
-    } else if (d[0] == '1') {
+        if (d[1] == '0') return;
+        /* Russian has no word for the empty tens place. */
+        if (t->img->t.num_two_kind != 2) bst_tok_say(t, STR(t, BST_S_OH));
+        one(t, d[1]);
+        return;
+    }
+    if (d[0] == '1') {
         teen(t, d[1]);
     } else {
         ten(t, d[0]);
@@ -51,12 +56,27 @@ static void two(bst_tok *t, const uint8_t *d) {
 /* Groups of three, most significant first, each followed by its scale. */
 static void groups(bst_tok *t, const uint8_t *d, int n) {
     int all_zero = (n == 2 && d[0] == '0' && d[1] == '0');
-    int empty = 0, said_scale = 0;
+    int empty = 0, said_scale = 0, first = 1;
     for (;;) {
         n--;
         if (n < 0) return;
+        /* Russian keeps a word of its own for each hundreds place, and puts a
+           comma between groups so the pause falls there. */
+        if (t->img->t.num_group_kind == 1 && !first && !all_zero &&
+            !(d[0] == '0' && d[1] == '0' && d[2] == '0'))
+            bst_tok_put(t, ',');
+        first = 0;
         if (d[0] == '0') empty = 1;
-        else { one(t, d[0]); bst_tok_say(t, STR(t, BST_S_HUNDRED)); }
+        else if (t->img->t.num_group_kind == 1)
+            bst_tok_say(t, STR(t, BST_S_HUNDREDS) + (unsigned)d[0] * 4);
+        else {
+            /* German says the short one before its hundred word and Dutch
+               says no one at all, where English says "one hundred". */
+            int k = t->img->t.num_group_kind;
+            if (d[0] == '1' && k == 2)      bst_tok_say(t, STR(t, BST_S_ONE_ALT));
+            else if (d[0] != '1' || k != 3) one(t, d[0]);
+            bst_tok_say(t, STR(t, BST_S_HUNDRED));
+        }
         if (d[1] == '0') {
             if (d[2] != '0') { one(t, d[2]); empty = 0; }
         } else {
@@ -95,7 +115,44 @@ void bst_say_grouped(bst_tok *t, const uint8_t *d, int n) {
     groups(t, buf, g);
 }
 
+/* Spelled out, Russian breaks a run longer than seven into fives with a
+   comma, so the pause falls where the eye would put it. */
+static void spell_russian(bst_tok *t, const uint8_t *d, int n) {
+    int split = n > 7;
+    for (int i = 0, left = n - 1; i < n; i++, left--) {
+        one(t, d[i]);
+        if (split && left != 0 && left % 5 == 0) bst_tok_put(t, ',');
+    }
+}
+
+/* Russian splits by how many digits there are rather than by whether the
+   number is short: four and five digits are padded out to two whole groups
+   instead of being read as a year. */
+static void say_number_russian(bst_tok *t, const uint8_t *d, int n) {
+    uint8_t pad[10];
+    switch (n) {
+    case 1: one(t, d[0]); return;
+    case 2: two(t, d); return;
+    case 3: groups(t, d, 1); return;
+    case 4:
+        pad[0] = '0'; pad[1] = '0'; pad[2] = d[0]; pad[3] = ',';
+        memcpy(pad + 4, d + 1, 3);
+        pad[7] = 0;
+        groups(t, pad, 2);
+        return;
+    case 5:
+        pad[0] = '0';
+        memcpy(pad + 1, d, 5);
+        pad[6] = 0;
+        groups(t, pad, 2);
+        return;
+    case 6: groups(t, d, 2); return;
+    default: spell_russian(t, d, n); return;
+    }
+}
+
 void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
+    if (t->img->t.num_kind == 1 && n > 0) { say_number_russian(t, d, n); return; }
     if (n < 5 && n > 0 && d[0] != '0') {
         uint8_t pad[8];
         switch (n) {
