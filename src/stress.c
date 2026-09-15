@@ -67,6 +67,15 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
     for (int k = 0; !keep && k < (int)sizeof img->t.stress_keep; k++)
         if (img->t.stress_keep[k] && fin == img->t.stress_keep[k]) keep = 1;
 
+    /* A word that reaches the pass already accented keeps the accent it has:
+       the rule only chooses where none was chosen. The number tables hand out
+       words marked this way. */
+    int pre = 0;
+    for (int k = 1; k <= n; k++) {
+        int v = s[slot[k]];
+        if (v == 0x36 || v == 0x37 || v == 0x38) pre = k;
+    }
+
     /* Where the accent falls: the last vowel, the one before it, or, in the
        Dutch build, the first. */
     int at = img->t.stress_rule == 5 ? 1 : keep && n > 1 ? n - 1 : n;
@@ -76,6 +85,14 @@ static void romance(const bst_image *img, uint8_t *s, int len, int emph) {
                  ? (img->t.stress_rule == 2 || img->t.stress_rule == 5 ? 0x35 : 0x33)
                  : 0x36;
     int lo = (emph & 1) ? (img->t.stress_rule == 2 ? 0x33 : 0x31) : 0x32;
+    if (pre) {
+        if (s[slot[pre]] == 0x36 && (emph & 1)) s[slot[pre]] = (uint8_t)hi;
+        for (int k = 1; k <= n; k++) {
+            int v = s[slot[k]];
+            if (k != pre && (v == 0 || is_mark(v))) s[slot[k]] = (uint8_t)lo;
+        }
+        return;
+    }
     for (int k = 1; k <= n; k++)
         s[slot[k]] = (uint8_t)(img->t.stress_rule == 4 || k == at ? hi : lo);
 }
