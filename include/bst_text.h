@@ -224,6 +224,12 @@ typedef struct {
     uint8_t  mark_78_take;
     /* The accent mark an emphasised word takes, where it is not 0x35. */
     uint8_t  mark_emph;
+    /* The build asks nothing of a syllable's own opener: every one of them
+       is free to take the accent. */
+    uint8_t  syl_free;
+    /* The backward walk over the marks stops once a syllable has taken the
+       accent, rather than running to the head of the word. */
+    uint8_t  walk_stop;
 
     /* Which syllable of a word carries the accent. Zero is the English rule
        in stress.c. One is the Romance rule: the last syllable but one, or the
