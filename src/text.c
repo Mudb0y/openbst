@@ -333,6 +333,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .trn_between_tenths = 7,
     .dict_silent    = 's',
     .trie_ent       = 3,
     .no_suffix      = 1,

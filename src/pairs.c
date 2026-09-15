@@ -704,9 +704,11 @@ static void trans_french(scan *z, int dur, int pos, int which) {
 
     if (z->emphasis && (at & 2) && which == 2) dur = (int16_t)dur >> 2;
 
+    int tenths = z->img->t.trn_between_tenths;
     if (between_vowels(z, pos) &&
         (((at & 2) && which == 0) || (!(at & 2) && which == 1)))
-        dur = (int16_t)(((int16_t)dur * 11) >> 4);
+        dur = tenths ? (int16_t)((int16_t)(dur * tenths) / 10)
+                     : (int16_t)(((int16_t)dur * 11) >> 4);
 
     if (flanked_simple(z, pos)) {
         int h = (int16_t)dur >> 1;
@@ -714,7 +716,8 @@ static void trans_french(scan *z, int dur, int pos, int which) {
     }
 
     if (which == 2 && glide_run_french(z))
-        dur = (int16_t)(((int16_t)dur * 11) >> 4);
+        dur = tenths ? (int16_t)((int16_t)(dur * tenths) / 10)
+                     : (int16_t)(((int16_t)dur * 11) >> 4);
 
     unsigned k = (unsigned)(((a1(z, z->next.val) & 0x80) == 0) + mc * 2);
     int c8 = s8at(z->img, z->img->t.trans_pitch, k * 6 + (unsigned)which);
@@ -735,7 +738,7 @@ static void trans_french(scan *z, int dur, int pos, int which) {
     }
 
     int thin = (int16_t)(dur - (int16_t)dur / 5);
-    int d = (int16_t)(thin + 1) >> 1;
+    int d = (int16_t)(thin + z->img->t.trn_round) >> 1;
     emit(z, BST_EMIT_TRANS, (unsigned)((mc - 1) * 3 + which), (unsigned)d, c8, c7);
 }
 
