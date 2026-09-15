@@ -1345,6 +1345,9 @@ const bst_tabmap BST_MAP_2006_DUT = {
 };
 /* FRE: 187 functions matched, 2752 addresses carried */
 const bst_tabmap BST_MAP_2006_FRE = {
+    .num_kind          = 4,
+    .num_group_kind    = 3,
+    .num_two_kind      = 3,
     .pair_prescan      = 1,
     .open_plain    = 1,
     .trn_dur_wide  = 1,

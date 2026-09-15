@@ -36,8 +36,27 @@ static void two_germanic(bst_tok *t, const uint8_t *d) {
     ten(t, d[0]);
 }
 
+/* French counts the seventies off the sixty word and the nineties off the
+   eighty one, both finishing on a teen, and joins a unit one with "et" except
+   after eighty. */
+static void two_french(bst_tok *t, const uint8_t *d) {
+    if (d[0] == '0') { one(t, d[1]); return; }
+    if (d[0] == '1') { teen(t, d[1]); return; }
+    if (d[0] == '7' || d[0] == '9') {
+        ten(t, d[0] == '7' ? '6' : '8');
+        if (d[0] == '7' && d[1] == '1') bst_tok_say(t, STR(t, BST_S_AND));
+        teen(t, d[1]);
+        return;
+    }
+    ten(t, d[0]);
+    if (d[1] == '1') { if (d[0] != '8') bst_tok_say(t, STR(t, BST_S_AND)); }
+    else if (d[1] == '0') return;
+    one(t, d[1]);
+}
+
 static void two(bst_tok *t, const uint8_t *d) {
     if (t->img->t.num_two_kind == 1) { two_germanic(t, d); return; }
+    if (t->img->t.num_two_kind == 3) { two_french(t, d); return; }
     if (d[0] == '0') {
         if (d[1] == '0') return;
         /* Russian and the Romance builds have no word for the empty tens
@@ -181,8 +200,27 @@ static void say_number_german(bst_tok *t, const uint8_t *d, int n) {
     }
 }
 
+/* French reads up to four digits and spells anything longer, and its four are
+   two whole groups rather than the year English makes of them. */
+static void say_number_french(bst_tok *t, const uint8_t *d, int n) {
+    uint8_t pad[10];
+    if (n > 4 || d[0] == '0') { spell(t, d, n); return; }
+    switch (n) {
+    case 1: one(t, d[0]); return;
+    case 2: two(t, d); return;
+    case 3: groups(t, d, 1); return;
+    default:
+        pad[0] = '0'; pad[1] = '0'; pad[2] = d[0]; pad[3] = ',';
+        memcpy(pad + 4, d + 1, 3);
+        pad[7] = 0;
+        groups(t, pad, 2);
+        return;
+    }
+}
+
 void bst_say_number(bst_tok *t, const uint8_t *d, int n) {
     if (n < 1) return;
+    if (t->img->t.num_kind == 4) { say_number_french(t, d, n); return; }
     if (t->img->t.num_kind == 1) { say_number_russian(t, d, n); return; }
     if (t->img->t.num_kind == 2 || t->img->t.num_kind == 3)
         { say_number_german(t, d, n); return; }
