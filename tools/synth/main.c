@@ -21,7 +21,7 @@ static int read_tables(bst_tables *t, const char *dll, const char *tables) {
     fclose(f);
     int rc;
     if (tables) {
-        bst_offsets o = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        bst_offsets o = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         size_t lb = 0, os = 0, nk = 0;
         size_t *fields[9] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog,
                               &o.duration, &lb, &os, &nk };

@@ -83,6 +83,15 @@ static inline int16_t lattice(bst_synth *s, int32_t x) {
     }
     s->b[0] = x;
 
+    if (s->t->out_8bit) {
+        /* Rounded, shifted by ten, clamped to a signed byte. The engine adds
+           a hundred and twenty eight and hands the host that byte; widening
+           it back keeps the step it actually produced. */
+        x = (x + 0x200) >> 10;
+        if (x < -128) x = -128;
+        if (x > 127) x = 127;
+        return (int16_t)(x * 256);
+    }
     x >>= s->t->out_shift ? s->t->out_shift : 3;
     if (x < -32767) x = -32767;
     if (x > 32767) x = 32767;
@@ -111,7 +120,7 @@ size_t bst_synth_run(bst_synth *s, int16_t *out, size_t max) {
 /* Where each table sits in the 1995 build. Other builds carry the same tables
    at their own offsets, and the ones with no log pair leave those zero. */
 const bst_offsets BST_OFFSETS_1995 = {
-    0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20, 0, 0, 0
+    0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20, 0, 0, 0, 0
 };
 
 int bst_tables_load_at(bst_tables *t, const void *image, size_t len,
@@ -126,6 +135,7 @@ int bst_tables_load_at(bst_tables *t, const void *image, size_t len,
     memcpy(t->gain,  p + o->gain,  sizeof t->gain);
     t->out_shift = o->out_shift;
     t->noise_kind = o->noise_kind;
+    t->out_8bit = o->out_8bit;
     /* The 2006 builds have no log pair: their interpolation is not in the
        log domain, and the lattice never reads them. */
     if (o->log_bytes) {

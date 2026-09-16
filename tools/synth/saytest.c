@@ -90,12 +90,12 @@ int main(int argc, char **argv) {
     }
     bst_tables tab;
     if (tablespec) {
-        bst_offsets o = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        size_t lb = 0, os = 0, nk = 0;
-        size_t *fields[9] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog,
-                              &o.duration, &lb, &os, &nk };
+        bst_offsets o = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        size_t lb = 0, os = 0, nk = 0, e8 = 0;
+        size_t *fields[10] = { &o.pulse, &o.noise, &o.gain, &o.log, &o.alog,
+                               &o.duration, &lb, &os, &nk, &e8 };
         const char *q = tablespec;
-        for (int i = 0; i < 9 && q && *q; i++) {
+        for (int i = 0; i < 10 && q && *q; i++) {
             char *e = NULL;
             *fields[i] = (size_t)strtoul(q, &e, 16);
             q = (e && *e == ',') ? e + 1 : NULL;
@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
         o.log_bytes = (int)lb;
         o.out_shift = (int)os;
         o.noise_kind = (int)nk;
+        o.out_8bit = (int)e8;
         if (bst_tables_load_at(&tab, d, n, &o) < 0) return 1;
     } else if (bst_tables_load(&tab, d, n) < 0) {
         return 1;

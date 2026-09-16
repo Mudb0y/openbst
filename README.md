@@ -35,7 +35,14 @@ accent pass, the pair scan, the contour, the segment targets, the frames, the
 interpolator and the lattice.
 
 The six 1998 modules are frame for frame exact: 226 words, 20793 frames, none
-differing.
+differing. Their audio is exact too, against the original lattice run under
+the emulator: 144 utterances, sample for sample, none differing. That last
+test came late. The 16-bit oracle intercepts above the synthesizer, so for a
+long time nothing compared the 1998 audio against anything, and it was wrong
+four ways at once -- the excitation and gain tables read out of the language
+module rather than the core module all six share, the output treated as
+sixteen bits when the engine synthesizes in eight, the 1995 noise generator
+instead of its own, and the wrong voice to start on.
 
 The thirteen 2006 builds are exact on a sentence each, on 728 numbers, on a
 hundred words each for the twelve non-Russian builds, and on fifty Russian
@@ -142,8 +149,10 @@ is already what it produces.
 
 `include` is the public header and the internal ones. `src` is the engine, a
 file to a stage, with `src/speak.c` as the front end over them and `src/data`
-as the tables. `tests` is thirty-two scripts. `tools/synth` builds the library and
-its drivers, `tools/oracle` runs the original binaries to compare against, and
+as the tables. `tests` is thirty-three scripts. `tools/synth` builds the library and
+its drivers, `tools/oracle` runs the original binaries to compare against -- the 32-bit
+one, the 16-bit one that drives a language module, and `kngoracle`, which
+drives the 1998 lattice itself -- and
 `tools/analysis` holds the scripts that found the tables in the first place.
 `.github/workflows/ci.yml` builds with both compilers, runs the self-test,
 installs the library and links a program against it both ways, and builds the

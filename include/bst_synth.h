@@ -28,6 +28,11 @@ typedef struct {
        Three in the earlier builds, five in the 2006 ones. Zero means three. */
     int     out_shift;
     int     noise_kind;
+    /* The 1998 modules are an eight-bit synthesizer: they round rather than
+       truncate, shift by ten, clamp to a signed byte and hand the host an
+       unsigned one. Everything they say carries that quantisation, so it is
+       kept and widened to sixteen bits rather than smoothed away. */
+    int     out_8bit;
 } bst_tables;
 
 /* Parameter interpolator. The engine never jumps to a target: each frame it
@@ -126,8 +131,10 @@ typedef struct {
     /* The lattice's output shift; zero means three. */
     int    out_shift;
     /* Which noise generator: zero for the earlier builds' sixteen-bit
-       multiply-add, one for the 2006 builds' thirty-two-bit one. */
+       multiply-add, one for the 2006 and 1998 builds' thirty-two-bit one. */
     int    noise_kind;
+    /* Set for the 1998 modules, which synthesize in eight bits. */
+    int    out_8bit;
 } bst_offsets;
 
 extern const bst_offsets BST_OFFSETS_1995;
