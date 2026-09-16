@@ -6,7 +6,9 @@
 /* The tables are read from the image the caller supplies; nothing here is a
    copy of the original's data. */
 
+#ifndef BST_NO_TRACE
 int bst_trace = 0;
+#endif
 
 /* The 1995 build's table directory. Every address here was found by reading
    the original's code; nothing is inferred from another build. */

@@ -223,8 +223,8 @@ static int try_at(const bst_image *img, const unsigned char *t, int len, int pos
             rule_fields(img, ridx, &prio, &next, &patoff, &outoff);
             if ((prio & 0xFF) >= threshold) {
                 if (bst_trace)
-                    fprintf(stderr, "  cand pos=%d span=%d ridx=%d prio=%04x"
-                                    " over threshold %04x\n",
+                    bst_tracef("  cand pos=%d span=%d ridx=%d prio=%04x"
+                               " over threshold %04x\n",
                             pos, span, ridx, prio, threshold);
                 break;
             }
@@ -238,7 +238,7 @@ static int try_at(const bst_image *img, const unsigned char *t, int len, int pos
             int ok = match(img, pat, ti + 1, t, len, pos + span, 1) &&
                      match(img, pat, ti - 1, t, len, pos - 1, -1);
             if (bst_trace)
-                fprintf(stderr, "  cand pos=%d span=%d ridx=%d prio=%04x pat='%s' %s\n",
+                bst_tracef("  cand pos=%d span=%d ridx=%d prio=%04x pat='%s' %s\n",
                         pos, span, ridx, prio, pat, ok ? "MATCH" : "no");
             if (ok) {
                 best = ridx;
@@ -279,7 +279,7 @@ void bst_lts_build(const bst_image *img, const bst_word *w, bst_builder *bp,
         rule_fields(img, ridx, &prio, &next, &patoff, &outoff);
         const char *o = pat_at(img, img->t.outputs + (uint32_t)outoff);
         if (bst_trace)
-            fprintf(stderr, "lts pos=%d used=%d ridx=%d outoff=%04x at=%08x\n",
+            bst_tracef("lts pos=%d used=%d ridx=%d outoff=%04x at=%08x\n",
                     pos, used, ridx, outoff, img->t.outputs + (unsigned)outoff);
         for (; *o; o++) bst_build_emit(img, &b, bst_uncode(img, (unsigned char)*o));
         pos += used > 0 ? used : 1;

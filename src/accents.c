@@ -313,8 +313,8 @@ static int accents_french(const bst_image *img, uint8_t *s, int len,
     if (slot) s[slot] = (uint8_t)slotcode;
 
     if (bst_trace)
-        fprintf(stderr, "acc n=%d last=%d latest=%d w=%d/%d code=%02x type=%02x"
-                        " dx=%d cx=%d out=%02x\n",
+        bst_tracef("acc n=%d last=%d latest=%d w=%d/%d code=%02x type=%02x"
+                   " dx=%d cx=%d out=%02x\n",
                 n, last, latest, w, wmark, code, type, dx, cx, out);
 
     if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
@@ -470,8 +470,8 @@ static int accents_japanese(const bst_image *img, uint8_t *s, int len,
     }
 
     if (bst_trace)
-        fprintf(stderr, "acc n=%d first=%d l14=%d l24=%d shape=%02x type=%02x"
-                        " hi=%02x lo=%02x out=%02x\n",
+        bst_tracef("acc n=%d first=%d l14=%d l24=%d shape=%02x type=%02x"
+                   " hi=%02x lo=%02x out=%02x\n",
                 n, first, l14, l24, shape, type, hi, lo, out);
 
     if (st->tail >= 0 && st->tail < len && s[st->tail] == 0)
@@ -648,8 +648,8 @@ int bst_accents(const bst_image *img, uint8_t *s, int len, bst_accent_state *st)
     }
 
     if (bst_trace)
-        fprintf(stderr, "acc n=%d first=%d last=%d kind=%d nextkind=%d emph=%d"
-                        " shape=%02x type=%02x level=%d lead=%02x codeA=%02x\n",
+        bst_tracef("acc n=%d first=%d last=%d kind=%d nextkind=%d emph=%d"
+                   " shape=%02x type=%02x level=%d lead=%02x codeA=%02x\n",
                 n, first, last, kind, nextkind, emph, shape, type, st->level,
                 lead, codeA);
 

@@ -942,7 +942,7 @@ void bst_tok_init(bst_tok *t, const bst_image *img, const char *text) {
     t->img = img;
     if (img->t.xlat_kind && bst_translit(img, text, t->xbuf, sizeof t->xbuf) >= 0) {
         text = t->xbuf;
-        if (bst_trace) fprintf(stderr, "xlat '%s'\n", t->xbuf);
+        if (bst_trace) bst_tracef("xlat '%s'\n", t->xbuf);
     }
     t->text = (const uint8_t *)text;
     t->tn = (int)strlen(text);

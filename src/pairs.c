@@ -231,8 +231,8 @@ static int vowel_simple(scan *z, int pos, int which) {
     }
     d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
-        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
-                        " edge=%d -> %02x\n",
+        bst_tracef("vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                   " edge=%d -> %02x\n",
                 ph, which, base, z->stress.val, mode, z->edge, (unsigned)d & 0xFF);
     return (int16_t)d;
 }
@@ -273,8 +273,8 @@ static int vowel_italian(scan *z, int pos, int which) {
     if ((int16_t)d < 10) d = 10;
     d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
-        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
-                        " edge=%d -> %02x\n",
+        bst_tracef("vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                   " edge=%d -> %02x\n",
                 ph, which, base, z->stress.val, mode, z->edge, (unsigned)d & 0xFF);
     return (int16_t)d;
 }
@@ -338,8 +338,8 @@ static int vowel_german(scan *z, int pos, int which) {
         d = 0x1E;
     d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
-        fprintf(stderr, "vdur ph=%02x which=%d row=%d base=%02x stress=%d"
-                        " mode=%d edge=%d -> %02x\n",
+        bst_tracef("vdur ph=%02x which=%d row=%d base=%02x stress=%d"
+                   " mode=%d edge=%d -> %02x\n",
                 ph, which, row, base, z->stress.val, mode, z->edge,
                 (unsigned)d & 0xFF);
     return (int16_t)d;
@@ -385,8 +385,8 @@ static int vowel_french(scan *z, int pos, int which) {
     if ((int16_t)d < 0x1E) d = 0x1E;
     d = (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);
     if (bst_trace)
-        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
-                        " edge=%d -> %02x\n",
+        bst_tracef("vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                   " edge=%d -> %02x\n",
                 ph, which, base, z->stress.val, mode, z->edge,
                 (unsigned)d & 0xFF);
     return (int16_t)d;
@@ -403,7 +403,7 @@ static int vowel_japanese(scan *z, int pos, int which) {
     rate_mode(z);
     int d = (int16_t)(s16at(z->img, z->img->t.sound_add, (unsigned)mc * 2) + base);
     if (bst_trace)
-        fprintf(stderr, "vdur ph=%02x which=%d base=%02x -> %02x\n",
+        bst_tracef("vdur ph=%02x which=%d base=%02x -> %02x\n",
                 z->s[pos], which, base, (unsigned)d & 0xFF);
     return d;
 }
@@ -469,8 +469,8 @@ static int vowel_duration(scan *z, int pos, int which) {
     else if (ph == 0x24 && d < 5) d = 5;
     else if (d < 0x1E) d = 0x1E;
     if (bst_trace)
-        fprintf(stderr, "vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
-                        " edge=%d nv=%02x -> %02x\n",
+        bst_tracef("vdur ph=%02x which=%d base=%02x stress=%d mode=%d"
+                   " edge=%d nv=%02x -> %02x\n",
                 ph, which, base, z->stress.val, mode, z->edge, nv,
                 (unsigned)((int16_t)d >> z->img->t.vowel_dur_shift) & 0xff);
     return (int16_t)((int16_t)d >> z->img->t.vowel_dur_shift);

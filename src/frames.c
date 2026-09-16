@@ -190,7 +190,7 @@ static int expand(bst_gen *g, bst_seg_rec *r) {
             if (g->flags & 4) d = (int16_t)(d << 2);
             int16_t dd = (int16_t)d;
             if (bst_trace)
-                fprintf(stderr, "expand nib=%x u=%04x dur=%02x -> %04x\n",
+                bst_tracef("expand nib=%x u=%04x dur=%02x -> %04x\n",
                         b0 & 0x0F, u, tp->dur, (uint16_t)dd);
             if (enqueue(g, pb, dd) == -2) { fail(g); return -2; }
             total = (int16_t)(total + dd);
@@ -340,7 +340,7 @@ static int interp_clock(bst_gen *g) {
               + g->pend.dur * dm + g->segleft;
         }
     }
-    if (bst_trace) fprintf(stderr, "clk dur=%d slope=%d mid=%d segleft=%d -> %d\n",
+    if (bst_trace) bst_tracef("clk dur=%d slope=%d mid=%d segleft=%d -> %d\n",
                            g->pend.dur, g->pend.slope, g->mid, g->segleft, v);
     g->pclock = (int16_t)v;
     if (g->pend.kind == 0) {
@@ -396,7 +396,7 @@ static void compensate(bst_gen *g) {
 
 static void emit(bst_gen *g) {
     if (bst_trace)
-        fprintf(stderr, "gain dur=%04x gclock=%04x acc=%04x target=%04x\n",
+        bst_tracef("gain dur=%04x gclock=%04x acc=%04x target=%04x\n",
                 (uint16_t)g->dur, (uint16_t)g->gclock, (uint16_t)g->gain_acc,
                 (uint16_t)g->gain_target);
     compensate(g);
@@ -449,7 +449,7 @@ static void pitch_step(bst_gen *g) {
     }
     g->pitch_period = (int16_t)(g->pitch_acc >> 8);
     if (bst_trace)
-        fprintf(stderr, "pitch n=%d dur=%04x pclock=%04x acc=%04x target=%04x -> %d\n",
+        bst_tracef("pitch n=%d dur=%04x pclock=%04x acc=%04x target=%04x -> %d\n",
                 g->nout, (uint16_t)g->dur, (uint16_t)g->pclock,
                 (uint16_t)g->pitch_acc, (uint16_t)g->pitch_target, g->pitch_period);
 }
@@ -481,7 +481,7 @@ static void build(bst_gen *g, const uint8_t *rec) {
     } else if (t == 0) {
         g->exc = 0;
         g->dur = g->left;
-        if (bst_trace) fprintf(stderr, "sil left=%d voiced=%d\n", g->left, g->voiced);
+        if (bst_trace) bst_tracef("sil left=%d voiced=%d\n", g->left, g->voiced);
         int16_t keep = g->dur;
         if (g->left < g->img->t.unvoiced_dur) {
             silence_frame(g);
@@ -608,11 +608,11 @@ static void build(bst_gen *g, const uint8_t *rec) {
     }
 
     if (bst_trace)
-        fprintf(stderr, "P acc=%04x tgt=%04x pclk=%04x dur=%d\n",
+        bst_tracef("P acc=%04x tgt=%04x pclk=%04x dur=%d\n",
                 (unsigned)(uint16_t)g->pitch_acc, (unsigned)(uint16_t)g->pitch_target,
                 (unsigned)(uint16_t)g->pclock, (int)g->dur);
     if (0)
-        fprintf(stderr, "Q acc=%04x tgt=%04x pclk=%04x dur=%d\n",
+        bst_tracef("Q acc=%04x tgt=%04x pclk=%04x dur=%d\n",
                 (unsigned)(uint16_t)g->pitch_acc, (unsigned)(uint16_t)g->pitch_target,
                 (unsigned)(uint16_t)g->pclock, (int)g->dur);
     for (int i = 0; i < BST_ORDER; i++) {
@@ -639,7 +639,7 @@ int bst_generate(bst_gen *g) {
     memset(g->frame, 0, sizeof g->frame);
     load_rate(g, g->rate);
 
-    if (ito_take(g, &g->inton) != 2) { if (bst_trace) fprintf(stderr, "exit1\n"); return g->nout; }
+    if (ito_take(g, &g->inton) != 2) { if (bst_trace) bst_tracef("exit1\n"); return g->nout; }
 
     int qi = -1;
     int first = 1;
@@ -649,12 +649,12 @@ int bst_generate(bst_gen *g) {
         int consumed = 0;
         while (g->segleft < 1) {
             bst_seg_rec *r = seg_peek(g);
-            if (!r) { if (bst_trace) fprintf(stderr, "exit2\n"); return g->nout; }
+            if (!r) { if (bst_trace) bst_tracef("exit2\n"); return g->nout; }
             int16_t was = g->cur.count;
             if ((r->index & 0xF000) == 0) {
-                if (seg_take(g, &g->cur) != 2) { if (bst_trace) fprintf(stderr, "exit3\n"); return g->nout; }
+                if (seg_take(g, &g->cur) != 2) { if (bst_trace) bst_tracef("exit3\n"); return g->nout; }
                 if (g->inton.kind == 1 && g->pclock < 1 && g->segleft < 1 && g->left < 1)
-                    { if (bst_trace) fprintf(stderr, "exit4\n"); return g->nout; }
+                    { if (bst_trace) bst_tracef("exit4\n"); return g->nout; }
                 g->cur.count = (int16_t)(g->cur.count + was);
                 int v = g->cur.b + g->segleft;
                 if (v < 1) v = 0;
@@ -692,7 +692,7 @@ int bst_generate(bst_gen *g) {
                 g->pend.period = g->inton.period;
                 g->pend.dur = g->inton.dur;
                 g->pend.slope = g->inton.slope;
-                if (g->pend.kind != 1 && ito_take(g, &g->inton) != 2) { if (bst_trace) fprintf(stderr, "exit5\n"); return g->nout; }
+                if (g->pend.kind != 1 && ito_take(g, &g->inton) != 2) { if (bst_trace) bst_tracef("exit5\n"); return g->nout; }
             } while (was == 0 && g->pend.slope == 0 && g->pend.kind != 1);
             g->pitch_period = g->pend.period;
             g->pitch_acc = (uint16_t)(g->pend.period << 8);
@@ -700,10 +700,10 @@ int bst_generate(bst_gen *g) {
 
         if (consumed != 0) {
             if (bst_trace)
-                fprintf(stderr, "step consumed=%d pend.dur=%d segleft=%d\n",
+                bst_tracef("step consumed=%d pend.dur=%d segleft=%d\n",
                         consumed, (int)g->pend.dur, (int)g->segleft);
             g->pend.dur = (int16_t)(g->pend.dur - consumed);
-            if (g->pend.dur < -1) { fail(g); { if (bst_trace) fprintf(stderr, "exit6\n"); return g->nout; } }
+            if (g->pend.dur < -1) { fail(g); { if (bst_trace) bst_tracef("exit6\n"); return g->nout; } }
             interp_clock(g);
         }
         if (g->pclock < 1 && interp_clock(g) == -2) break;
@@ -711,8 +711,8 @@ int bst_generate(bst_gen *g) {
         while (g->left < 1) {
             qi = next_record(g, qi, first);
             first = 0;
-            if (qi < 0) { if (bst_trace) fprintf(stderr, "exit7\n"); return g->nout; }
-            if (seg_entry(g, g->q[qi].rec) == -2) { if (bst_trace) fprintf(stderr, "exit8\n"); return g->nout; }
+            if (qi < 0) { if (bst_trace) bst_tracef("exit7\n"); return g->nout; }
+            if (seg_entry(g, g->q[qi].rec) == -2) { if (bst_trace) bst_tracef("exit8\n"); return g->nout; }
         }
 
         build(g, g->q[qi].rec);
@@ -747,9 +747,9 @@ int bst_generate(bst_gen *g) {
         }
 
         if (g->pclock < 1 && g->mid == g->pclock && g->segleft > 0 &&
-            interp_clock(g) == -2) { fail(g); { if (bst_trace) fprintf(stderr, "exit9\n"); return g->nout; } }
-        if (g->done) { if (bst_trace) fprintf(stderr, "exit10\n"); return g->nout; }
+            interp_clock(g) == -2) { fail(g); { if (bst_trace) bst_tracef("exit9\n"); return g->nout; } }
+        if (g->done) { if (bst_trace) bst_tracef("exit10\n"); return g->nout; }
         emit(g);
     }
-    { if (bst_trace) fprintf(stderr, "exit11\n"); return g->nout; }
+    { if (bst_trace) bst_tracef("exit11\n"); return g->nout; }
 }

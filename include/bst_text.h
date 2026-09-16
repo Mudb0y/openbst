@@ -536,8 +536,19 @@ typedef struct {
 /* Set to print each stage's working as it runs -- the stream as assembled,
    after the rule pass and at the pair scan, the transition records, the vowel
    durations and the gain smoother's inputs. What a build is compared against
-   the engine on when its frames stop agreeing. */
+   the engine on when its frames stop agreeing.
+
+   It is a variable so a driver can turn it on part way through a run, which
+   also means the calls reach the linker in every ordinary build and drag
+   vfprintf in behind them. BST_NO_TRACE makes it a constant instead, so the
+   blocks fold away and nothing in the library names stdio at all. */
+#ifdef BST_NO_TRACE
+enum { bst_trace = 0 };
+#define bst_tracef(...) ((void)0)
+#else
 extern int bst_trace;
+#define bst_tracef(...) fprintf(stderr, __VA_ARGS__)
+#endif
 
 /* Returns a pointer to `need` bytes at a virtual address, or NULL. */
 const uint8_t *bst_at(const bst_image *img, uint32_t va, size_t need);

@@ -383,12 +383,12 @@ void bst_word_stress(const bst_image *img, uint8_t *s, int len, int emph, int mo
     }
 
     if (bst_trace) {
-        fprintf(stderr, "stress n=%d chosen=%d emph=%d unstressed=%d tail=%d flags",
+        bst_tracef("stress n=%d chosen=%d emph=%d unstressed=%d tail=%d flags",
                 n, chosen, emph, unstressed, tail);
-        for (int k = 1; k <= tail; k++) fprintf(stderr, " %02x", flags[k]);
-        fprintf(stderr, " marks");
-        for (int k = 1; k <= tail; k++) fprintf(stderr, " %02x", s[slot[k]]);
-        fprintf(stderr, "\n");
+        for (int k = 1; k <= tail; k++) bst_tracef(" %02x", flags[k]);
+        bst_tracef(" marks");
+        for (int k = 1; k <= tail; k++) bst_tracef(" %02x", s[slot[k]]);
+        bst_tracef("\n");
     }
 
     /* Russian: the accent takes the strong mark, the syllable just before it

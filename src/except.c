@@ -286,7 +286,7 @@ int bst_except(bst_tok *t, const uint8_t *word, int wlen,
         if (!more) break;
     }
     if (bst_trace)
-        fprintf(stderr, "except '%.*s' best=%d bestlen=%d/%d\n",
+        bst_tracef("except '%.*s' best=%d bestlen=%d/%d\n",
                 wlen, (const char *)word, best, bestlen, wlen);
     if (!best || bestlen != wlen) return 0;
 
@@ -300,9 +300,9 @@ int bst_except(bst_tok *t, const uint8_t *word, int wlen,
     int m = 0;
     for (int i = from; i <= to && m < max; i++) out[m++] = rec[i];
     if (bst_trace) {
-        fprintf(stderr, "  rec n=%d from=%d to=%d:", n, from, to);
-        for (int i = 0; i < n; i++) fprintf(stderr, " %02x", rec[i]);
-        fprintf(stderr, "\n");
+        bst_tracef("  rec n=%d from=%d to=%d:", n, from, to);
+        for (int i = 0; i < n; i++) bst_tracef(" %02x", rec[i]);
+        bst_tracef("\n");
     }
     return m;
 }

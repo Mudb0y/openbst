@@ -158,9 +158,9 @@ int bst_dict_lookup(const bst_image *img, const bst_word *w, bst_recs *out) {
     if (!encode(img, stem, enc, (int)sizeof enc)) return 0;
 
     if (bst_trace) {
-        fprintf(stderr, "dict key");
-        for (int q = 0; q <= enc[0]; q++) fprintf(stderr, " %02x", enc[q]);
-        fprintf(stderr, "\n");
+        bst_tracef("dict key");
+        for (int q = 0; q <= enc[0]; q++) bst_tracef(" %02x", enc[q]);
+        bst_tracef("\n");
     }
     int bucket = enc[1] - 1;
     if (bucket < 0 || bucket >= 15) return 0;
@@ -213,10 +213,10 @@ found:
             p += (uint32_t)decode_one(img, u8at(img, p), u8at(img, p + 1), out);
     }
     if (bst_trace) {
-        fprintf(stderr, "dict recs");
+        bst_tracef("dict recs");
         for (int q = 0; q < out->n; q++)
-            fprintf(stderr, " %c%d,%d", out->rec[q].type, out->rec[q].a, out->rec[q].b);
-        fprintf(stderr, "\n");
+            bst_tracef(" %c%d,%d", out->rec[q].type, out->rec[q].a, out->rec[q].b);
+        bst_tracef("\n");
     }
     return 1;
 }
