@@ -1,0 +1,66 @@
+name: ci
+
+# Only the self-test can run here. Every other test compares against an
+# original binary under the emulator, and those binaries are not in this
+# repository.
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ gcc, clang ]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build and self-test
+        run: make CC=${{ matrix.cc }} selftest
+
+      # The library is only useful if what gets installed is what links, so
+      # install it and build something small against both forms of it.
+      - name: Install and link against it
+        run: |
+          make install PREFIX=/usr DESTDIR="$PWD/staging"
+          cat > demo.c <<'EOF'
+          #include <stdio.h>
+          #include <stdlib.h>
+          #include "bst.h"
+          int main(void) {
+              bst *h = bst_open("2006ENG");
+              if (!h) return 1;
+              long n = bst_length(h, "Hello there.");
+              int16_t *pcm = malloc((size_t)n * sizeof *pcm);
+              if (!pcm) return 1;
+              long got = bst_say(h, "Hello there.", pcm, n);
+              printf("%ld samples at %d Hz\n", got, bst_rate(h));
+              free(pcm);
+              bst_close(h);
+              return got > 0 ? 0 : 1;
+          }
+          EOF
+          ${{ matrix.cc }} -O2 -Istaging/usr/include -o demo-static demo.c staging/usr/lib/libbst.a
+          ./demo-static
+          ${{ matrix.cc }} -O2 -Istaging/usr/include -o demo-shared demo.c -Lstaging/usr/lib -lbst
+          LD_LIBRARY_PATH=staging/usr/lib ./demo-shared
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31.11.1
+
+      # nix build runs the self-test itself, in its check phase.
+      - run: nix flake check
+      - run: nix build
+      - run: nix run . -- --list

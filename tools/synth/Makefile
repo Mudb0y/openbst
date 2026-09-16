@@ -47,8 +47,14 @@ $(BUILD)/data_%.o: $(SRC)/data/%.c $(INC)/bst_text.h
 $(BUILD)/libbst.a: $(LIBOBJ)
 	$(AR) rcs $@ $^
 
-$(BUILD)/libbst.so: $(LIBOBJ)
-	$(CC) -shared -o $@ $^
+# The shared library carries a soname, so that a consumer links against the
+# major version rather than the file that happens to be there.
+SOVER := 0
+$(BUILD)/libbst.so.$(SOVER): $(LIBOBJ)
+	$(CC) -shared -Wl,-soname,libbst.so.$(SOVER) -o $@ $^
+
+$(BUILD)/libbst.so: $(BUILD)/libbst.so.$(SOVER)
+	ln -sf libbst.so.$(SOVER) $@
 
 $(BUILD)/bstspeak: $(BUILD)/drv_bstspeak.o $(LIBOBJ)
 	$(CC) $^ -o $@
@@ -84,7 +90,8 @@ $(foreach b,$(filter-out synth,$(BINS)),$(eval $(call BINRULE,$(b))))
 clean:
 	rm -f $(BUILD)/lib_*.o $(BUILD)/drv_*.o $(BUILD)/data_*.o \
 	      $(addprefix $(BUILD)/,$(BINS)) \
-	      $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak \
+	      $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/libbst.so.$(SOVER) \
+	      $(BUILD)/bstspeak \
 	      $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest
 
 .PHONY: all clean

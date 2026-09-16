@@ -31,8 +31,21 @@ test: all oracle
 	if [ $$fail -eq 0 ]; then echo "all tests passed"; \
 	else echo "$$fail test scripts failed"; exit 1; fi
 
+PREFIX ?= /usr/local
+DESTDIR ?=
+
+# The library, its header and the command. Nothing else: the test drivers and
+# the analysis tools stay in the tree they were built in.
+install: all
+	install -d $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/include $(DESTDIR)$(PREFIX)/bin
+	install -m 644 $(BUILD)/libbst.a $(DESTDIR)$(PREFIX)/lib/
+	install -m 755 $(BUILD)/libbst.so.0 $(DESTDIR)$(PREFIX)/lib/
+	ln -sf libbst.so.0 $(DESTDIR)$(PREFIX)/lib/libbst.so
+	install -m 644 include/bst.h $(DESTDIR)$(PREFIX)/include/
+	install -m 755 $(BUILD)/bstspeak $(DESTDIR)$(PREFIX)/bin/
+
 clean:
 	$(MAKE) -C tools/synth clean
 	$(MAKE) -C tools/oracle clean
 
-.PHONY: all oracle lift selftest golden test clean
+.PHONY: all oracle lift selftest golden test install clean

@@ -59,8 +59,13 @@ originals said.
     make
 
 That writes `build/libbst.a`, `build/libbst.so` and `build/bstspeak`. There
-are no dependencies beyond a C compiler and make. A Nix development shell is
-in `flake.nix`.
+are no dependencies beyond a C compiler and make; it is built here with both
+gcc and clang, which produce the same samples.
+
+`make install PREFIX=/usr/local` installs the library, `bst.h` and the
+command. With Nix, `nix build` builds the same thing and runs the self-test on
+the way, `nix run .` is `bstspeak`, and `nix develop` is the shell the
+analysis tools want.
 
 ## Using it
 
@@ -135,3 +140,6 @@ file to a stage, with `src/speak.c` as the front end over them and `src/data`
 as the tables. `tests` is thirty-one scripts. `tools/synth` builds the library and
 its drivers, `tools/oracle` runs the original binaries to compare against, and
 `tools/analysis` holds the scripts that found the tables in the first place.
+`.github/workflows/ci.yml` builds with both compilers, runs the self-test,
+installs the library and links a program against it both ways, and builds the
+flake. It cannot run the other thirty tests, for want of the binaries.
