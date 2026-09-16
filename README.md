@@ -149,7 +149,7 @@ is already what it produces.
 
 `include` is the public header and the internal ones. `src` is the engine, a
 file to a stage, with `src/speak.c` as the front end over them and `src/data`
-as the tables. `tests` is thirty-three scripts. `tools/synth` builds the library and
+as the tables. `tests` is thirty-four scripts. `tools/synth` builds the library and
 its drivers, `tools/oracle` runs the original binaries to compare against -- the 32-bit
 one, the 16-bit one that drives a language module, and `kngoracle`, which
 drives the 1998 lattice itself -- and

@@ -21,7 +21,7 @@ a bug in the change.
 
 ## The gate
 
-`make test` is thirty-three scripts and is the real gate, but thirty of them need
+`make test` is thirty-four scripts and is the real gate, but thirty-one of them need
 the original binaries, which are not in this repository and never will be. They
 go under `dll/1995`, `dll/1998` and `dll/2006`.
 
