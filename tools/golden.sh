@@ -16,7 +16,7 @@ w=$root/tests/words2006
 "$st" --write 1995 "$root/dll/1995/B32_TTS.DLL" "$w/eng.txt" >> "$out"
 for l in ENG:eng DUT:dut FRN:fre GRM:ger ITL:ita SPN:spa; do
     "$st" --write "1998${l%%:*}" "$root/dll/1998/KGM${l%%:*}.DLL" \
-          "$w/${l##*:}.txt" >> "$out"
+          --core "$root/dll/1998/KNGMM.DLL" "$w/${l##*:}.txt" >> "$out"
 done
 for l in ara dut eng fre ger gre heb ita jpn pol por rus spa; do
     u=$(echo "$l" | tr a-z A-Z)

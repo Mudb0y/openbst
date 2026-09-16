@@ -24,6 +24,9 @@ typedef struct {
     int               rate;    /* what the build asks the host to play at */
     int               voice;   /* the voice the host starts it on */
     bst_offsets       lat;     /* where the lattice tables sit in the file */
+    /* The 1998 modules keep the excitation and gain tables in the core module
+       rather than the language one, so those builds need both files. */
+    int               core_tables;
 } build;
 
 /* The 1995 and 1998 builds start on voice one, the 2006 builds on voice
@@ -31,47 +34,47 @@ typedef struct {
    them, and is in bst_open. */
 static const build BUILDS[] = {
     { "1995",    &BST_MAP_1995,     0, 11025, 1,
-      { 0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20, 0, 0, 0 } },
+      { 0x17E48, 0x17E08, 0x18488, 0x17A08, 0x17C08, 0x18C20, 0, 0, 0 }, 0 },
 
     { "1998ENG", &BST_MAP_1998_ENG, 1, 11025, 1,
-      { 0xC870, 0xC830, 0xCEB0, 0x7AD20, 0x7AF20, 0, 0, 0, 0 } },
+      { 0xC870, 0xC830, 0xCEB0, 0x7AD20, 0x7AF20, 0, 0, 0, 0 }, 1 },
     { "1998DUT", &BST_MAP_1998_DUT, 1, 11025, 1,
-      { 0xC870, 0xC830, 0xCEB0, 0x26866, 0x26A66, 0, 0, 0, 0 } },
+      { 0xC870, 0xC830, 0xCEB0, 0x26866, 0x26A66, 0, 0, 0, 0 }, 1 },
     { "1998FRN", &BST_MAP_1998_FRN, 1, 11025, 1,
-      { 0xC870, 0xC830, 0xCEB0, 0x1C582, 0x1C782, 0, 0, 0, 0 } },
+      { 0xC870, 0xC830, 0xCEB0, 0x1C582, 0x1C782, 0, 0, 0, 0 }, 1 },
     { "1998GRM", &BST_MAP_1998_GRM, 1, 11025, 1,
-      { 0xC870, 0xC830, 0xCEB0, 0x3304E, 0x3324E, 0, 0, 0, 0 } },
+      { 0xC870, 0xC830, 0xCEB0, 0x3304E, 0x3324E, 0, 0, 0, 0 }, 1 },
     { "1998ITL", &BST_MAP_1998_ITL, 1, 11025, 1,
-      { 0xC870, 0xC830, 0xCEB0, 0x210CE, 0x212CE, 0, 0, 0, 0 } },
+      { 0xC870, 0xC830, 0xCEB0, 0x210CE, 0x212CE, 0, 0, 0, 0 }, 1 },
     { "1998SPN", &BST_MAP_1998_SPN, 1, 11025, 1,
-      { 0xC870, 0xC830, 0xCEB0, 0x137EC, 0x139EC, 0, 0, 0, 0 } },
+      { 0xC870, 0xC830, 0xCEB0, 0x137EC, 0x139EC, 0, 0, 0, 0 }, 1 },
 
     { "2006ARA", &BST_MAP_2006_ARA, 0, 10000, 0,
-      { 0x1FBD8, 0x1FB98, 0x20218, 0x1F71C, 0x1F81C, 0, 1, 5, 1 } },
+      { 0x1FBD8, 0x1FB98, 0x20218, 0x1F71C, 0x1F81C, 0, 1, 5, 1 }, 0 },
     { "2006DUT", &BST_MAP_2006_DUT, 0, 10000, 0,
-      { 0x2E2FC, 0x2E2BC, 0x2E93C, 0x1FB08, 0x1FC08, 0, 1, 5, 1 } },
+      { 0x2E2FC, 0x2E2BC, 0x2E93C, 0x1FB08, 0x1FC08, 0, 1, 5, 1 }, 0 },
     { "2006ENG", &BST_MAP_2006_ENG, 0, 10000, 0,
-      { 0x78E10, 0x78DD0, 0x79450, 0x1EA2C, 0x1EB2C, 0, 1, 5, 1 } },
+      { 0x78E10, 0x78DD0, 0x79450, 0x1EA2C, 0x1EB2C, 0, 1, 5, 1 }, 0 },
     { "2006FRE", &BST_MAP_2006_FRE, 0, 10000, 0,
-      { 0x1B2D4, 0x1B294, 0x1B914, 0x1AFE4, 0x1B0E4, 0, 1, 5, 1 } },
+      { 0x1B2D4, 0x1B294, 0x1B914, 0x1AFE4, 0x1B0E4, 0, 1, 5, 1 }, 0 },
     { "2006GER", &BST_MAP_2006_GER, 0, 10000, 0,
-      { 0x2C1F8, 0x2C1B8, 0x2C838, 0x20E0C, 0x20F0C, 0, 1, 5, 1 } },
+      { 0x2C1F8, 0x2C1B8, 0x2C838, 0x20E0C, 0x20F0C, 0, 1, 5, 1 }, 0 },
     { "2006GRE", &BST_MAP_2006_GRE, 0, 10000, 0,
-      { 0x1E278, 0x1E238, 0x1E8B8, 0x1DF08, 0x1E008, 0, 1, 5, 1 } },
+      { 0x1E278, 0x1E238, 0x1E8B8, 0x1DF08, 0x1E008, 0, 1, 5, 1 }, 0 },
     { "2006HEB", &BST_MAP_2006_HEB, 0, 10000, 0,
-      { 0x1EB28, 0x1EAE8, 0x1F168, 0x1DBEC, 0x1DCEC, 0, 1, 5, 1 } },
+      { 0x1EB28, 0x1EAE8, 0x1F168, 0x1DBEC, 0x1DCEC, 0, 1, 5, 1 }, 0 },
     { "2006ITA", &BST_MAP_2006_ITA, 0, 10000, 0,
-      { 0x1ED7C, 0x1ED3C, 0x1F3BC, 0x17B1C, 0x17C1C, 0, 1, 5, 1 } },
+      { 0x1ED7C, 0x1ED3C, 0x1F3BC, 0x17B1C, 0x17C1C, 0, 1, 5, 1 }, 0 },
     { "2006JPN", &BST_MAP_2006_JPN, 0, 10000, 0,
-      { 0x198D8, 0x19898, 0x19F18, 0x17238, 0x17338, 0, 1, 5, 1 } },
+      { 0x198D8, 0x19898, 0x19F18, 0x17238, 0x17338, 0, 1, 5, 1 }, 0 },
     { "2006POL", &BST_MAP_2006_POL, 0, 10000, 0,
-      { 0x258C4, 0x25884, 0x25F04, 0x25654, 0x25754, 0, 1, 5, 1 } },
+      { 0x258C4, 0x25884, 0x25F04, 0x25654, 0x25754, 0, 1, 5, 1 }, 0 },
     { "2006POR", &BST_MAP_2006_POR, 0, 10000, 0,
-      { 0x21548, 0x21508, 0x21B88, 0x1FE7C, 0x1FF7C, 0, 1, 5, 1 } },
+      { 0x21548, 0x21508, 0x21B88, 0x1FE7C, 0x1FF7C, 0, 1, 5, 1 }, 0 },
     { "2006RUS", &BST_MAP_2006_RUS, 0, 10800, 0,
-      { 0x77AE4, 0x77AA4, 0x78124, 0x25F8C, 0x2608C, 0, 1, 5, 1 } },
+      { 0x77AE4, 0x77AA4, 0x78124, 0x25F8C, 0x2608C, 0, 1, 5, 1 }, 0 },
     { "2006SPA", &BST_MAP_2006_SPA, 0, 10000, 0,
-      { 0x17E48, 0x17E08, 0x18488, 0x178FC, 0x179FC, 0, 1, 5, 1 } },
+      { 0x17E48, 0x17E08, 0x18488, 0x178FC, 0x179FC, 0, 1, 5, 1 }, 0 },
 };
 
 #define NBUILDS ((int)(sizeof BUILDS / sizeof BUILDS[0]))
@@ -123,20 +126,28 @@ static bst *settle(bst *h, const build *b) {
     return h;
 }
 
-bst *bst_open_image(const char *name, const void *image, size_t len) {
+bst *bst_open_images(const char *name, const void *image, size_t len,
+                     const void *core, size_t corelen) {
     const build *b = find(name);
     if (!b || !image) return NULL;
+    if (b->core_tables && !core) return NULL;
     bst *h = calloc(1, sizeof *h);
     if (!h) return NULL;
 
     int ok = b->ne ? bst_image_init_ne(&h->img, image, len, b->map)
                    : bst_image_init_map(&h->img, image, len, b->map);
-    if (ok < 0 || bst_tables_load_at(&h->tab, image, len, &b->lat) < 0) {
+    if (ok < 0 ||
+        bst_tables_load_split(&h->tab, image, len, &b->lat,
+                              b->core_tables ? core : NULL, corelen) < 0) {
         bst_image_free(&h->img);
         free(h);
         return NULL;
     }
     return settle(h, b);
+}
+
+bst *bst_open_image(const char *name, const void *image, size_t len) {
+    return bst_open_images(name, image, len, NULL, 0);
 }
 
 bst *bst_open(const char *name) {

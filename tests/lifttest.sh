@@ -14,7 +14,8 @@ run() {
 }
 run 1995 "$root/dll/1995/B32_TTS.DLL" "$root/tests/words2006/eng.txt"
 for l in ENG:eng DUT:dut FRN:fre GRM:ger ITL:ita SPN:spa; do
-    run "1998${l%%:*}" "$root/dll/1998/KGM${l%%:*}.DLL" "$root/tests/words2006/${l##*:}.txt"
+    run "1998${l%%:*}" "$root/dll/1998/KGM${l%%:*}.DLL" \
+        --core "$root/dll/1998/KNGMM.DLL" "$root/tests/words2006/${l##*:}.txt"
 done
 for l in ara dut eng fre ger gre heb ita jpn pol por rus spa; do
     u=$(echo "$l" | tr a-z A-Z)

@@ -49,18 +49,31 @@ static void emit(FILE *out, bst *h, const char *name, const char *text) {
     fprintf(out, "%s\t%ld\t%016llx\t%s\n", name, n, hash(pcm, n), text);
 }
 
-static int write_one(FILE *out, const char *name, const char *dll,
-                     char **lists, int nlists) {
-    FILE *f = fopen(dll, "rb");
-    if (!f) { fprintf(stderr, "selftest: cannot read %s\n", dll); return 1; }
+static char *slurp(const char *path, long *len) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
     fseek(f, 0, SEEK_END);
-    long len = ftell(f);
+    long n = ftell(f);
     fseek(f, 0, SEEK_SET);
-    char *image = malloc((size_t)len);
-    if (!image || fread(image, 1, (size_t)len, f) != (size_t)len) return 1;
+    char *d = malloc((size_t)n);
+    if (!d || fread(d, 1, (size_t)n, f) != (size_t)n) { free(d); fclose(f); return NULL; }
     fclose(f);
+    *len = n;
+    return d;
+}
 
-    bst *h = bst_open_image(name, image, (size_t)len);
+static int write_one(FILE *out, const char *name, const char *dll,
+                     const char *corepath, char **lists, int nlists) {
+    long len = 0, corelen = 0;
+    char *image = slurp(dll, &len);
+    if (!image) { fprintf(stderr, "selftest: cannot read %s\n", dll); return 1; }
+    char *core = NULL;
+    if (corepath && !(core = slurp(corepath, &corelen))) {
+        fprintf(stderr, "selftest: cannot read %s\n", corepath);
+        return 1;
+    }
+
+    bst *h = bst_open_images(name, image, (size_t)len, core, (size_t)corelen);
     if (!h) { fprintf(stderr, "selftest: cannot open %s\n", name); return 1; }
 
     char word[256];
@@ -153,11 +166,14 @@ static int check(const char *golden) {
 }
 
 int main(int argc, char **argv) {
-    if (argc >= 4 && strcmp(argv[1], "--write") == 0)
-        return write_one(stdout, argv[2], argv[3], argv + 4, argc - 4);
+    if (argc >= 4 && strcmp(argv[1], "--write") == 0) {
+        if (argc >= 6 && strcmp(argv[4], "--core") == 0)
+            return write_one(stdout, argv[2], argv[3], argv[5], argv + 6, argc - 6);
+        return write_one(stdout, argv[2], argv[3], NULL, argv + 4, argc - 4);
+    }
     if (argc == 2)
         return check(argv[1]);
     fprintf(stderr, "usage: selftest GOLDEN\n"
-                    "       selftest --write BUILD DLL [WORDLIST...] > lines\n");
+                    "       selftest --write BUILD DLL [--core CORE] [WORDLIST...]\n");
     return 2;
 }

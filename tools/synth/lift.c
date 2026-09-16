@@ -98,16 +98,24 @@ static void sweep(bst *h) {
 
 int main(int argc, char **argv) {
     if (argc < 4) {
-        fprintf(stderr, "usage: lift BUILD DLL OUTDIR [WORDLIST...]\n");
+        fprintf(stderr, "usage: lift BUILD DLL OUTDIR [--core CORE] [WORDLIST...]\n");
         return 2;
     }
     const char *name = argv[1], *dllpath = argv[2], *outdir = argv[3];
+    const char *corepath = NULL;
+    int first = 4;
+    if (argc > 5 && strcmp(argv[4], "--core") == 0) { corepath = argv[5]; first = 6; }
 
-    size_t len;
+    size_t len, corelen = 0;
     char *image = slurp(dllpath, &len);
     if (!image) { fprintf(stderr, "lift: cannot read %s\n", dllpath); return 1; }
+    char *core = NULL;
+    if (corepath && !(core = slurp(corepath, &corelen))) {
+        fprintf(stderr, "lift: cannot read %s\n", corepath);
+        return 1;
+    }
 
-    bst *h = bst_open_image(name, image, len);
+    bst *h = bst_open_images(name, image, len, core, corelen);
     if (!h) { fprintf(stderr, "lift: cannot open %s as %s\n", dllpath, name); return 1; }
 
     /* The laid-out image, which for a 16-bit module is not the file. */
@@ -118,7 +126,7 @@ int main(int argc, char **argv) {
 
     bst_read_hook = watch;
     sweep(h);
-    for (int i = 4; i < argc; i++) say_file(h, argv[i]);
+    for (int i = first; i < argc; i++) say_file(h, argv[i]);
     bst_read_hook = NULL;
 
     /* Keep whole every section a read landed in. */

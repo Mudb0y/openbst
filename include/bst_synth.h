@@ -138,4 +138,12 @@ int    bst_tables_load(bst_tables *t, const void *image, size_t len);
 int    bst_tables_load_at(bst_tables *t, const void *image, size_t len,
                           const bst_offsets *o);
 
+/* The 1998 modules split them: the excitation and gain tables are in the core
+   module every language shares, and only the log pair is in the language
+   module, at an offset of its own. `core` is that module, or NULL when one
+   file holds everything and this is bst_tables_load_at. */
+int    bst_tables_load_split(bst_tables *t, const void *image, size_t len,
+                             const bst_offsets *o,
+                             const void *core, size_t corelen);
+
 #endif

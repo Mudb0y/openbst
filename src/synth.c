@@ -142,6 +142,27 @@ int bst_tables_load_at(bst_tables *t, const void *image, size_t len,
     return 0;
 }
 
+int bst_tables_load_split(bst_tables *t, const void *image, size_t len,
+                          const bst_offsets *o,
+                          const void *core, size_t corelen) {
+    if (!core) return bst_tables_load_at(t, image, len, o);
+
+    /* The excitation and gain tables out of the core, everything else out of
+       the language module. */
+    bst_offsets exc = *o;
+    exc.log = exc.alog = exc.duration = 0;
+    if (bst_tables_load_at(t, core, corelen, &exc) < 0) return -1;
+
+    bst_tables rest;
+    bst_offsets own = *o;
+    own.pulse = own.noise = own.gain = 0;
+    if (bst_tables_load_at(&rest, image, len, &own) < 0) return -1;
+    memcpy(t->log, rest.log, sizeof t->log);
+    memcpy(t->alog, rest.alog, sizeof t->alog);
+    memcpy(t->duration, rest.duration, sizeof t->duration);
+    return 0;
+}
+
 int bst_tables_load(bst_tables *t, const void *image, size_t len) {
     return bst_tables_load_at(t, image, len, &BST_OFFSETS_1995);
 }

@@ -23,7 +23,8 @@ for l in ENG DUT FRN GRM ITL SPN; do
         ENG) w=eng;; DUT) w=dut;; FRN) w=fre;;
         GRM) w=ger;; ITL) w=ita;; SPN) w=spa;;
     esac
-    run "1998$l" "$root/dll/1998/KGM$l.DLL" "$root/tests/words2006/$w.txt"
+    run "1998$l" "$root/dll/1998/KGM$l.DLL" --core "$root/dll/1998/KNGMM.DLL" \
+        "$root/tests/words2006/$w.txt"
 done
 for l in ara dut eng fre ger gre heb ita jpn pol por rus spa; do
     u=$(echo "$l" | tr a-z A-Z)

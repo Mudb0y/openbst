@@ -28,7 +28,13 @@ static unsigned seed = 12345;
 static unsigned next(void) { seed = seed * 1103515245u + 12345u; return seed >> 16; }
 
 int main(int argc, char **argv) {
-    if (argc < 3) { fprintf(stderr, "usage: lifttest BUILD DLL [WORDLIST...]\n"); return 2; }
+    if (argc < 3) {
+        fprintf(stderr, "usage: lifttest BUILD DLL [--core CORE] [WORDLIST...]\n");
+        return 2;
+    }
+    const char *corepath = NULL;
+    int first = 3;
+    if (argc > 4 && strcmp(argv[3], "--core") == 0) { corepath = argv[4]; first = 5; }
 
     FILE *f = fopen(argv[2], "rb");
     if (!f) { fprintf(stderr, "lifttest: cannot read %s\n", argv[2]); return 1; }
@@ -39,12 +45,23 @@ int main(int argc, char **argv) {
     if (!image || fread(image, 1, (size_t)n, f) != (size_t)n) return 1;
     fclose(f);
 
+    char *core = NULL;
+    long corelen = 0;
+    if (corepath) {
+        FILE *g = fopen(corepath, "rb");
+        if (!g) { fprintf(stderr, "lifttest: cannot read %s\n", corepath); return 1; }
+        fseek(g, 0, SEEK_END); corelen = ftell(g); fseek(g, 0, SEEK_SET);
+        core = malloc((size_t)corelen);
+        if (!core || fread(core, 1, (size_t)corelen, g) != (size_t)corelen) return 1;
+        fclose(g);
+    }
+
     ha = bst_open(argv[1]);
-    hb = bst_open_image(argv[1], image, (size_t)n);
+    hb = bst_open_images(argv[1], image, (size_t)n, core, (size_t)corelen);
     if (!ha || !hb) { fprintf(stderr, "lifttest: cannot open %s\n", argv[1]); return 1; }
 
     char t[128];
-    for (int i = 3; i < argc; i++) {
+    for (int i = first; i < argc; i++) {
         FILE *g = fopen(argv[i], "rb");
         if (!g) continue;
         while (fgets(t, sizeof t, g)) {

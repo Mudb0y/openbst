@@ -38,7 +38,7 @@ DATA    := $(wildcard $(SRC)/data/*.c)
 DATAOBJ := $(patsubst $(SRC)/data/%.c,$(BUILD)/data_%.o,$(DATA))
 LIBOBJ  := $(addprefix $(BUILD)/lib_,$(addsuffix .o,$(LIBMODS))) $(DATAOBJ)
 
-all: $(addprefix $(BUILD)/,$(BINS)) $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest
+all: $(addprefix $(BUILD)/,$(BINS)) $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest $(BUILD)/tabletest
 
 $(BUILD)/data_%.o: $(SRC)/data/%.c $(INC)/bst_text.h
 	@mkdir -p $(BUILD)
@@ -68,6 +68,9 @@ $(BUILD)/lifttest: $(BUILD)/drv_lifttest.o $(LIBOBJ)
 $(BUILD)/selftest: $(BUILD)/drv_selftest.o $(LIBOBJ)
 	$(CC) $^ -o $@
 
+$(BUILD)/tabletest: $(BUILD)/drv_tabletest.o $(LIBOBJ)
+	$(CC) $^ -o $@
+
 $(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h $(INC)/bst.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
@@ -92,6 +95,6 @@ clean:
 	      $(addprefix $(BUILD)/,$(BINS)) \
 	      $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/libbst.so.$(SOVER) \
 	      $(BUILD)/bstspeak \
-	      $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest
+	      $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest $(BUILD)/tabletest
 
 .PHONY: all clean

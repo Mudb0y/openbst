@@ -30,8 +30,15 @@ int bst_builds(const char **names, int max);
 bst *bst_open(const char *build);
 
 /* The same, on a caller's copy of an original binary. The bytes have to
-   outlive the handle. */
+   outlive the handle.
+
+   The 1998 modules keep their excitation and gain tables in the core module
+   all six languages share, so those builds need it as well and bst_open_image
+   returns NULL for them rather than speaking from whatever is at the offset.
+   Every other build ignores `core`. */
 bst *bst_open_image(const char *build, const void *image, size_t len);
+bst *bst_open_images(const char *build, const void *image, size_t len,
+                     const void *core, size_t corelen);
 
 void bst_close(bst *h);
 
