@@ -1,5 +1,5 @@
 {
-  description = "BeSTspeech / Keynote GOLD reimplementation";
+  description = "Portable implementation of Bestspeech / Keynote Gold";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -37,8 +37,8 @@
           checkTarget = "selftest";
 
           meta = with pkgs.lib; {
-            description = "The Berkeley Speech Technologies synthesizer, reimplemented";
-            homepage = "https://github.com/Mudb0y/bestspeech";
+            description = "Portable implementation of Bestspeech / Keynote Gold";
+            homepage = "https://github.com/Mudb0y/openbst";
             mainProgram = "bstspeak";
             platforms = platforms.unix;
             # Our code is MIT. The tables under src/data are Berkeley Speech
