@@ -38,7 +38,7 @@ DATA    := $(wildcard $(SRC)/data/*.c)
 DATAOBJ := $(patsubst $(SRC)/data/%.c,$(BUILD)/data_%.o,$(DATA))
 LIBOBJ  := $(addprefix $(BUILD)/lib_,$(addsuffix .o,$(LIBMODS))) $(DATAOBJ)
 
-all: $(addprefix $(BUILD)/,$(BINS)) $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest $(BUILD)/tabletest
+all: $(addprefix $(BUILD)/,$(BINS)) $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/bstspeak $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest $(BUILD)/tabletest $(BUILD)/inventory
 
 $(BUILD)/data_%.o: $(SRC)/data/%.c $(INC)/bst_text.h
 	@mkdir -p $(BUILD)
@@ -59,7 +59,12 @@ $(BUILD)/libbst.so: $(BUILD)/libbst.so.$(SOVER)
 $(BUILD)/bstspeak: $(BUILD)/drv_bstspeak.o $(LIBOBJ)
 	$(CC) $^ -o $@
 
-$(BUILD)/lift: $(BUILD)/drv_lift.o $(LIBOBJ)
+$(BUILD)/lift: $(BUILD)/drv_lift.o $(BUILD)/drv_corpus.o $(LIBOBJ)
+	$(CC) $^ -o $@
+
+# What the shipped tables consist of. Drives the same corpus the lift does,
+# which is why that corpus lives in its own file rather than in either.
+$(BUILD)/inventory: $(BUILD)/drv_inventory.o $(BUILD)/drv_corpus.o $(LIBOBJ)
 	$(CC) $^ -o $@
 
 $(BUILD)/lifttest: $(BUILD)/drv_lifttest.o $(LIBOBJ)
@@ -75,7 +80,7 @@ $(BUILD)/lib_%.o: $(SRC)/%.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_fra
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
-$(BUILD)/drv_%.o: %.c $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h $(INC)/bst.h
+$(BUILD)/drv_%.o: %.c corpus.h $(INC)/bst_synth.h $(INC)/bst_text.h $(INC)/bst_frames.h $(INC)/bst_token.h $(INC)/bst.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -95,6 +100,7 @@ clean:
 	      $(addprefix $(BUILD)/,$(BINS)) \
 	      $(BUILD)/libbst.a $(BUILD)/libbst.so $(BUILD)/libbst.so.$(SOVER) \
 	      $(BUILD)/bstspeak \
-	      $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest $(BUILD)/tabletest
+	      $(BUILD)/lift $(BUILD)/lifttest $(BUILD)/selftest $(BUILD)/tabletest \
+	      $(BUILD)/inventory
 
 .PHONY: all clean
