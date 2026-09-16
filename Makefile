@@ -13,6 +13,15 @@ oracle:
 lift: all
 	bash tools/lift.sh
 
+# The one test that needs no original binary: the library against the answers
+# they gave, carried in tests/golden.txt.
+selftest: all
+	bash tests/selftest.sh
+
+# Writes those answers again. Needs the binaries; the test does not.
+golden: all
+	bash tools/golden.sh
+
 # Every test script, by its exit status rather than by what it prints: some
 # of them report a line per language and only fail on one of them.
 test: all oracle
@@ -26,4 +35,4 @@ clean:
 	$(MAKE) -C tools/synth clean
 	$(MAKE) -C tools/oracle clean
 
-.PHONY: all oracle lift test clean
+.PHONY: all oracle lift selftest golden test clean

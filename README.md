@@ -47,6 +47,13 @@ binaries by `tests/lifttest.sh`, over every word of every corpus, twenty
 thousand words the lift never saw, four hundred numbers and three sentences:
 411864 utterances across the twenty builds, none differing.
 
+All of that needs the original binaries. One test does not: `make selftest`
+runs the library against `tests/golden.txt`, which carries, for 4200
+utterances across the twenty builds, how many samples came out and a hash of
+them. Those numbers were written from the binaries rather than from the
+library, so a clone with no binaries can still hold the library to what the
+originals said.
+
 ## Building
 
     make
@@ -108,10 +115,15 @@ That is 3.6 megabytes of tables out of the 5.1 megabytes of binary the
 twenty builds come to.
 
 `src/data` is checked in, so building and using the library needs nothing
-else. Running the tests does. Every test compares against an original binary,
-and those binaries are not in this repository and will not be. Put them under
-`dll/1995`, `dll/1998` and `dll/2006` and `make test` will run; without them
-it cannot.
+else, and `make selftest` will run. The other thirty tests compare against an
+original binary under the emulator, and those binaries are not in this
+repository and will not be. Put them under `dll/1995`, `dll/1998` and
+`dll/2006` and `make test` will run them all; without them only the self-test
+can.
+
+`make golden` writes `tests/golden.txt` again from the binaries. It is the
+one thing in the repository written by the originals rather than checked
+against them, which is what lets the self-test stand in for the rest.
 
 `make lift` writes `src/data` again from those binaries. What is checked in
 is already what it produces.
@@ -120,6 +132,6 @@ is already what it produces.
 
 `include` is the public header and the internal ones. `src` is the engine, a
 file to a stage, with `src/speak.c` as the front end over them and `src/data`
-as the tables. `tests` is thirty scripts. `tools/synth` builds the library and
+as the tables. `tests` is thirty-one scripts. `tools/synth` builds the library and
 its drivers, `tools/oracle` runs the original binaries to compare against, and
 `tools/analysis` holds the scripts that found the tables in the first place.
