@@ -217,6 +217,10 @@ typedef struct {
     uint8_t  num_scale_kind;   /* 1 = the Italian plural thousand and its lone one */
     uint8_t  num_hundred_and;  /* a hundreds word joins what follows with "and" */
     uint8_t  num_liaison;      /* the marker a lone tens word is said behind */
+    /* A four digit number that is not a round thousand is read as a count of
+       hundreds, the hundred word kept in front of whatever follows it,
+       rather than as a count of thousands. */
+    uint8_t  num_four_as_hundreds;
     /* What the two lower "not this one" marks do, which the builds do not
        agree on: 0 the English way, 1 Russian, 2 the Romance and Greek and
        Hebrew way, 3 Japanese, 4 Arabic, 5 Dutch and German. */

@@ -268,10 +268,21 @@ static void say_number_french(bst_tok *t, const uint8_t *d, int n) {
     case 2: two(t, d); return;
     case 3: groups(t, d, 1); return;
     default:
-        pad[0] = '0'; pad[1] = '0'; pad[2] = d[0]; pad[3] = ',';
-        memcpy(pad + 4, d + 1, 3);
-        pad[7] = 0;
-        groups(t, pad, 2);
+        /* The 2006 build reads every four digit number as a count of
+           thousands. The 1998 one does so only for a round thousand and
+           reads the rest as a count of hundreds, keeping the hundred word
+           in front of whatever follows it. */
+        if (!t->img->t.num_four_as_hundreds ||
+            (d[1] == '0' && d[2] == '0' && d[3] == '0')) {
+            pad[0] = '0'; pad[1] = '0'; pad[2] = d[0]; pad[3] = ',';
+            memcpy(pad + 4, d + 1, 3);
+            pad[7] = 0;
+            groups(t, pad, 2);
+            return;
+        }
+        two(t, d);
+        bst_tok_say(t, STR(t, BST_S_HUNDRED));
+        if (!(d[2] == '0' && d[3] == '0')) two(t, d + 2);
         return;
     }
 }
