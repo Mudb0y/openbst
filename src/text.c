@@ -1215,7 +1215,6 @@ const bst_tabmap BST_MAP_2006_DUT = {
         0x85, 0xE1, 0x83, 0xE3, 0x84, 0xE5, 0xE6, 0xE7, 0x8A, 0x82, 0x88, 0x89, 0xEC, 0xED, 0x8C, 0x8B,
         0xF0, 0xF1, 0xF2, 0xF3, 0x93, 0xF5, 0x94, 0xF7, 0xF8, 0xF9, 0xFA, 0x96, 0x81, 0xFD, 0xFE, 0xFF,
     },
-    .vdur_kind     = 1,
     .trn_whole     = 1,
     .pair_class = {
         0, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 7, 7, 7, 7,
@@ -2546,7 +2545,6 @@ const bst_tabmap BST_MAP_2006_POL = {
         [0x5E] = 0x20,
     },
 
-    .vdur_kind     = 1,
     .trn_whole     = 1,
     .pair_class = {
         0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1,
@@ -3079,7 +3077,6 @@ const bst_tabmap BST_MAP_2006_RUS = {
     .slope_mult        = 167,
     .inton_dur_mult    = 887,
     .inton_slope_shift = 1,
-    .stress_shift      = 5,
     .voice_stride      = 4,
     .trn_round         = 1,
     .ph_single_n       = 84,
