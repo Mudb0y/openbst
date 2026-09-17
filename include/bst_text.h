@@ -105,8 +105,10 @@ typedef struct {
     /* An unvoiced frame carries no pitch fraction at all, not even the
        coefficient parity the others fold into that byte. */
     uint8_t  unvoiced_no_frac;
-    /* The highest pitch level a build's accent codes reach. French tops
-       out four above the middle where the others climb ten. */
+    /* The level a word takes when its every stress mark has been used, as a
+       height above the middle. Five unless a build holds it lower, which the
+       1998 French module does at four. It is not a ceiling on every code: the
+       level a phrase reaches is higher than this and is not cut down to it. */
     uint8_t  level_max;
     uint8_t  long_silence_f0;
     uint8_t  exc_two_way;

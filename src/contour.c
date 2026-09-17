@@ -210,7 +210,10 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
 
     p->round10 = img->t.contour_round ? 5 : 0;
     p->reach = img->t.voice_top;
-    p->levmax = img->t.level_max ? img->t.level_max : 10;
+    /* The table's own bound, not a build's. Where a build holds its accent
+       codes lower than the rest, it does so as the code is chosen; by the
+       time one is looked up here it means what it says. */
+    p->levmax = 10;
 
     memset(e, 0, sizeof e);
     p->emphasis = 0;

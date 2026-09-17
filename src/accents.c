@@ -211,13 +211,20 @@ static int accents_french(const bst_image *img, uint8_t *s, int len,
     w--;
 
     if (last != 0 && !seen && latest == 0 && (type == 0x11 || type == 0x17)) {
+        /* A word whose every stress mark has been used takes the level below
+           the one a phrase reaches. The 1998 module holds that level lower
+           than the 2006 one does, and the cap belongs here rather than on
+           every lookup: the level a phrase carries is higher still and must
+           not be pulled down with it. */
+        int own = 0x3D + (img->t.level_max ? img->t.level_max : 5);
+        if (own > 0x42) own = 0x42;
         if (n - last + 1 > 4) {
             if (kind == 2) { if (type == 0x11) { type = 0x16; code = 0x44; } }
-            else if (w == wmark) code = 0x42;
+            else if (w == wmark) code = own;
         } else if (kind == 2) {
             last = 0;
         } else if (w == wmark) {
-            code = 0x42;
+            code = own;
         }
     }
 
