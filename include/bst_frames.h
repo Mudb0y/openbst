@@ -41,7 +41,10 @@ typedef struct {
     bst_trn_rec ctrn;            /* the transition being consumed */
     int nofrac;                  /* this frame carries no pitch fraction */
 
-    int16_t dur, left, gclock, segleft, mid, pclock;
+    int16_t dur, left, gclock, segleft, mid;
+    /* The intonation clock is thirty-two bits in the engine, which stores and
+       tests both halves; a phrase can carry one past what sixteen bits hold. */
+    int32_t pclock;
     int16_t targets[BST_ORDER], prev[BST_ORDER], state[BST_ORDER];
     int16_t curtgt, prvtgt;
     int16_t durscale[16];

@@ -301,7 +301,7 @@ static int seg_entry(bst_gen *g, const uint8_t *rec) {
         if (g->left < need) {
             int16_t add = (int16_t)(need - g->left);
             g->left = (int16_t)(g->left + add);
-            g->pclock = (int16_t)(g->pclock + add);
+            g->pclock = g->pclock + add;
             g->mid = (int16_t)(g->mid + add);
             g->segleft = (int16_t)(g->segleft + add);
             g->gclock = (int16_t)(g->gclock + add);
@@ -342,7 +342,7 @@ static int interp_clock(bst_gen *g) {
     }
     if (bst_trace) bst_tracef("clk dur=%d slope=%d mid=%d segleft=%d -> %d\n",
                            g->pend.dur, g->pend.slope, g->mid, g->segleft, v);
-    g->pclock = (int16_t)v;
+    g->pclock = v;
     if (g->pend.kind == 0) {
         g->pend.kind = 2;
         g->pitch_period = g->pend.period;
@@ -720,7 +720,7 @@ int bst_generate(bst_gen *g) {
         if (g->left < g->dur) {
             int16_t add = (int16_t)(g->dur - g->left);
             g->left = g->dur;
-            g->pclock = (int16_t)(g->pclock + add);
+            g->pclock = g->pclock + add;
             g->segleft = (int16_t)(g->segleft + add);
             g->gclock = (int16_t)(g->gclock + add);
             if (g->voiced) g->mid = (int16_t)(g->mid + add);
@@ -728,7 +728,7 @@ int bst_generate(bst_gen *g) {
         g->left = (int16_t)(g->left - g->dur);
         if (g->voiced) g->mid = (int16_t)(g->mid - g->dur);
         g->gclock = (int16_t)(g->gclock - g->dur);
-        g->pclock = (int16_t)(g->pclock - g->dur);
+        g->pclock = g->pclock - g->dur;
         g->segleft = (int16_t)(g->segleft - g->dur);
 
         /* A short frame is held for several pitch periods rather than emitted
@@ -738,7 +738,7 @@ int bst_generate(bst_gen *g) {
             while (acc < 0x37 && g->dur < g->left) {
                 g->frame[0]++;
                 g->gclock = (int16_t)(g->gclock - g->dur);
-                g->pclock = (int16_t)(g->pclock - g->dur);
+                g->pclock = g->pclock - g->dur;
                 g->segleft = (int16_t)(g->segleft - g->dur);
                 g->mid = (int16_t)(g->mid - g->dur);
                 g->left = (int16_t)(g->left - g->dur);
