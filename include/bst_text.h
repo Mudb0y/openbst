@@ -203,6 +203,9 @@ typedef struct {
     uint8_t  acc_shape;
     uint8_t  acc_shape_keep;    /* a single accent does not collapse the shape */
     uint8_t  run_stop_kind;    /* 1 = the run before an accent stops on its own test */
+    /* A sound the run before an accent walks straight past, even though it
+       carries a target of its own. Zero means none. */
+    uint8_t  run_stop_skip;
     uint8_t  num_two_kind;     /* 1 = units, a joiner, then tens; 2 = no leading oh */
     uint8_t  num_group_kind;   /* 1 = a hundreds table, and a comma between groups */
     uint8_t  num_kind;         /* 1 = the Russian split by digit count, 2 = the German */

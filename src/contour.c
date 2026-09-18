@@ -187,7 +187,13 @@ static void scan_back_seg(const bst_image *img, const uint8_t *s, int from, bst_
 static int run_stop(const bst_image *img, int c) {
     int a = bst_ph_attr1(img, c);
     if (img->t.run_stop_kind == 1) return (a & 4) && !(a & 0x42);
-    return a & 0x80;
+    if (!(a & 0x80)) return 0;
+    /* One sound carries a target of its own and still does not stop the walk,
+       so a word built on it has the run reach back past the word and come out
+       empty. French names its schwa here and German its own; most builds name
+       nothing. */
+    if (img->t.run_stop_skip && c == img->t.run_stop_skip) return 0;
+    return 1;
 }
 
 static int run_before(const bst_image *img, const uint8_t *s, int p) {

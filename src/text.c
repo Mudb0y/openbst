@@ -336,6 +336,7 @@ const bst_tabmap BST_MAP_1998_DUT = {
 
 /* KGMFRN. */
 const bst_tabmap BST_MAP_1998_FRN = {
+    .run_stop_skip  = 0x26,
     .trn_between_tenths = 7,
     .dict_silent    = 's',
     .trie_ent       = 3,
@@ -475,6 +476,7 @@ const bst_tabmap BST_MAP_1998_FRN = {
 
 /* KGMGRM. */
 const bst_tabmap BST_MAP_1998_GRM = {
+    .run_stop_skip  = 0x1D,
     .dict_silent    = 'n',
     .trie_ent       = 3,
     .syl_weak       = { 0x80, 0x81 },
