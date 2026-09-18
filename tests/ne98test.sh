@@ -61,12 +61,12 @@ run_lang() {
 }
 
 fail=0
-for spec in "ENG 7ad20 7af20 dog cat house water number people mother father book table chair door window bread milk cheese street school large small woman man hand foot head eye nose mouth hair day night light warm cold" \
-            "DUT 26866 26a66 hond kat huis water moeder vader kinderen bloem boek tafel stoel deur raam brood melk kaas straat fiets school groot klein vrouw kind man jongen meisje hand voet hoofd oog oor neus mond haar dag nacht licht donker warm koud" \
-            "FRN 1c582 1c782 chien chat maison eau mere pere enfant fleur livre table chaise porte fenetre pain lait fromage rue ecole grand petit femme homme main pied tete oeil nez bouche cheveux jour nuit lumiere chaud froid" \
-            "GRM 3304e 3324e hund katze haus wasser mutter vater kinder blume ende bitte sonne liebe affe garten bruder schwester freund baum name leben salat hat brot braun frei frau schnell gut gross klein alt neu tisch stuhl fenster milch strasse schule buch berg fluss stadt land himmel erde mond stern licht nacht tag jahr" \
-            "ITL 210ce 212ce cane gatto casa acqua madre padre bambino fiore libro sedia porta finestra pane latte formaggio strada scuola grande piccolo donna uomo mano piede testa occhio naso bocca capelli giorno notte luce caldo freddo" \
-            "SPN 137ec 139ec perro gato casa agua madre padre nino flor libro mesa silla puerta ventana pan leche queso calle escuela grande pequeno mujer hombre mano pie cabeza ojo nariz boca pelo dia noche luz calor frio"; do
+for spec in "ENG 7ad20 7af20 dog cat house water number people mother father book table chair door window bread milk cheese street school large small woman man hand foot head eye nose mouth hair day night light warm cold a e i o u" \
+            "DUT 26866 26a66 hond kat huis water moeder vader kinderen bloem boek tafel stoel deur raam brood melk kaas straat fiets school groot klein vrouw kind man jongen meisje hand voet hoofd oog oor neus mond haar dag nacht licht donker warm koud a e i o u" \
+            "FRN 1c582 1c782 chien chat maison eau mere pere enfant fleur livre table chaise porte fenetre pain lait fromage rue ecole grand petit femme homme main pied tete oeil nez bouche cheveux jour nuit lumiere chaud froid a e i o u" \
+            "GRM 3304e 3324e hund katze haus wasser mutter vater kinder blume ende bitte sonne liebe affe garten bruder schwester freund baum name leben salat hat brot braun frei frau schnell gut gross klein alt neu tisch stuhl fenster milch strasse schule buch berg fluss stadt land himmel erde mond stern licht nacht tag jahr a e i o u" \
+            "ITL 210ce 212ce cane gatto casa acqua madre padre bambino fiore libro sedia porta finestra pane latte formaggio strada scuola grande piccolo donna uomo mano piede testa occhio naso bocca capelli giorno notte luce caldo freddo a e i o u" \
+            "SPN 137ec 139ec perro gato casa agua madre padre nino flor libro mesa silla puerta ventana pan leche queso calle escuela grande pequeno mujer hombre mano pie cabeza ojo nariz boca pelo dia noche luz calor frio a e i o u"; do
     set -- $(run_lang $spec)
     name=$(echo $spec | cut -d' ' -f1)
     echo "ne98test: $name $1 of $2 words, $3 of $4 frames"

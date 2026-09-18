@@ -621,6 +621,7 @@ const bst_tabmap BST_MAP_1998_ITL = {
     .trn_kind       = 2,
     .trn_thin       = 2,
     .stress_rule    = 1,
+    .mark_emph      = 0x33,
     .pair_class = {
         0, 7, 7, 7, 2, 2, 2, 7, 7, 7, 7, 1, 1, 1, 1, 1,
         7, 7, 7, 7, 7, 1, 1, 1, 7, 7, 7, 7, 6, 6, 6, 6,
@@ -753,6 +754,7 @@ const bst_tabmap BST_MAP_1998_SPN = {
     .trn_kind       = 1,
     .vdur_kind      = 1,
     .stress_rule    = 1,
+    .mark_emph      = 0x33,
     .pair_class = {
         0, 7, 7, 7, 2, 7, 2, 7, 2, 7, 1, 1, 1, 1, 7, 7,
         7, 7, 7, 7, 1, 1, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6,
