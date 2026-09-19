@@ -298,7 +298,8 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
 
         int slope;
         if (bst_ph_attr2(img, s[next]) & 8) {
-            if (bst_ph_attr1(img, s[here]) & 0x80) {
+            if (img->t.run_before_always ||
+                (bst_ph_attr1(img, s[here]) & 0x80)) {
                 carry = run_before(img, s, next);
                 dur -= carry;
             }

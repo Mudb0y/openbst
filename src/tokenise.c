@@ -201,6 +201,7 @@ static int ordinal_seen(bst_tok *t, int c);
 static void ordinal_emit(bst_tok *t);
 static int dash_out(bst_tok *t, int c);
 static void say_char(bst_tok *t, int c);
+static void word_range(bst_tok *t, int from, int to, int dotted);
 
 /* Punctuation that closes a phrase versus punctuation that only groups. */
 static int closes(int b) {
@@ -319,6 +320,19 @@ static int handler(bst_tok *t, unsigned h, int c) {
         return 1;
     case BST_H_SEP:      /* what may sit between two runs of digits */
         return c == ':' || c == '.' || c == ',' || c == '/' || c == '-' || c == ' ';
+    case BST_H_DASHLETTER: {
+        /* One letter with a hyphen on each side, the middle of "c.-a-d.".
+           The letter is said on its own and everything after it is given
+           back, so the hyphen that follows starts the next piece. */
+        unread(t, 1);
+        int p = t->start;
+        while (p < t->cur && t->ring[p] == '-') p++;
+        word_range(t, p, p, 0);
+        if (t->cur > p) unread(t, t->cur - p);
+        t->prevkind = t->kind;
+        t->kind = 5 - ((chattr(t, t->ring[p]) & 0x20) == 0);
+        return 1;
+    }
     default:         return 0;
     }
 }
@@ -358,7 +372,8 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
        right are not, and neither is one the exception table holds. */
     if (n == 1 && (dotted || (first != 'a' && first != 'A' && first != 'I'))) {
         uint8_t codes[64];
-        int m = dotted ? 0 : bst_except(t, t->ring + from, 1, codes, (int)sizeof codes);
+        int m = dotted ? 0 : bst_except_at(t, t->ring + from, 1, codes,
+                                          (int)sizeof codes, to == t->cur);
         if (m > 0) {
             emit(t, ' ');
             emit(t, 0xFE);
@@ -376,7 +391,8 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
     }
     if (n > 0 && n < 64) {
         uint8_t codes[256];
-        int m = bst_except(t, t->ring + from, n, codes, (int)sizeof codes);
+        int m = bst_except_at(t, t->ring + from, n, codes, (int)sizeof codes,
+                              to == t->cur);
         if (m > 0) {
             emit(t, ' ');
             emit(t, 0xFE);
@@ -760,6 +776,9 @@ static int scan(bst_tok *t) {
             i++;
         }
         if (!row(t, i, &st, &h, &nx)) return 0;
+        if (bst_trace)
+            bst_tracef("sm %d '%c' %08x -> %d\n", t->state,
+                       (c >= 32 && c < 127) ? c : '.', h, nx);
         t->state = nx;
         if (t->state == 0) {
             t->start = t->cur + 1;

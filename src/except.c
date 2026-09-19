@@ -271,24 +271,43 @@ static void choose(bst_tok *t, uint8_t *rec, int n, const uint8_t *word,
 
 /* ---- the front --------------------------------------------------------- */
 
-int bst_except(bst_tok *t, const uint8_t *word, int wlen,
-               uint8_t *out, int max) {
+/* `extend` says the word ends where the reader stands, so the walk may run on
+   past it. Entries are keyed on the text, not on words: the French table
+   holds "dix-" and "y a", whose keys carry the hyphen and the space that
+   follow, and those decide the liaison. A walk that stops at the word's last
+   letter can never reach them. What the walk reads beyond the word is given
+   back unless the entry that matched covers it. */
+int bst_except_at(bst_tok *t, const uint8_t *word, int wlen,
+                  uint8_t *out, int max, int extend) {
     trie w;
     if (!load_trie(t->img, &w)) return 0;
     if (wlen <= 0) return 0;
 
-    int cur = -1, best = 0, bestlen = 0;
-    for (int i = 0; i < wlen; i++) {
+    int cur = -1, best = 0, bestlen = 0, pulled = 0;
+    for (int i = 0; ; i++) {
+        int c;
+        if (i < wlen) c = word[i];
+        else if (!extend) break;
+        else {
+            c = bst_tok_peek_read(t);
+            /* Only the text itself. The reader manufactures a tail once the
+               text runs out, and an entry keyed on a stop must not be reached
+               through a stop that was never written. */
+            if (c == 0xFFFF || t->cur > t->textend) { bst_tok_unread(t, 1); break; }
+            pulled++;
+        }
         int more;
-        int r = step(&w, &cur, word[i], &more);
+        int r = step(&w, &cur, c, &more);
         if (r < 0) break;
         if (r != 0) { best = r; bestlen = i + 1; }
         if (!more) break;
     }
+    int over = (best && bestlen > wlen) ? bestlen - wlen : 0;
+    if (pulled > over) bst_tok_unread(t, pulled - over);
     if (bst_trace)
-        bst_tracef("except '%.*s' best=%d bestlen=%d/%d\n",
-                wlen, (const char *)word, best, bestlen, wlen);
-    if (!best || bestlen != wlen) return 0;
+        bst_tracef("except '%.*s' best=%d bestlen=%d/%d over=%d\n",
+                wlen, (const char *)word, best, bestlen, wlen, over);
+    if (!best || bestlen < wlen) return 0;
 
     uint8_t rec[256];
     int n = record(&w, best, rec, (int)sizeof rec);
@@ -305,4 +324,9 @@ int bst_except(bst_tok *t, const uint8_t *word, int wlen,
         bst_tracef("\n");
     }
     return m;
+}
+
+int bst_except(bst_tok *t, const uint8_t *word, int wlen,
+               uint8_t *out, int max) {
+    return bst_except_at(t, word, wlen, out, max, 0);
 }

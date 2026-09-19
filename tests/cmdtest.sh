@@ -119,10 +119,9 @@ run98 SPN 137ec 139ec perro gato casa
 # as though they were absent, and the Russian one stops the text there, which
 # for a build that says nothing without a full stop means it says nothing.
 #
-# Left out: 2006 French, which breaks the phrase in the right place and times
-# it differently, and 2006 Greek and Arabic, which answer any text in the
-# Latin alphabet with the same fixed output whatever it says, the empty string
-# included, so there is nothing about the mark to measure on them.
+# Left out: 2006 Greek and Arabic, which answer any text in the Latin alphabet
+# with the same fixed output whatever it says, the empty string included, so
+# there is nothing about the mark to measure on them.
 run06() {
     local build=$1 dll=$2
     shift 2
@@ -148,7 +147,8 @@ for spec in "2006ENG dll_eng.dll" "2006GER dll_ger.dll" \
             "2006ITA dll_ita.dll" "2006SPA dll_spa.dll" \
             "2006DUT dll_dut.dll" "2006POR dll_por.dll" \
             "2006POL dll_pol.dll" "2006HEB dll_heb.dll" \
-            "2006JPN dll_jpn.dll" "2006RUS dll_rus.dll"; do
+            "2006JPN dll_jpn.dll" "2006RUS dll_rus.dll" \
+            "2006FRE dll_fre.dll"; do
     set -- $spec
     run06 "$1" "$2" \
         "one two." \

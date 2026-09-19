@@ -28,7 +28,7 @@ enum {
     BST_H_APOS, BST_H_POSSESS, BST_H_EAT2, BST_H_EAT3, BST_H_WORD,
     BST_H_NUMBER, BST_H_DOTTED, BST_H_SEP, BST_H_GROUPS, BST_H_SEPNUM,
     BST_H_MONEY, BST_H_DASH2, BST_H_ORDINAL, BST_H_ORDEMIT, BST_H_PUNCTOUT,
-    BST_H_DOTOUT, BST_H_ONEDIGIT,
+    BST_H_DOTOUT, BST_H_ONEDIGIT, BST_H_DASHLETTER,
     BST_H_COUNT
 };
 
@@ -219,6 +219,11 @@ typedef struct {
     /* A sound the run before an accent walks straight past, even though it
        carries a target of its own. Zero means none. */
     uint8_t  run_stop_skip;
+    /* Most builds walk the run before a phrase-final break only when the
+       accent it belongs to sits on a sound of its own; the 2006 French build
+       walks it whatever the accent sits on, which is the difference between
+       a question's trailing silence carrying its own record and not. */
+    uint8_t  run_before_always;
     uint8_t  num_two_kind;     /* 1 = units, a joiner, then tens; 2 = no leading oh */
     uint8_t  num_group_kind;   /* 1 = a hundreds table, and a comma between groups */
     uint8_t  num_kind;         /* 1 = the Russian split by digit count, 2 = the German */

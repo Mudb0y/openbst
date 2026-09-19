@@ -89,7 +89,11 @@ void bst_say_digits(bst_tok *t, const uint8_t *digits, int n);
 void bst_say_grouped(bst_tok *t, const uint8_t *digits, int n);
 
 /* Looks a word up in the exception table. Returns the number of phoneme
-   codes written, or zero if the table does not hold it. */
+   codes written, or zero if the table does not hold it. `extend` lets the
+   walk run past the word into the text after it, for the entries that are
+   keyed on more than the word. */
+int  bst_except_at(bst_tok *t, const uint8_t *word, int wlen,
+                   uint8_t *out, int max, int extend);
 int  bst_except(bst_tok *t, const uint8_t *word, int wlen,
                 uint8_t *out, int max);
 
