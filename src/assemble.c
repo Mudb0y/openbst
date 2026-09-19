@@ -57,6 +57,7 @@ static void command(bst_assembler *z, const uint8_t *rec) {
 /* Ends the phrase, or records how it broke if it does not. */
 static void close_phrase(bst_assembler *z, uint8_t *rec) {
     int direct = 0;
+    z->open = 0;
     if (z->hdr == 0) {
         if (rec[3] != 0) direct = 1;
         else {
@@ -97,8 +98,11 @@ static void close_phrase(bst_assembler *z, uint8_t *rec) {
 /* Punctuation: the marker it closes on, the pause it leaves, the sentence
    type it sets. The type and the contour shape are bytes of the command
    record at the head of the stream rather than variables, because that is
-   where the later stages read them. */
-static void punctuation(bst_assembler *z, int c) {
+   where the later stages read them.
+
+   `forced` marks the break the stream's own size imposes rather than a mark
+   in the text: that one ends the stream whatever the build does with a mark. */
+static void punctuation(bst_assembler *z, int c, int forced) {
     int pause, tmpl, slot;
     switch (c) {
     case 0x2A: pause = 0; tmpl = 0x4D; z->punct = 3; z->s[8] = 5; slot = 0; break;
@@ -120,6 +124,10 @@ static void punctuation(bst_assembler *z, int c) {
     uint8_t rec[6] = { (uint8_t)tmpl, 0, 0, (uint8_t)c, 0, 0 };
     while (pause--) put(z, 0x2F);
     close_phrase(z, rec);
+    if (!forced && c == 0x7C && z->img->t.speak_now_inline && z->done) {
+        z->done = 0;
+        z->open = 1;
+    }
 }
 
 /* The stress pass runs over the word, split where a boundary marker says the
@@ -157,7 +165,7 @@ static int word(bst_assembler *z, uint8_t *buf) {
         header(z, l);
     }
     int n = buf[0];
-    if (z->wp + n + 0x25 >= STREAM_MAX) { punctuation(z, 0x7C); return 0; }
+    if (z->wp + n + 0x25 >= STREAM_MAX) { punctuation(z, 0x7C, 1); return 0; }
 
     stress_word(z, buf + 2, n);
     if (!(z->emph & 2)) {
@@ -184,6 +192,7 @@ void bst_assemble_start(bst_assembler *z) {
     z->hdr = -1;
     z->done = 0;
     z->full = 0;
+    z->open = 0;
     header(z, z->carry);
     static const uint8_t iv[6] = { 'I', 2, 0, 0, 0, 0 };
     command(z, iv);
@@ -207,7 +216,7 @@ int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {
         word(z, buf);
         break;
     case 4:
-        punctuation(z, buf[0]);
+        punctuation(z, buf[0], 0);
         break;
     case 5:
         close_phrase(z, buf);
@@ -218,7 +227,7 @@ int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {
     default:
         break;
     }
-    return z->wp >= 0 && z->s[z->wp] == 0x5C;
+    return z->wp >= 0 && z->s[z->wp] == 0x5C && !z->open;
 }
 
 void bst_assemble_init(bst_assembler *z, const bst_image *img, uint8_t *stream) {

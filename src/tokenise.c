@@ -226,8 +226,16 @@ static void punct_out(bst_tok *t, int c) {
     if (t->literal) return;
     /* A tilde is a lead-in rather than a symbol: it and the character after
        it are one mark, and neither is said by name. Speak now closes the
-       phrase where it stands, which is what the bar does as punctuation. */
-    if (b == 0x7E && c == 0x7C) { rd(t); emit(t, 0x7C); return; }
+       phrase where it stands, which is what the bar does as punctuation.
+       Two builds do neither: the Japanese one reads the two characters and
+       goes on as though they were absent, and the Russian one stops the text
+       there. */
+    if (b == 0x7E && c == 0x7C) {
+        rd(t);
+        if (t->img->t.speak_now_none == 2) t->tp = t->tn;
+        else if (!t->img->t.speak_now_none) emit(t, 0x7C);
+        return;
+    }
     if (b == ':' && is_digit(t, t->prevch) && is_digit(t, c)) { emit(t, ','); return; }
     if (b == ',' && t->img->t.comma_ends_text) {
         /* The build stops here: nothing after the comma reaches the machine.

@@ -143,6 +143,19 @@ typedef struct {
        seven. Zero means one. */
     uint8_t  close_pause;
 
+    /* Speak now ends the phrase, and in the 2006 builds it stops there: the
+       break goes into the stream and the words after it are appended behind
+       it, so one sentence reaches the accent pass whole. The 1995 and 1998
+       builds end the stream instead and start another. */
+    uint8_t  speak_now_inline;
+
+    /* What a build does with speak now other than break the phrase. One: the
+       Japanese build swallows the two characters and speaks the sentence as
+       though they were absent, down to the sample. Two: the Russian build
+       stops there the way it stops at a comma, and since it says nothing that
+       does not end in a full stop, what is left is said as nothing. */
+    uint8_t  speak_now_none;
+
     /* The contour shape the phrase header carries in its tenth byte, which
        the accent pass reads back. Most builds put 0x4C there; a few do not.
        Zero means 0x4C. */
@@ -708,7 +721,7 @@ typedef struct {
     uint8_t *s;
     int      wp, hdr, last, len;
     int      emph, punct, hist, mode;
-    int      done, full;
+    int      done, full, open;
     uint8_t  carry[6];
 } bst_assembler;
 

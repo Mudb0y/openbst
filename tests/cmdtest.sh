@@ -3,19 +3,21 @@
 #
 # A tilde is a lead-in rather than a symbol: the engine reads it and the
 # character after it as one mark and says neither by name. Speak now, tilde
-# bar, closes the phrase where it stands, opens the next one as a
-# continuation and gives the phrase it closed the fifth sentence type. The
-# card's own manual describes it as beginning speech after the next word,
-# which is what the hardware does with the phrases once it has them; inside
-# the engine it is a phrase break at the mark.
+# bar, closes the phrase where it stands and opens the next one as a
+# continuation. In 1995 and 1998 that ends the stream, and the phrase it
+# closed carries the fifth sentence type; the 2006 builds leave the break
+# inside the stream and keep appending, so the sentence type is whatever the
+# real terminator sets. The card's own manual describes the mark as beginning
+# speech after the next word, which is what the hardware does with the
+# phrases once it has them; inside the engine it is a phrase break.
 #
 # 1995 is checked on audio, sample for sample. The 1998 modules are checked
 # on frames, the way ne98test does, because their oracle intercepts above the
-# synthesizer. Two builds are left out and neither is about the mark: 1998
-# French diverges from the engine on any two-word sentence, mark or no mark,
-# which predates this and is not covered by any other test, and the 2006
-# builds break the phrase in the right place but time the first one
-# differently, which is not yet measured.
+# synthesizer. The 2006 builds are checked on audio again.
+#
+# 1998 French is left out and it is not about the mark: it diverges from the
+# engine on any two-word sentence, mark or no mark, which predates this and is
+# not covered by any other test.
 set -u
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -107,12 +109,20 @@ run98 SPN 137ec 139ec perro gato casa
 # Say_TTS takes a wide string in these builds; a narrow one leaves the engine
 # with a single character and the comparison is silence against silence.
 #
-# Only what holds is asserted. The mark itself is wrong in every 2006 build:
-# they break the phrase in the right place and the trailing silence is exact,
-# but the first phrase glides its pitch faster than the engine, which leaves
-# our accumulator on whole periods and its fraction byte zero where the
-# engine's advances. 2006 Italian and Spanish also say the bare tilde and the
-# bare bar differently, which is its own fault and not about the mark.
+# Speak now does not end the stream in this generation. The break goes into
+# the stream and the words after it are appended behind it, so one sentence
+# reaches the accent pass whole and the accent before the mark is the one a
+# phrase-internal accent would be rather than a closing one.
+#
+# Two builds do something else with the mark and both are asserted here as
+# well: the Japanese one swallows the two characters and speaks the sentence
+# as though they were absent, and the Russian one stops the text there, which
+# for a build that says nothing without a full stop means it says nothing.
+#
+# Left out: 2006 French, which breaks the phrase in the right place and times
+# it differently, and 2006 Greek and Arabic, which answer any text in the
+# Latin alphabet with the same fixed output whatever it says, the empty string
+# included, so there is nothing about the mark to measure on them.
 run06() {
     local build=$1 dll=$2
     shift 2
@@ -132,11 +142,33 @@ run06() {
     done
 }
 
+# Where the mark sits relative to the words, how many there are, and a mark
+# with nothing after it, which leaves the last phrase unterminated.
+for spec in "2006ENG dll_eng.dll" "2006GER dll_ger.dll" \
+            "2006ITA dll_ita.dll" "2006SPA dll_spa.dll" \
+            "2006DUT dll_dut.dll" "2006POR dll_por.dll" \
+            "2006POL dll_pol.dll" "2006HEB dll_heb.dll" \
+            "2006JPN dll_jpn.dll" "2006RUS dll_rus.dll"; do
+    set -- $spec
+    run06 "$1" "$2" \
+        "one two." \
+        "one ~| two." \
+        "one ~|two." \
+        "~|one two." \
+        "one two ~| three." \
+        "one ~| two ~| three." \
+        "one ~|"
+done
+
+# A longer sentence, on the builds that agree on one. It has no comma: the
+# 2006 builds stop at the first one, so the obvious choice measures that
+# instead and fails on German.
 for spec in "2006ENG dll_eng.dll" "2006GER dll_ger.dll" \
             "2006ITA dll_ita.dll" "2006SPA dll_spa.dll"; do
     set -- $spec
-    run06 "$1" "$2" "one two." "The quick brown fox jumps over the lazy dog."
+    run06 "$1" "$2" "The quick brown fox jumps over the lazy dog."
 done
+
 # The lone symbols are said by name, and these two builds get that right.
 run06 2006ENG dll_eng.dll "one | two." "one ~ two."
 run06 2006GER dll_ger.dll "one | two." "one ~ two."

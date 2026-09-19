@@ -703,7 +703,10 @@ int bst_generate(bst_gen *g) {
                 bst_tracef("step consumed=%d pend.dur=%d segleft=%d\n",
                         consumed, (int)g->pend.dur, (int)g->segleft);
             g->pend.dur = (int16_t)(g->pend.dur - consumed);
-            if (g->pend.dur < -1) { fail(g); { if (bst_trace) bst_tracef("exit6\n"); return g->nout; } }
+            /* A record whose time ran out mid-segment is held at the value
+               that makes the glide follow what is left of the segment rather
+               than the record. Overshooting it is ordinary, not an error. */
+            if (g->pend.dur < -1) g->pend.dur = -1;
             interp_clock(g);
         }
         if (g->pclock < 1 && interp_clock(g) == -2) break;

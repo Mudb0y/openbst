@@ -331,6 +331,10 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
 
         int f = freq(p, e[k].code);
         int period = f ? rate_of(img) / f : 0;
+        if (bst_trace)
+            bst_tracef("con k=%d code=%d pos=%d flag=%d dur=%d slope=%02x"
+                       " period=%d\n", k, e[k].code, e[k].pos, e[k].flag,
+                       dur, slope, period);
         if (nrec < max) {
             out[nrec].kind = 2;
             out[nrec].period = (uint8_t)period;
@@ -348,6 +352,9 @@ int bst_contour(const bst_image *img, const uint8_t *s, int len,
 
     int f = freq(p, e[fin].code);
     int period = f ? rate_of(img) / f : 0;
+    if (bst_trace)
+        bst_tracef("con fin=%d code=%d pos=%d carry=%d period=%d\n",
+                   fin, e[fin].code, e[fin].pos, carry, period);
     if (carry != 0) {
         if (nrec < max) {
             out[nrec].kind = 2;
