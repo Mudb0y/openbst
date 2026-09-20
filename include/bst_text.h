@@ -130,7 +130,9 @@ typedef struct {
        phrase and opens one more holding nothing but a pause. The earlier
        builds speak that phrase; the 2006 ones stop instead, and what reaches
        the buffer in its place is the twenty silent samples of their own
-       shutdown. */
+       shutdown. Two: the Japanese build drops it whatever the phrase before
+       it ended on, where the others keep one a mark other than a stop
+       leaves open. */
     uint8_t  no_closing_phrase;
 
     /* The 2006 builds want the first group of a number written with
@@ -161,6 +163,12 @@ typedef struct {
        stops there and nothing after it is read. The 1995 and 1998 builds,
        whose own tail is that character, read it as ordinary punctuation. */
     uint8_t  brace_ends_text;
+
+    /* The Arabic build says nothing to a mark written in the text and does
+       not break the phrase at one either: the whole text is one sentence,
+       ended by the stop the reader adds after it. The comma is the exception,
+       and ends the text the way it does in the other builds. */
+    uint8_t  punct_dropped;
 
     /* Speak now ends the phrase, and in the 2006 builds it stops there: the
        break goes into the stream and the words after it are appended behind

@@ -142,6 +142,7 @@ int main(int argc, char **argv) {
     uint8_t buf[128];
     int nphrase = 0;
     int prevmark = 0;   /* the mark that closed the phrase before this */
+    int words = 0;      /* whether a word has gone into this phrase */
     for (int guard = 0; guard < 4096; guard++) {
         memset(buf, 0, sizeof buf);
         int kind = bst_tok_next(&tk, buf);
@@ -151,6 +152,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\n");
         }
         z.mode = 0;
+        if (kind == 3) words = 1;
         int done = bst_assemble_token(&z, kind, buf);
         if (!done) { if (kind == 6) break; else continue; }
 
@@ -167,11 +169,14 @@ int main(int argc, char **argv) {
                written in the text closes is not that phrase and is said. A
                first phrase with nothing in it is said too, as the silence
                it is. */
-            if (!spoken && !tk.endreal &&
-                (prevmark == '.' || prevmark == '}' || prevmark == 0)) break;
+            if (!spoken && !words && (map->no_closing_phrase == 2 ||
+                            (!tk.endreal && (prevmark == '.' ||
+                                             prevmark == '}' || prevmark == 0))))
+                break;
         }
         nphrase++;
         prevmark = tk.endmark;
+        words = 0;
 
         if (bst_trace) {
             fprintf(stderr, "assembled");

@@ -211,6 +211,7 @@ static long run(bst *h, const char *text, int16_t *out, long max) {
     uint8_t buf[128];
     int level = h->level, have_voice = 0, nphrase = 0;
     int prevmark = 0;   /* the mark that closed the phrase before this */
+    int words = 0;      /* whether a word has gone into this phrase */
     long used = 0;
 
     memset(&voice, 0, sizeof voice);
@@ -224,6 +225,7 @@ static long run(bst *h, const char *text, int16_t *out, long max) {
         memset(buf, 0, sizeof buf);
         int kind = bst_tok_next(&tk, buf);
         z.mode = 0;
+        if (kind == 3) words = 1;
         if (!bst_assemble_token(&z, kind, buf)) {
             if (kind == 6) break;
             continue;
@@ -244,11 +246,14 @@ static long run(bst *h, const char *text, int16_t *out, long max) {
                which is what a closing brace also is. A phrase a stop written
                in the text closes is not that phrase and is said. A first
                phrase with nothing in it is said too, as the silence it is. */
-            if (!spoken && !tk.endreal &&
-                (prevmark == '.' || prevmark == '}' || prevmark == 0)) break;
+            if (!spoken && !words && (map->no_closing_phrase == 2 ||
+                            (!tk.endreal && (prevmark == '.' ||
+                                             prevmark == '}' || prevmark == 0))))
+                break;
         }
         nphrase++;
         prevmark = tk.endmark;
+        words = 0;
 
         int grew = bst_phrules(&h->img, h->stream, &len, STREAM, 0);
         z.hdr += grew;

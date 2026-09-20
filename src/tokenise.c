@@ -285,6 +285,7 @@ static void punct_out(bst_tok *t, int c) {
         if (t->img->t.comma_ends_text != 2) emit(t, '.');
         return;
     }
+    if (t->img->t.punct_dropped && t->start <= t->textend) return;
     if (!t->sentence && b != '\'' && b != '`') { emit(t, b); return; }
     if (b == '-') { emit(t, ','); return; }
     /* Anything else is said by name: "percent", "dollar", "at". */
@@ -310,6 +311,7 @@ static void dot_out(bst_tok *t, int c) {
     } while (d == 0xAF || d == '\'' || d == '}' || d == ']' || d == ')');
     unread(t, n);
     if (!is_space(d) && d != 0xFFFF && d != 0x7F) return;
+    if (t->img->t.punct_dropped && t->start <= t->textend) return;
     emit(t, '.');
 }
 
