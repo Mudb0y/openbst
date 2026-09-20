@@ -347,6 +347,17 @@ static int handler(bst_tok *t, unsigned h, int c) {
         return 1;
     case BST_H_SEP:      /* what may sit between two runs of digits */
         return c == ':' || c == '.' || c == ',' || c == '/' || c == '-' || c == ' ';
+    case BST_H_HIGH:     return c > 0x7F;
+    case BST_H_HIGHOUT:
+        /* A character above the alphabet that none of the build's tables
+           knows. The row before this one has already taken it; this one is
+           reached with the character after it in hand and gives that back.
+           What it leaves behind is a word boundary and no sound, so "nino"
+           with a tilde over the n comes out as "ni o". */
+        unread(t, 1);
+        t->prevkind = t->kind;
+        t->kind = 8;
+        return 1;
     case BST_H_DASHLETTER: {
         /* One letter with a hyphen on each side, the middle of "c.-a-d.".
            The letter is said on its own and everything after it is given

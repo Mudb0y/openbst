@@ -6,8 +6,18 @@
 # those encodings and passed as bytes; Arabic is read a byte at a time rather
 # than as a wide string. Russian has a corpus of its own in rus2006.sh.
 #
-# French carries accents, and its list is held in the code page the build
-# reads, the Windows Latin one, the same way the Greek list is.
+# A build whose language needs more than the alphabet gets a second list,
+# <lang>-cp.txt, held in the code page that build reads, which is not always
+# the one the name suggests. Say_TTS converts the caller's wide string with a
+# code page it names itself, but what the tables are written in is a separate
+# question, and only some builds carry a map between the two. French, Italian,
+# Portuguese, German and Dutch have that map and take the Windows Latin page;
+# Spanish has none and takes the DOS page its tables are written in; Polish
+# takes the DOS Central European one and Hebrew the DOS Hebrew one. The lists
+# are held in whichever that is, and the engine is given the same bytes.
+#
+# The 1998 modules share the plain lists, so nothing that only the 2006
+# generation can read may go in those.
 set -uf
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
