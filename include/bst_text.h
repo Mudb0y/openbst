@@ -751,6 +751,8 @@ typedef struct {
     int      wp, hdr, last, len;
     int      emph, punct, hist, mode;
     int      done, full, open;
+    int      stuck;    /* a word was written past a break the opening brace
+                          held open, which the 2006 builds never recover from */
     uint8_t  carry[6];
 } bst_assembler;
 

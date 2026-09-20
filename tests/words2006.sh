@@ -23,11 +23,16 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
+# A text the build says nothing to is a result like any other, so an empty
+# pair counts as agreement -- but only because the oracle is checked for
+# having run: a failed run also leaves nothing behind, and the two must not
+# be confused. The capture file is deleted first for the same reason.
 cat > "$work/cmp.py" <<'PYEOF'
+import os
 import sys
-a = open(sys.argv[1], 'rb').read()
-b = open(sys.argv[2], 'rb').read()
-sys.exit(0 if a and len(a) == len(b) and a[40:] == b[40:] else 1)
+a = open(sys.argv[1], 'rb').read() if os.path.exists(sys.argv[1]) else b''
+b = open(sys.argv[2], 'rb').read() if os.path.exists(sys.argv[2]) else b''
+sys.exit(0 if len(a) == len(b) and a[40:] == b[40:] else 1)
 PYEOF
 
 same=0 diff=0
@@ -42,9 +47,14 @@ for l in ara dut eng fre ger gre heb ita jpn pol por spa; do
     [ -f "$extra" ] && list="$list $extra"
     while IFS= read -r w2; do
         [ -z "$w2" ] && continue
-        timeout 120 "$root/build/oracle" --dll "$d" --limit 800000000 \
+        rm -f "$work/r.pcm" "$work/o.pcm"
+        if ! timeout 120 "$root/build/oracle" --dll "$d" --limit 800000000 \
             --call Init_TTS --call "Say_TTS:$form:$w2." --raw --out "$work/r.pcm" \
-            >/dev/null 2>&1
+            >/dev/null 2>&1; then
+            diff=$((diff + 1))
+            echo "  $l $w2 oracle failed"
+            continue
+        fi
         "$root/build/saytest" --map "2006$(echo "$l" | tr a-z A-Z)" --voice 0 \
             --params 0x50,0xA0,3,0,0,0,0x30,0x10,-0x12,0 --tables "$tables" \
             "$d" "$w2." > "$work/o.pcm" 2>/dev/null

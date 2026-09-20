@@ -131,7 +131,7 @@ static void punctuation(bst_assembler *z, int c, int forced) {
                     (c == 0x7D && z->img->t.brace_ends_text)) &&
         z->img->t.speak_now_inline && z->done) {
         z->done = 0;
-        z->open = 1;
+        z->open = (c == 0x7B) ? 2 : 1;
     }
 }
 
@@ -170,6 +170,9 @@ static int word(bst_assembler *z, uint8_t *buf) {
         header(z, l);
     }
     int n = buf[0];
+    /* A word behind a break the opening brace held open goes into the stream
+       past the marker that ends it, and the build never speaks again. */
+    if (z->open == 2) z->stuck = 1;
     if (z->wp + n + 0x25 >= STREAM_MAX) { punctuation(z, 0x7C, 1); return 0; }
 
     stress_word(z, buf + 2, n);
@@ -198,6 +201,7 @@ void bst_assemble_start(bst_assembler *z) {
     z->done = 0;
     z->full = 0;
     z->open = 0;
+    z->stuck = 0;
     header(z, z->carry);
     static const uint8_t iv[6] = { 'I', 2, 0, 0, 0, 0 };
     command(z, iv);
@@ -232,7 +236,7 @@ int bst_assemble_token(bst_assembler *z, int kind, uint8_t *buf) {
     default:
         break;
     }
-    return z->wp >= 0 && z->s[z->wp] == 0x5C && !z->open;
+    return !z->stuck && z->wp >= 0 && z->s[z->wp] == 0x5C && !z->open;
 }
 
 void bst_assemble_init(bst_assembler *z, const bst_image *img, uint8_t *stream) {
