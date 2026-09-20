@@ -150,6 +150,12 @@ typedef struct {
        the way their own comma does. */
     uint8_t  close_paren_comma;
 
+    /* A lone letter is spelled, unless it is a word in its own right. Which
+       letters those are is written into the reader rather than held in a
+       table: the English builds name a, A and I, and no other build names
+       any. Set means this build names none. */
+    uint8_t  lone_no_words;
+
     /* Speak now ends the phrase, and in the 2006 builds it stops there: the
        break goes into the stream and the words after it are appended behind
        it, so one sentence reaches the accent pass whole. The 1995 and 1998

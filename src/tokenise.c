@@ -409,9 +409,10 @@ static void word_range(bst_tok *t, int from, int to, int dotted) {
         word_range(t, to - 1, to, 0);
         return;
     }
-    /* A lone letter is said by name. The three that are words in their own
+    /* A lone letter is said by name. The letters that are words in their own
        right are not, and neither is one the exception table holds. */
-    if (n == 1 && (dotted || (first != 'a' && first != 'A' && first != 'I'))) {
+    if (n == 1 && (dotted || t->img->t.lone_no_words ||
+                   (first != 'a' && first != 'A' && first != 'I'))) {
         uint8_t codes[64];
         int m = dotted ? 0 : bst_except_at(t, t->ring + from, 1, codes,
                                           (int)sizeof codes, to == t->cur);
