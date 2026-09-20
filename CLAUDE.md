@@ -13,7 +13,7 @@ The directory is still called `reb32`. The project is openbst.
 Unlike a project where a changed case is a question, a changed sample here is a
 failure. The 1995 build is bit-exact through every stage, the six 1998 modules
 are frame for frame and sample for sample exact, and the thirteen 2006 builds are
-exact over 2048 utterances. Nothing is allowed to move. If a test differs, the
+exact over 2358 utterances. Nothing is allowed to move. If a test differs, the
 change is wrong until proven otherwise, and the burden is never on the test.
 
 gcc and clang must produce the same samples. A change that makes them disagree is
@@ -27,7 +27,7 @@ go under `dll/1995`, `dll/1998` and `dll/2006`.
 
 Without those binaries only `make selftest` and `tests/tabletest.sh` can run.
 `make selftest` holds the library to `tests/golden.txt`, which records the sample
-count and a hash for 4200 utterances across the twenty builds.
+count and a hash for 4906 utterances across the twenty builds.
 
 ## Two files that must not be casually regenerated
 

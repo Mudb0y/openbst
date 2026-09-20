@@ -45,17 +45,17 @@ sixteen bits when the engine synthesizes in eight, the 1995 noise generator
 instead of its own, and the wrong voice to start on.
 
 The thirteen 2006 builds are exact on a sentence each, on 728 numbers, on a
-hundred words each for the twelve non-Russian builds, and on fifty Russian
-words, three sentences and fifty-four numbers. That is 2048 utterances with
-none differing.
+corpus of words and marked-up texts for the twelve non-Russian builds, and on
+fifty Russian words, three sentences and fifty-four numbers. That is 2358
+utterances with none differing.
 
 The tables compiled into the library are checked against the tables in the
 binaries by `tests/lifttest.sh`, over every word of every corpus, twenty
 thousand words the lift never saw, four hundred numbers and three sentences:
-411864 utterances across the twenty builds, none differing.
+411894 utterances across the twenty builds, none differing.
 
 All of that needs the original binaries. Two tests do not. `make selftest`
-runs the library against `tests/golden.txt`, which carries, for 4200
+runs the library against `tests/golden.txt`, which carries, for 4906
 utterances across the twenty builds, how many samples came out and a hash of
 them. Those numbers were written from the binaries rather than from the
 library, so a clone with no binaries can still hold the library to what the
