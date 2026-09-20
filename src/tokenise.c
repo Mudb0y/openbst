@@ -347,7 +347,10 @@ static int handler(bst_tok *t, unsigned h, int c) {
         return 1;
     case BST_H_SEP:      /* what may sit between two runs of digits */
         return c == ':' || c == '.' || c == ',' || c == '/' || c == '-' || c == ' ';
-    case BST_H_HIGH:     return c > 0x7F;
+    /* Two rows ask the same question in different places: one ends a word,
+       the other ends a run of digits. */
+    case BST_H_HIGH:
+    case BST_H_HIGH2:    return c > 0x7F;
     case BST_H_HIGHOUT:
         /* A character above the alphabet that none of the build's tables
            knows. The row before this one has already taken it; this one is
