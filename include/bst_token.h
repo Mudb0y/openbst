@@ -47,8 +47,8 @@ typedef struct {
        are read ahead of the assembler so that a sentence too long to say in
        one breath can have a break put into it before any of it is spoken. */
     struct {
-        uint8_t  type, flag, spare, pushback;
-        uint8_t  len;
+        uint8_t  type, flag, fromtext, pushback;
+        uint8_t  raw, len;
         uint8_t  buf[104];
     } tok[20];
     int      rd, wr, held, blocked, bytes;
@@ -62,6 +62,9 @@ typedef struct {
     int      ord, ordlast, ordprev;
     int      textend;    /* the last ring position that came from the text */
     int      lastend;    /* the character that ended the last sentence */
+    int      markreal;   /* and whether it was written in the text */
+    int      rawmark;    /* the mark as written, before it is mapped */
+    int      endreal, endmark;   /* the pair, for the mark just given out */
     int      queued;   /* the second character of a build's expansion */
     uint8_t  fix[8];   /* what a rewritten sequence reads as, after the first */
     uint8_t  fixn, fixi;

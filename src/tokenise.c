@@ -251,6 +251,8 @@ static void punct_out(bst_tok *t, int c) {
                 b == '[' || b == '(' || b == '`');
     t->sentence = !closes(b);
     if (b == '.' || b == '?' || b == '!' || b == ',' || b == ';') t->lastend = b;
+    t->rawmark = b;
+    if (t->start <= t->textend) t->markreal = 1;
     if (t->literal) return;
     /* A tilde is a lead-in rather than a symbol: it and the character after
        it are one mark, and neither is said by name. Speak now closes the
@@ -265,12 +267,21 @@ static void punct_out(bst_tok *t, int c) {
         return;
     }
     if (b == ':' && is_digit(t, t->prevch) && is_digit(t, c)) { emit(t, ','); return; }
+    if (b == '}' && t->img->t.brace_ends_text) {
+        /* The text stops here. Whatever the reader has already pulled in
+           behind this mark is the tail's as far as the rest is concerned. */
+        t->tp = t->tn;
+        t->textend = t->start;
+        emit(t, b);
+        return;
+    }
     if (b == ',' && t->img->t.comma_ends_text) {
         /* The build stops here: nothing after the comma reaches the machine.
            Most builds then say the comma the way a full stop is said; the
            Russian one says nothing at all. */
         t->tp = t->tn;
-        t->lastend = '.';
+        t->textend = t->start;
+        t->lastend = t->rawmark = '.';
         if (t->img->t.comma_ends_text != 2) emit(t, '.');
         return;
     }
@@ -283,6 +294,8 @@ static void punct_out(bst_tok *t, int c) {
 static void dot_out(bst_tok *t, int c) {
     (void)c;
     t->sentence = 0;
+    t->rawmark = '.';
+    if (t->start <= t->textend) t->markreal = 1;
     if (t->cur <= t->textend) t->lastend = '.';
     t->prevkind = t->kind;
     t->kind = 3;
@@ -980,6 +993,9 @@ static void produce(bst_tok *t) {
         }
         len = 1;
         t->tok[i].flag = 1;
+        t->tok[i].fromtext = (uint8_t)t->markreal;
+        t->tok[i].raw = (uint8_t)t->rawmark;
+        t->markreal = 0;
         t->tok[i].pushback = 1;
         t->blocked |= 1;
         break;
@@ -1117,5 +1133,9 @@ int bst_tok_next(bst_tok *t, uint8_t *buf) {
     t->rd = (t->rd + 1) % 20;
     if (t->tok[i].type == 3)
         t->total -= t->tok[i].flag ? t->tok[i].len - 4 : t->tok[i].len;
+    if (t->tok[i].type == 4) {
+        t->endreal = t->tok[i].fromtext;
+        t->endmark = t->tok[i].raw;
+    }
     return t->tok[i].type;
 }

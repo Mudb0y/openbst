@@ -156,6 +156,12 @@ typedef struct {
        any. Set means this build names none. */
     uint8_t  lone_no_words;
 
+    /* The closing brace is the mark the reader adds after the text, and the
+       2006 builds treat one written in the text as that same mark: the text
+       stops there and nothing after it is read. The 1995 and 1998 builds,
+       whose own tail is that character, read it as ordinary punctuation. */
+    uint8_t  brace_ends_text;
+
     /* Speak now ends the phrase, and in the 2006 builds it stops there: the
        break goes into the stream and the words after it are appended behind
        it, so one sentence reaches the accent pass whole. The 1995 and 1998
