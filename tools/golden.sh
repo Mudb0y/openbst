@@ -18,11 +18,16 @@ for l in ENG:eng DUT:dut FRN:fre GRM:ger ITL:ita SPN:spa; do
     "$st" --write "1998${l%%:*}" "$root/dll/1998/KGM${l%%:*}.DLL" \
           --core "$root/dll/1998/KNGMM.DLL" "$w/${l##*:}.txt" >> "$out"
 done
+# The 1998 modules share the word lists above. A build whose own list carries
+# characters the earlier generation cannot read gets a second list of its own,
+# so the shared one stays in the encoding both can take.
 for l in ara dut eng fre ger gre heb ita jpn pol por rus spa; do
     u=$(echo "$l" | tr a-z A-Z)
     list="$w/$l.txt"
     [ "$l" = rus ] && list="$root/tests/ruswords.txt"
-    "$st" --write "2006$u" "$root/dll/2006/dll_$l.dll" "$list" >> "$out"
+    extra=""
+    [ -f "$w/$l-cp.txt" ] && extra="$w/$l-cp.txt"
+    "$st" --write "2006$u" "$root/dll/2006/dll_$l.dll" $list $extra >> "$out"
 done
 
 echo "golden: $(wc -l < "$out") utterances"

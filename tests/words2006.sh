@@ -28,21 +28,23 @@ for l in ara dut eng fre ger gre heb ita jpn pol por spa; do
     tables=$(python3 "$root/tools/analysis/tables2006.py" \
              "$root/dll/1995/B32_TTS.DLL" "$d") || continue
     case $l in ara) form=str;; *) form=wstr;; esac
-    while IFS= read -r w; do
-        [ -z "$w" ] && continue
+    extra="$root/tests/words2006/$l-cp.txt"
+    [ -f "$extra" ] && list="$list $extra"
+    while IFS= read -r w2; do
+        [ -z "$w2" ] && continue
         timeout 120 "$root/build/oracle" --dll "$d" --limit 800000000 \
-            --call Init_TTS --call "Say_TTS:$form:$w." --raw --out "$work/r.pcm" \
+            --call Init_TTS --call "Say_TTS:$form:$w2." --raw --out "$work/r.pcm" \
             >/dev/null 2>&1
         "$root/build/saytest" --map "2006$(echo "$l" | tr a-z A-Z)" --voice 0 \
             --params 0x50,0xA0,3,0,0,0,0x30,0x10,-0x12,0 --tables "$tables" \
-            "$d" "$w." > "$work/o.pcm" 2>/dev/null
+            "$d" "$w2." > "$work/o.pcm" 2>/dev/null
         if python3 "$work/cmp.py" "$work/r.pcm" "$work/o.pcm"; then
             same=$((same + 1))
         else
             diff=$((diff + 1))
-            echo "  $l $w differs"
+            echo "  $l $w2 differs"
         fi
-    done < "$list"
+    done < <(cat $list)
 done
 
 echo "words2006: $same identical, $diff differing"
