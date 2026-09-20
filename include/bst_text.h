@@ -144,6 +144,12 @@ typedef struct {
        seven. Zero means one. */
     uint8_t  close_pause;
 
+    /* A closing bracket written in the text. The earlier builds read it as
+       the closing brace, which is the full stop that pause belongs to; the
+       2006 ones read it as a comma instead, and go on rather than stopping
+       the way their own comma does. */
+    uint8_t  close_paren_comma;
+
     /* Speak now ends the phrase, and in the 2006 builds it stops there: the
        break goes into the stream and the words after it are appended behind
        it, so one sentence reaches the accent pass whole. The 1995 and 1998

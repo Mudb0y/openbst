@@ -966,8 +966,10 @@ static void produce(bst_tok *t) {
             buf[0] = '.'; t->run = 0; t->quest = 0; break;
         case '(': case '-': case ':': case '[':
             buf[0] = ','; break;
-        case ')':
-            buf[0] = '}'; break;
+        case ')': case ']':
+            if (t->img->t.close_paren_comma) buf[0] = ',';
+            else if (buf[0] == ')')          buf[0] = '}';
+            break;
         case '?':
             buf[0] = (uint8_t)(t->quest ? '.' : '?');
             t->run = 0; t->quest = 0; break;
