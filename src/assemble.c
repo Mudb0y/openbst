@@ -127,7 +127,8 @@ static void punctuation(bst_assembler *z, int c, int forced) {
     /* The opening brace holds the phrase open the same way speak now does:
        the break is written into the stream and whatever follows is appended
        behind it, so the mark after it is what ends the phrase. */
-    if (!forced && (c == 0x7C || c == 0x7B) &&
+    if (!forced && (c == 0x7C || c == 0x7B ||
+                    (c == 0x7D && z->img->t.brace_ends_text)) &&
         z->img->t.speak_now_inline && z->done) {
         z->done = 0;
         z->open = 1;

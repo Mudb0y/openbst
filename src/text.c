@@ -3121,7 +3121,7 @@ const bst_tabmap BST_MAP_2006_RUS = {
     .hdr_shape     = 0x52,
     .comma_ends_text = 2,
     .close_paren_comma = 1,
-    .lone_no_words = 1, .brace_ends_text = 1,
+    .lone_no_words = 1,
     .speak_now_none = 2,
     .speak_now_inline = 1,
     .contour_round = 1,
