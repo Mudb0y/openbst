@@ -346,6 +346,11 @@ typedef struct {
        every h as ch. Zero means the one character stands alone. */
     uint8_t  in_map2[0x100];
 
+    /* A build with letters written into its reader rather than into a table.
+       One is the 2006 French set: three sequences it rewrites before it reads
+       any of the text. */
+    uint8_t  text_fix_kind;
+
     /* What each character in a rule pattern tests. A build that spells its
        patterns as plain letter-attribute bits -- Polish does, with no run or
        suffix operators at all -- gives the bit here and the matcher takes one

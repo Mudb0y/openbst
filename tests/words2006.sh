@@ -6,11 +6,8 @@
 # those encodings and passed as bytes; Arabic is read a byte at a time rather
 # than as a wide string. Russian has a corpus of its own in rus2006.sh.
 #
-# French is the one build whose list carries accents, and it needs both forms:
-# the library reads the build's own code page, which is the DOS one, while
-# Say_TTS converts real Unicode into it and takes nothing else. So the list is
-# held in UTF-8, the engine is given it widened properly, and the library is
-# given it converted.
+# French carries accents, and its list is held in the code page the build
+# reads, the Windows Latin one, the same way the Greek list is.
 set -uf
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
@@ -30,25 +27,15 @@ for l in ara dut eng fre ger gre heb ita jpn pol por spa; do
     [ -f "$list" ] || continue
     tables=$(python3 "$root/tools/analysis/tables2006.py" \
              "$root/dll/1995/B32_TTS.DLL" "$d") || continue
-    cp=
-    case $l in
-        ara) form=str;;
-        fre) form=wstru; cp=CP437;;
-        *)   form=wstr;;
-    esac
+    case $l in ara) form=str;; *) form=wstr;; esac
     while IFS= read -r w; do
         [ -z "$w" ] && continue
         timeout 120 "$root/build/oracle" --dll "$d" --limit 800000000 \
             --call Init_TTS --call "Say_TTS:$form:$w." --raw --out "$work/r.pcm" \
             >/dev/null 2>&1
-        if [ -n "$cp" ]; then
-            t=$(printf '%s.' "$w" | iconv -f UTF-8 -t "$cp")
-        else
-            t="$w."
-        fi
         "$root/build/saytest" --map "2006$(echo "$l" | tr a-z A-Z)" --voice 0 \
             --params 0x50,0xA0,3,0,0,0,0x30,0x10,-0x12,0 --tables "$tables" \
-            "$d" "$t" > "$work/o.pcm" 2>/dev/null
+            "$d" "$w." > "$work/o.pcm" 2>/dev/null
         if python3 "$work/cmp.py" "$work/r.pcm" "$work/o.pcm"; then
             same=$((same + 1))
         else

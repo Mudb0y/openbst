@@ -27,13 +27,40 @@ static int is_space(int c) { return c == ' ' || c == '\t' || c == '\n' ||
 
 /* ---- input ------------------------------------------------------------- */
 
+/* The sequences the 2006 French build rewrites on its way in. They are
+   written into its reader rather than held in a table, so they are written
+   here too: three dots become one, "dent" loses its t and "ouvrir" comes out
+   as "uvrier". The match is against the text as it was written, before the
+   input map, which changes nothing here because none of these letters is in
+   the map. */
+static const struct { const char *from, *to; } TEXT_FIX_FRENCH[] = {
+    { "...",    "."      },
+    { "dent",   "den"    },
+    { "ouvrir", "uvrier" },
+};
+
 /* The next character, from the text while there is any and from the tail
    after that. `real` says which, because the stop the tail carries closes the
    last sentence without being the character the sentence ended on. */
 static int source(bst_tok *t, int *real) {
     *real = 1;
+    if (t->fixi < t->fixn) return t->fix[t->fixi++];
     if (t->queued) { int c = t->queued; t->queued = 0; return c; }
     if (t->tp < t->tn) {
+        if (t->img->t.text_fix_kind == 1) {
+            for (size_t k = 0; k < sizeof TEXT_FIX_FRENCH / sizeof TEXT_FIX_FRENCH[0]; k++) {
+                const char *from = TEXT_FIX_FRENCH[k].from;
+                const char *to   = TEXT_FIX_FRENCH[k].to;
+                size_t n = strlen(from);
+                if ((size_t)(t->tn - t->tp) < n) continue;
+                if (memcmp(t->text + t->tp, from, n) != 0) continue;
+                t->tp += (int)n;
+                t->fixn = (uint8_t)strlen(to);
+                t->fixi = 1;
+                memcpy(t->fix, to, t->fixn);
+                return (unsigned char)to[0];
+            }
+        }
         int c = t->text[t->tp++];
         if (t->img->t.in_map[1]) {
             t->queued = t->img->t.in_map2[c];

@@ -63,6 +63,8 @@ typedef struct {
     int      textend;    /* the last ring position that came from the text */
     int      lastend;    /* the character that ended the last sentence */
     int      queued;   /* the second character of a build's expansion */
+    uint8_t  fix[8];   /* what a rewritten sequence reads as, after the first */
+    uint8_t  fixn, fixi;
     char     xbuf[BST_XLAT_MAX];  /* the text after a build's own rewrite */
 } bst_tok;
 
