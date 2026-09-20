@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
 
     uint8_t buf[128];
     int nphrase = 0;
+    int mark = 0, prevmark = 0;   /* what closed this phrase, and the last */
     for (int guard = 0; guard < 4096; guard++) {
         memset(buf, 0, sizeof buf);
         int kind = bst_tok_next(&tk, buf);
@@ -150,6 +151,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "\n");
         }
         z.mode = 0;
+        if (kind == 4) mark = buf[0];
         int done = bst_assemble_token(&z, kind, buf);
         if (!done) { if (kind == 6) break; else continue; }
 
@@ -161,12 +163,13 @@ int main(int argc, char **argv) {
             for (int i = 12; i < len; i++)
                 if (stream[i] && stream[i] < 0x2F) { spoken = 1; break; }
             /* The build says the phrase the closing brace opens only when
-               the sentence ended on something other than a full stop. A
-               first phrase with nothing in it is still said, as the silence
-               it is. */
-            if (!spoken && (tk.lastend == '.' || tk.lastend == 0)) break;
+               the phrase before it ended on something other than a full
+               stop. A first phrase with nothing in it is still said, as the
+               silence it is. */
+            if (!spoken && (prevmark == '.' || prevmark == 0)) break;
         }
         nphrase++;
+        prevmark = mark;
 
         if (bst_trace) {
             fprintf(stderr, "assembled");
